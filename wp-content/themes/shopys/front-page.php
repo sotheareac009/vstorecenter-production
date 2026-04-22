@@ -371,7 +371,7 @@ $slide_count = count( $slider_images );
     <div class="fp-trust__inner">
         <div class="fp-trust__item">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 4v4h-7V8zM1 16h20M5.5 21a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM18.5 21a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/></svg>
-            <div><strong>Fastest Delivery</strong>Phnom Penh &amp; nationwide</div>
+            <div><strong>Pro - Fastest Delivery</strong>Phnom Penh &amp; nationwide</div>
         </div>
         <div class="fp-trust__item">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
