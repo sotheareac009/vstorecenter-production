@@ -395,19 +395,21 @@ $slide_count = count( $slider_images );
         <?php foreach ( $slider_images as $img_url ) : ?>
         <div class="fp-slide">
             <img class="fp-slide__img" src="<?php echo esc_url( $img_url ); ?>" alt="" loading="lazy" />
-            <div class="fp-slide__overlay">
-                <div class="fp-slide__content">
-                    <div class="fp-hero__tag">New Arrivals 2025</div>
-                    <h1 class="fp-hero__title">Your Ultimate<br><span>Tech Store</span></h1>
-                    <p class="fp-hero__sub">Laptops · Gaming Gear · PC Hardware · Accessories<br>— all under one roof at the best prices.</p>
-                    <a href="<?php echo esc_url( wc_get_page_permalink('shop') ); ?>" class="fp-hero__cta">
-                        Shop Now
-                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                    </a>
-                </div>
-            </div>
         </div>
         <?php endforeach; ?>
+    </div>
+
+    <!-- Static overlay — stays fixed while images slide -->
+    <div class="fp-slide__overlay">
+        <div class="fp-slide__content">
+            <div class="fp-hero__tag">New Arrivals 2025</div>
+            <h1 class="fp-hero__title">Your Ultimate<br><span>Tech Store</span></h1>
+            <p class="fp-hero__sub">Laptops · Gaming Gear · PC Hardware · Accessories<br>— all under one roof at the best prices.</p>
+            <a href="<?php echo esc_url( home_url( '/laptop-v2/' ) ); ?>" class="fp-hero__cta">
+                Shop Now
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+        </div>
     </div>
 
     <!-- Prev arrow -->
@@ -573,7 +575,11 @@ $slide_count = count( $slider_images );
                 </div>
                 <?php
                 $used_cat = get_term_by( 'slug', 'used-product', 'product_cat' );
-                $used_link = $used_cat ? get_term_link( $used_cat ) : wc_get_page_permalink( 'shop' );
+                if ( ! $used_cat ) {
+                    $result = wp_insert_term( 'Used Products', 'product_cat', array( 'slug' => 'used-product' ) );
+                    $used_cat = is_wp_error( $result ) ? false : get_term( $result['term_id'], 'product_cat' );
+                }
+                $used_link = home_url( '/used-product/' );
                 ?>
                 <a href="<?php echo esc_url( $used_link ); ?>" class="fp-section-head__link">
                     View All Used Products
@@ -589,19 +595,37 @@ $slide_count = count( $slider_images );
 <section class="fp-products">
     <div class="fp-products__inner">
 
+        <!-- ── NEW RECENT ADDED ── -->
+        <div class="fp-cat-section">
+            <div class="fp-section-head">
+                <div class="fp-section-head__left">
+                    <div class="fp-section-head__bar"></div>
+                    <div>
+                        <h2 class="fp-section-head__title">New Recent Added <span style="background:#13e800;color:#000;font-size:12px;font-weight:700;padding:2px 10px;border-radius:20px;vertical-align:middle;margin-left:6px;">NEW</span></h2>
+                        <span class="fp-section-head__count">Latest arrivals · Just in stock</span>
+                    </div>
+                </div>
+                <a href="<?php echo esc_url( home_url( '/new-arrivals/' ) ); ?>" class="fp-section-head__link">
+                    View All New Arrivals
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </a>
+            </div>
+            <?php echo do_shortcode( '[premium_products limit="12" columns="6" filter="false" cart="true" show_description="false" pagination_type="normal" orderby="date" order="DESC"]' ); ?>
+        </div>
+
         <?php
         $fp_categories = array(
-            array( 'slug' => 'laptop',           'label' => 'Laptops',      'count' => 93  ),
-            array( 'slug' => 'component,desktop', 'label' => 'PC Hardware',  'count' => 249 ),
-            array( 'slug' => 'accessories',       'label' => 'Accessories',  'count' => 69  ),
-            array( 'slug' => 'gaming-gear',       'label' => 'Gaming Gear',  'count' => 80  ),
-            array( 'slug' => 'monitor',           'label' => 'Monitors',     'count' => 37  ),
+            array( 'slug' => 'laptop',           'label' => 'Laptops',      'count' => 93,  'custom_url' => 'laptop-v2' ),
+            array( 'slug' => 'component,desktop', 'label' => 'PC Hardware',  'count' => 249, 'custom_url' => 'pc-harware-v2' ),
+            array( 'slug' => 'accessories',       'label' => 'Accessories',  'count' => 69,  'custom_url' => 'accessories' ),
+            array( 'slug' => 'gaming-gear',       'label' => 'Gaming Gear',  'count' => 80,  'custom_url' => 'gaming-gear' ),
+            array( 'slug' => 'monitor',           'label' => 'Monitors',     'count' => 37,  'custom_url' => '' ),
         );
 
         foreach ( $fp_categories as $cat ) :
             $first_slug = trim( explode( ',', $cat['slug'] )[0] );
             $cat_obj    = get_term_by( 'slug', $first_slug, 'product_cat' );
-            $cat_link   = $cat_obj ? get_term_link( $cat_obj ) : wc_get_page_permalink( 'shop' );
+            $cat_link   = ! empty( $cat['custom_url'] ) ? home_url( '/' . $cat['custom_url'] . '/' ) : ( $cat_obj ? get_term_link( $cat_obj ) : wc_get_page_permalink( 'shop' ) );
         ?>
         <div class="fp-cat-section">
             <div class="fp-section-head">
