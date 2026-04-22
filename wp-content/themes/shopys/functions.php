@@ -592,35 +592,43 @@ add_action( 'wp_head', function() {
     $price = $product->get_price();
     $price_html = $price ? wc_format_decimal( $price, 2 ) : '';
 
-    // Image — featured image first, fallback to WooCommerce placeholder
-    $image_id  = $product->get_image_id();
-    $image_url = $image_id
-        ? wp_get_attachment_image_url( $image_id, 'large' )
-        : wc_placeholder_img_src( 'large' );
+    // Image — full size for best quality, fallback to placeholder
+    $image_id   = $product->get_image_id();
+    $image_data = $image_id ? wp_get_attachment_image_src( $image_id, 'full' ) : null;
+    $image_url  = $image_data ? $image_data[0] : wc_placeholder_img_src( 'full' );
+    $image_w    = $image_data ? $image_data[1] : 800;
+    $image_h    = $image_data ? $image_data[2] : 800;
+    $image_alt  = $image_id ? trim( get_post_meta( $image_id, '_wp_attachment_image_alt', true ) ) : $title;
+    if ( empty( $image_alt ) ) $image_alt = $title;
 
     // --- output ---
     ?>
 <!-- Open Graph / Deep Link Preview -->
 <meta property="og:type"        content="product" />
+<meta property="og:locale"      content="en_US" />
 <meta property="og:site_name"   content="<?php echo esc_attr( $site_name ); ?>" />
 <meta property="og:url"         content="<?php echo esc_url( $url ); ?>" />
 <meta property="og:title"       content="<?php echo esc_attr( $title ); ?>" />
 <meta property="og:description" content="<?php echo esc_attr( $desc ); ?>" />
 <?php if ( $image_url ) : ?>
-<meta property="og:image"       content="<?php echo esc_url( $image_url ); ?>" />
-<meta property="og:image:width" content="800" />
-<meta property="og:image:height" content="800" />
+<meta property="og:image"             content="<?php echo esc_url( $image_url ); ?>" />
+<meta property="og:image:secure_url"  content="<?php echo esc_url( $image_url ); ?>" />
+<meta property="og:image:width"       content="<?php echo esc_attr( $image_w ); ?>" />
+<meta property="og:image:height"      content="<?php echo esc_attr( $image_h ); ?>" />
+<meta property="og:image:alt"         content="<?php echo esc_attr( $image_alt ); ?>" />
+<meta property="og:image:type"        content="image/jpeg" />
 <?php endif; ?>
 <?php if ( $price_html ) : ?>
 <meta property="product:price:amount"   content="<?php echo esc_attr( $price_html ); ?>" />
 <meta property="product:price:currency" content="<?php echo esc_attr( $currency ); ?>" />
 <?php endif; ?>
-<!-- Twitter / Telegram fallback card -->
+<!-- Twitter / Telegram card -->
 <meta name="twitter:card"        content="summary_large_image" />
 <meta name="twitter:title"       content="<?php echo esc_attr( $title ); ?>" />
 <meta name="twitter:description" content="<?php echo esc_attr( $desc ); ?>" />
 <?php if ( $image_url ) : ?>
 <meta name="twitter:image"       content="<?php echo esc_url( $image_url ); ?>" />
+<meta name="twitter:image:alt"   content="<?php echo esc_attr( $image_alt ); ?>" />
 <?php endif; ?>
     <?php
 }, 1 );
