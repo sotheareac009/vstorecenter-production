@@ -557,3 +557,70 @@ add_action( 'init', function() {
         update_option( 'shopys_new_arrivals_rules_flushed', true );
     }
 }, 99 );
+
+// ── OPEN GRAPH / DEEP LINK PREVIEWS ──────────────────────────────────────
+// Injects OG + Twitter Card meta into <head> on product pages so that
+// pasting a product URL in Telegram, Messenger, Facebook etc. shows a
+// rich preview with product image, name, price and description.
+add_action( 'wp_head', function() {
+    if ( ! is_singular( 'product' ) ) {
+        return;
+    }
+
+    $product = wc_get_product( get_the_ID() );
+    if ( ! $product ) {
+        return;
+    }
+
+    // --- collect values ---
+    $title       = wp_strip_all_tags( $product->get_name() );
+    $url         = get_permalink();
+    $site_name   = get_bloginfo( 'name' );
+    $currency    = get_woocommerce_currency();
+
+    // Description: short desc → full desc → product name fallback
+    $desc = wp_strip_all_tags( $product->get_short_description() );
+    if ( empty( $desc ) ) {
+        $desc = wp_strip_all_tags( $product->get_description() );
+    }
+    if ( empty( $desc ) ) {
+        $desc = $title;
+    }
+    $desc = wp_trim_words( $desc, 30 );
+
+    // Price
+    $price = $product->get_price();
+    $price_html = $price ? wc_format_decimal( $price, 2 ) : '';
+
+    // Image — featured image first, fallback to WooCommerce placeholder
+    $image_id  = $product->get_image_id();
+    $image_url = $image_id
+        ? wp_get_attachment_image_url( $image_id, 'large' )
+        : wc_placeholder_img_src( 'large' );
+
+    // --- output ---
+    ?>
+<!-- Open Graph / Deep Link Preview -->
+<meta property="og:type"        content="product" />
+<meta property="og:site_name"   content="<?php echo esc_attr( $site_name ); ?>" />
+<meta property="og:url"         content="<?php echo esc_url( $url ); ?>" />
+<meta property="og:title"       content="<?php echo esc_attr( $title ); ?>" />
+<meta property="og:description" content="<?php echo esc_attr( $desc ); ?>" />
+<?php if ( $image_url ) : ?>
+<meta property="og:image"       content="<?php echo esc_url( $image_url ); ?>" />
+<meta property="og:image:width" content="800" />
+<meta property="og:image:height" content="800" />
+<?php endif; ?>
+<?php if ( $price_html ) : ?>
+<meta property="product:price:amount"   content="<?php echo esc_attr( $price_html ); ?>" />
+<meta property="product:price:currency" content="<?php echo esc_attr( $currency ); ?>" />
+<?php endif; ?>
+<!-- Twitter / Telegram fallback card -->
+<meta name="twitter:card"        content="summary_large_image" />
+<meta name="twitter:title"       content="<?php echo esc_attr( $title ); ?>" />
+<meta name="twitter:description" content="<?php echo esc_attr( $desc ); ?>" />
+<?php if ( $image_url ) : ?>
+<meta name="twitter:image"       content="<?php echo esc_url( $image_url ); ?>" />
+<?php endif; ?>
+    <?php
+}, 1 );
