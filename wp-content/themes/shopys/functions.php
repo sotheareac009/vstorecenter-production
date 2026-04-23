@@ -213,7 +213,107 @@ add_action( 'admin_menu', function() {
         'shopys-settings',
         'shopys_hero_banner_page'
     );
+
+    add_submenu_page(
+        'shopys-settings',
+        'Hero Slider Images',
+        'Hero Slider Images',
+        'manage_options',
+        'shopys-slider-images',
+        'shopys_slider_images_page'
+    );
 } );
+
+function shopys_slider_images_page() {
+    if ( ! current_user_can( 'manage_options' ) ) return;
+
+    if ( isset( $_POST['shopys_slider_save'] ) && check_admin_referer( 'shopys_slider_save' ) ) {
+        for ( $i = 1; $i <= 5; $i++ ) {
+            $url = isset( $_POST[ 'shopys_hero_slide_' . $i ] ) ? esc_url_raw( $_POST[ 'shopys_hero_slide_' . $i ] ) : '';
+            set_theme_mod( 'shopys_hero_slide_' . $i, $url );
+        }
+        echo '<div class="notice notice-success is-dismissible"><p><strong>Slider images saved!</strong></p></div>';
+    }
+
+    $defaults = shopys_hero_slider_defaults();
+    ?>
+    <div class="wrap">
+        <h1 style="display:flex;align-items:center;gap:10px;">
+            <span style="background:#13e800;color:#000;padding:4px 14px;border-radius:6px;font-size:13px;font-weight:700;">Shopys</span>
+            Hero Slider Images
+        </h1>
+        <p style="color:#666;margin-bottom:20px;">Upload or change the 5 hero slider images shown on the homepage.</p>
+
+        <form method="POST">
+            <?php wp_nonce_field( 'shopys_slider_save' ); ?>
+            <table class="form-table" role="presentation">
+                <?php for ( $i = 1; $i <= 5; $i++ ) :
+                    $current = get_theme_mod( 'shopys_hero_slide_' . $i, $defaults[ $i ] );
+                ?>
+                <tr>
+                    <th><label>Slide <?php echo $i; ?> Image</label></th>
+                    <td>
+                        <div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;">
+                            <?php if ( $current ) : ?>
+                            <img src="<?php echo esc_url( $current ); ?>" id="preview_<?php echo $i; ?>"
+                                style="width:160px;height:90px;object-fit:cover;border-radius:6px;border:2px solid #e2e6ea;" />
+                            <?php else : ?>
+                            <div id="preview_<?php echo $i; ?>" style="width:160px;height:90px;background:#f1f5f9;border-radius:6px;border:2px dashed #cbd5e1;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:12px;">No image</div>
+                            <?php endif; ?>
+                            <div>
+                                <input type="text" name="shopys_hero_slide_<?php echo $i; ?>" id="slide_url_<?php echo $i; ?>"
+                                    value="<?php echo esc_attr( $current ); ?>" class="large-text" style="margin-bottom:8px;" />
+                                <br>
+                                <button type="button" class="button shopys-upload-btn" data-target="slide_url_<?php echo $i; ?>" data-preview="preview_<?php echo $i; ?>">
+                                    Choose Image
+                                </button>
+                                <button type="button" class="button shopys-remove-btn" data-target="slide_url_<?php echo $i; ?>" data-preview="preview_<?php echo $i; ?>" style="margin-left:6px;">
+                                    Remove
+                                </button>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                <?php endfor; ?>
+            </table>
+            <p class="submit">
+                <button type="submit" name="shopys_slider_save" class="button button-primary" style="background:#13e800;border-color:#0fb500;color:#000;font-weight:700;">
+                    Save Slider Images
+                </button>
+            </p>
+        </form>
+    </div>
+
+    <script>
+    jQuery(function($){
+        // Open media uploader
+        $(document).on('click', '.shopys-upload-btn', function(e){
+            e.preventDefault();
+            var targetId  = $(this).data('target');
+            var previewId = $(this).data('preview');
+            var frame = wp.media({ title: 'Select Slide Image', button: { text: 'Use this image' }, multiple: false });
+            frame.on('select', function(){
+                var att = frame.state().get('selection').first().toJSON();
+                $('#' + targetId).val(att.url);
+                $('#' + previewId).replaceWith('<img src="'+att.url+'" id="'+previewId+'" style="width:160px;height:90px;object-fit:cover;border-radius:6px;border:2px solid #13e800;" />');
+            });
+            frame.open();
+        });
+
+        // Remove image
+        $(document).on('click', '.shopys-remove-btn', function(e){
+            e.preventDefault();
+            var targetId  = $(this).data('target');
+            var previewId = $(this).data('preview');
+            $('#' + targetId).val('');
+            $('#' + previewId).replaceWith('<div id="'+previewId+'" style="width:160px;height:90px;background:#f1f5f9;border-radius:6px;border:2px dashed #cbd5e1;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:12px;">No image</div>');
+        });
+    });
+    </script>
+    <?php
+    // Enqueue media uploader scripts
+    wp_enqueue_media();
+}
 
 function shopys_hero_banner_page() {
     if ( ! current_user_can( 'manage_options' ) ) return;
