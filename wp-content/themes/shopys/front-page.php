@@ -402,11 +402,11 @@ $slide_count = count( $slider_images );
     <!-- Static overlay — stays fixed while images slide -->
     <div class="fp-slide__overlay">
         <div class="fp-slide__content">
-            <div class="fp-hero__tag">New Arrivals 2025</div>
-            <h1 class="fp-hero__title">Your Ultimate<br><span>Tech Store</span></h1>
-            <p class="fp-hero__sub">Laptops · Gaming Gear · PC Hardware · Accessories<br>— all under one roof at the best prices.</p>
-            <a href="<?php echo esc_url( home_url( '/laptop-v2/' ) ); ?>" class="fp-hero__cta">
-                Shop Now
+            <div class="fp-hero__tag"><?php echo esc_html( get_option( 'shopys_hero_tag', 'New Arrivals 2025' ) ); ?></div>
+            <h1 class="fp-hero__title"><?php echo esc_html( get_option( 'shopys_hero_title', 'Your Ultimate' ) ); ?><br><span><?php echo esc_html( get_option( 'shopys_hero_title_highlight', 'Tech Store' ) ); ?></span></h1>
+            <p class="fp-hero__sub"><?php echo esc_html( get_option( 'shopys_hero_subtitle', 'Laptops · Gaming Gear · PC Hardware · Accessories — all under one roof at the best prices.' ) ); ?></p>
+            <a href="<?php echo esc_url( home_url( get_option( 'shopys_hero_cta_url', '/laptop-v2/' ) ) ); ?>" class="fp-hero__cta">
+                <?php echo esc_html( get_option( 'shopys_hero_cta_text', 'Shop Now' ) ); ?>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </a>
         </div>

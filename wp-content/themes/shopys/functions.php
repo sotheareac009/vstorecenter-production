@@ -192,6 +192,108 @@ function shopys_hero_slider_customizer( $wp_customize ) {
 }
 add_action( 'customize_register', 'shopys_hero_slider_customizer', 101 );
 
+// ── SHOPYS ADMIN MENU ─────────────────────────────────────────────────────
+add_action( 'admin_menu', function() {
+
+    add_menu_page(
+        'Shopys Settings',
+        'Shopys',
+        'manage_options',
+        'shopys-settings',
+        'shopys_hero_banner_page',
+        'dashicons-store',
+        59
+    );
+
+    add_submenu_page(
+        'shopys-settings',
+        'Hero Banner',
+        'Hero Banner',
+        'manage_options',
+        'shopys-settings',
+        'shopys_hero_banner_page'
+    );
+} );
+
+function shopys_hero_banner_page() {
+    if ( ! current_user_can( 'manage_options' ) ) return;
+
+    if ( isset( $_POST['shopys_hero_save'] ) && check_admin_referer( 'shopys_hero_save' ) ) {
+        $fields = array( 'shopys_hero_tag', 'shopys_hero_title', 'shopys_hero_title_highlight', 'shopys_hero_subtitle', 'shopys_hero_cta_text', 'shopys_hero_cta_url' );
+        foreach ( $fields as $key ) {
+            $val = isset( $_POST[ $key ] ) ? sanitize_text_field( $_POST[ $key ] ) : '';
+            update_option( $key, $val );
+        }
+        echo '<div class="notice notice-success is-dismissible"><p><strong>Hero banner saved!</strong></p></div>';
+    }
+
+    $tag       = get_option( 'shopys_hero_tag',             'New Arrivals 2025' );
+    $title     = get_option( 'shopys_hero_title',           'Your Ultimate' );
+    $highlight = get_option( 'shopys_hero_title_highlight', 'Tech Store' );
+    $subtitle  = get_option( 'shopys_hero_subtitle',        'Laptops · Gaming Gear · PC Hardware · Accessories — all under one roof at the best prices.' );
+    $cta_text  = get_option( 'shopys_hero_cta_text',        'Shop Now' );
+    $cta_url   = get_option( 'shopys_hero_cta_url',         '/laptop-v2/' );
+    ?>
+    <div class="wrap">
+        <h1 style="display:flex;align-items:center;gap:10px;">
+            <span style="background:#13e800;color:#000;padding:4px 14px;border-radius:6px;font-size:13px;font-weight:700;">Shopys</span>
+            Hero Banner
+        </h1>
+        <p style="color:#666;margin-bottom:20px;">Edit the text shown on the homepage hero slider overlay.</p>
+
+        <form method="POST">
+            <?php wp_nonce_field( 'shopys_hero_save' ); ?>
+            <table class="form-table" role="presentation">
+                <tr>
+                    <th><label for="shopys_hero_tag">Badge Text</label></th>
+                    <td><input type="text" id="shopys_hero_tag" name="shopys_hero_tag" value="<?php echo esc_attr( $tag ); ?>" class="regular-text">
+                    <p class="description">Small pill above the title e.g. "New Arrivals 2025"</p></td>
+                </tr>
+                <tr>
+                    <th><label for="shopys_hero_title">Title — First Line</label></th>
+                    <td><input type="text" id="shopys_hero_title" name="shopys_hero_title" value="<?php echo esc_attr( $title ); ?>" class="regular-text">
+                    <p class="description">e.g. "Your Ultimate"</p></td>
+                </tr>
+                <tr>
+                    <th><label for="shopys_hero_title_highlight">Title — Highlighted Word</label></th>
+                    <td><input type="text" id="shopys_hero_title_highlight" name="shopys_hero_title_highlight" value="<?php echo esc_attr( $highlight ); ?>" class="regular-text">
+                    <p class="description">Shown in green e.g. "Tech Store"</p></td>
+                </tr>
+                <tr>
+                    <th><label for="shopys_hero_subtitle">Subtitle</label></th>
+                    <td><textarea id="shopys_hero_subtitle" name="shopys_hero_subtitle" class="large-text" rows="3"><?php echo esc_textarea( $subtitle ); ?></textarea></td>
+                </tr>
+                <tr>
+                    <th><label for="shopys_hero_cta_text">Button Text</label></th>
+                    <td><input type="text" id="shopys_hero_cta_text" name="shopys_hero_cta_text" value="<?php echo esc_attr( $cta_text ); ?>" class="regular-text">
+                    <p class="description">e.g. "Shop Now"</p></td>
+                </tr>
+                <tr>
+                    <th><label for="shopys_hero_cta_url">Button URL</label></th>
+                    <td><input type="text" id="shopys_hero_cta_url" name="shopys_hero_cta_url" value="<?php echo esc_attr( $cta_url ); ?>" class="regular-text">
+                    <p class="description">e.g. /laptop-v2/ or full URL</p></td>
+                </tr>
+            </table>
+            <p class="submit">
+                <button type="submit" name="shopys_hero_save" class="button button-primary" style="background:#13e800;border-color:#0fb500;color:#000;font-weight:700;">
+                    Save Hero Banner
+                </button>
+            </p>
+        </form>
+
+        <div style="margin-top:30px;padding:20px;background:#f8f9fa;border:1px solid #e2e8f0;border-radius:8px;max-width:600px;">
+            <strong>Live Preview</strong>
+            <div style="margin-top:12px;background:#0d1117;padding:24px;border-radius:8px;color:#fff;">
+                <div style="display:inline-block;background:rgba(19,232,0,.15);border:1px solid rgba(19,232,0,.35);color:#13e800;font-size:11px;font-weight:700;padding:4px 12px;border-radius:50px;margin-bottom:10px;"><?php echo esc_html( $tag ); ?></div>
+                <div style="font-size:22px;font-weight:800;line-height:1.2;margin-bottom:8px;"><?php echo esc_html( $title ); ?> <span style="color:#13e800;"><?php echo esc_html( $highlight ); ?></span></div>
+                <div style="font-size:13px;opacity:.7;margin-bottom:14px;"><?php echo esc_html( $subtitle ); ?></div>
+                <div style="display:inline-block;background:#13e800;color:#000;font-weight:700;font-size:13px;padding:8px 18px;border-radius:6px;"><?php echo esc_html( $cta_text ); ?> →</div>
+            </div>
+        </div>
+    </div>
+    <?php
+}
+
 /***************************/
 //custom style
 /***************************/
