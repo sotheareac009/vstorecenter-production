@@ -6,3 +6,4 @@ vstore_prod_db.sql
 wp-content.zip
 *.zip
 wp-config.php
+.htaccess
