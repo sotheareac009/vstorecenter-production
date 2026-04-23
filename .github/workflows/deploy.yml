@@ -1,0 +1,48 @@
+name: Deploy to Hostinger
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set deployment path
+        id: vars
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "target=/public_html/" >> $GITHUB_OUTPUT
+          else
+            echo "target=/public_html/dev/" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: ${{ steps.vars.outputs.target }}
+          local-dir: ./
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.github/**
+            **/node_modules/**
+            **/wp-config.php
+            **/.env
+            **/*.sql
+            **/*.zip
+            **/wp-content/uploads/**
+            **/wp-content/cache/**
+            **/wp-content/upgrade/**
+            **/.htaccess
+            **/uat/**
+            **/dev/**
+            **/backup/**
