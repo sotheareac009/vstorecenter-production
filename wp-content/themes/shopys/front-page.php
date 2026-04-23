@@ -379,27 +379,59 @@ $slide_count = count( $slider_images );
 }
 </style>
 
+<?php
+// Trust Bar - check if enabled
+$trust_enabled = get_option( 'shopys_trust_enabled', '1' );
+if ( $trust_enabled ) {
+    $trust_icons = array(
+        1 => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 4v4h-7V8zM1 16h20M5.5 21a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM18.5 21a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/></svg>',
+        2 => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+        3 => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+        4 => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>',
+    );
+    
+    $trust_defaults = array(
+        1 => array( 'title' => 'Fastest Delivery', 'desc' => 'Phnom Penh & nationwide' ),
+        2 => array( 'title' => 'Official Warranty', 'desc' => 'All products guaranteed' ),
+        3 => array( 'title' => 'After-Sales Support', 'desc' => '7 days a week' ),
+        4 => array( 'title' => 'Secure Payment', 'desc' => 'ABA · ACLEDA · Cash' ),
+    );
+    
+    $trust_count = (int) get_option( 'shopys_trust_count', 4 );
+    $trust_items = array();
+    
+    // Collect all trust items from database
+    for ( $i = 1; $i <= 50; $i++ ) {
+        $title = get_option( "shopys_trust_title_$i", '' );
+        if ( ! empty( $title ) ) {
+            $desc = get_option( "shopys_trust_desc_$i", '' );
+            $trust_items[ $i ] = array( 'title' => $title, 'desc' => $desc );
+        }
+    }
+    
+    // If no items found, use defaults
+    if ( empty( $trust_items ) ) {
+        for ( $i = 1; $i <= 4; $i++ ) {
+            $trust_items[ $i ] = $trust_defaults[ $i ];
+        }
+    }
+    ?>
 <!-- ═══════════════════════════ TRUST BAR ════════════════════════════ -->
 <div class="fp-trust">
     <div class="fp-trust__inner">
+    <?php foreach ( $trust_items as $i => $item ) {
+        $icon = isset( $trust_icons[ $i ] ) ? $trust_icons[ $i ] : $trust_icons[1];
+    ?>
         <div class="fp-trust__item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 4v4h-7V8zM1 16h20M5.5 21a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM18.5 21a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/></svg>
-            <div><strong>Fastest Delivery</strong>Phnom Penh &amp; nationwide</div>
+            <?php echo $icon; ?>
+            <div><strong><?php echo esc_html( $item['title'] ); ?></strong><?php echo esc_html( $item['desc'] ); ?></div>
         </div>
-        <div class="fp-trust__item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            <div><strong>Official Warranty</strong>All products guaranteed</div>
-        </div>
-        <div class="fp-trust__item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-            <div><strong>After-Sales Support</strong>7 days a week</div>
-        </div>
-        <div class="fp-trust__item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
-            <div><strong>Secure Payment</strong>ABA · ACLEDA · Cash</div>
-        </div>
+    <?php } ?>
     </div>
 </div>
+    <?php
+}
+?>
 
 <!-- ═══════════════════════════ HERO SLIDER ══════════════════════════ -->
 <section class="fp-hero" id="fp-hero">

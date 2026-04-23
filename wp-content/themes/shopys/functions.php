@@ -203,6 +203,22 @@ add_action( 'admin_menu', function() {
         'shopys-hero-banner',
         'shopys_hero_banner_page'
     );
+    add_submenu_page(
+        'shopys-dashboard',
+        'Announcement Banner',
+        'Announcement Banner',
+        'edit_posts',
+        'shopys-announcement-banner',
+        'shopys_announcement_banner_page'
+    );
+    add_submenu_page(
+        'shopys-dashboard',
+        'Trust Bar',
+        'Trust Bar',
+        'edit_posts',
+        'shopys-trust-bar',
+        'shopys_trust_bar_page'
+    );
 }, 20 );
 
 // Redirect pretty admin URLs to their real admin.php?page= equivalents
@@ -295,6 +311,293 @@ function shopys_hero_banner_page() {
                 <div style="font-size:22px;font-weight:800;line-height:1.2;margin-bottom:8px;"><?php echo esc_html( $title ); ?> <span style="color:#13e800;"><?php echo esc_html( $highlight ); ?></span></div>
                 <div style="font-size:13px;opacity:.7;margin-bottom:14px;"><?php echo esc_html( $subtitle ); ?></div>
                 <div style="display:inline-block;background:#13e800;color:#000;font-weight:700;font-size:13px;padding:8px 18px;border-radius:6px;"><?php echo esc_html( $cta_text ); ?> →</div>
+            </div>
+        </div>
+    </div>
+    <?php
+}
+
+function shopys_trust_bar_page() {
+    if ( ! current_user_can( 'edit_posts' ) ) return;
+
+    if ( isset( $_POST['shopys_trust_save'] ) && check_admin_referer( 'shopys_trust_save' ) ) {
+        $enabled = isset( $_POST['shopys_trust_enabled'] ) ? '1' : '0';
+        
+        // Handle deletions first
+        if ( isset( $_POST['shopys_trust_delete'] ) && ! empty( $_POST['shopys_trust_delete'] ) ) {
+            $delete_ids = array_map( 'intval', (array) $_POST['shopys_trust_delete'] );
+            foreach ( $delete_ids as $id ) {
+                delete_option( "shopys_trust_title_$id" );
+                delete_option( "shopys_trust_desc_$id" );
+            }
+        }
+        
+        // Count and save all trust items — reindex after deletion
+        $item_count = 0;
+        $new_index = 1;
+        for ( $i = 1; $i <= 50; $i++ ) {
+            $title = isset( $_POST[ "shopys_trust_title_$i" ] ) ? sanitize_text_field( $_POST[ "shopys_trust_title_$i" ] ) : '';
+            $desc  = isset( $_POST[ "shopys_trust_desc_$i" ] ) ? sanitize_text_field( $_POST[ "shopys_trust_desc_$i" ] ) : '';
+            
+            if ( ! empty( $title ) ) {
+                update_option( "shopys_trust_title_$new_index", $title );
+                update_option( "shopys_trust_desc_$new_index", $desc );
+                $item_count++;
+                $new_index++;
+            }
+        }
+        
+        // Clean up old indices after reordering
+        for ( $i = $new_index; $i <= 50; $i++ ) {
+            delete_option( "shopys_trust_title_$i" );
+            delete_option( "shopys_trust_desc_$i" );
+        }
+        
+        update_option( 'shopys_trust_enabled', $enabled );
+        update_option( 'shopys_trust_count', $item_count );
+        echo '<div class="notice notice-success is-dismissible"><p><strong>Trust bar saved with ' . $item_count . ' item(s)!</strong></p></div>';
+    }
+
+    $enabled = get_option( 'shopys_trust_enabled', '1' );
+    $item_count = (int) get_option( 'shopys_trust_count', 4 );
+    
+    // Default trust items
+    $defaults = array(
+        1 => array( 'title' => 'Fastest Delivery', 'desc' => 'Phnom Penh & nationwide' ),
+        2 => array( 'title' => 'Official Warranty', 'desc' => 'All products guaranteed' ),
+        3 => array( 'title' => 'After-Sales Support', 'desc' => '7 days a week' ),
+        4 => array( 'title' => 'Secure Payment', 'desc' => 'ABA · ACLEDA · Cash' ),
+    );
+    ?>
+    <div class="wrap">
+        <h1 style="display:flex;align-items:center;gap:10px;">
+            <span style="background:#13e800;color:#000;padding:4px 14px;border-radius:6px;font-size:13px;font-weight:700;">Shopys</span>
+            Trust Bar
+        </h1>
+        <p style="color:#666;margin-bottom:20px;">Control the trust bar visibility and customize trust items displayed on homepage.</p>
+
+        <form method="POST" id="shopys_trust_form">
+            <?php wp_nonce_field( 'shopys_trust_save' ); ?>
+            <table class="form-table" role="presentation">
+                <tr>
+                    <th><label for="shopys_trust_enabled">Enable Trust Bar</label></th>
+                    <td>
+                        <label>
+                            <input type="checkbox" id="shopys_trust_enabled" name="shopys_trust_enabled" value="1" <?php checked( $enabled, '1' ); ?> />
+                            Show trust bar on homepage
+                        </label>
+                    </td>
+                </tr>
+            </table>
+
+            <h2 style="margin-top:30px;margin-bottom:15px;font-size:18px;">Trust Items <span style="color:#999;font-size:14px;font-weight:400;">(<span id="item_count"><?php echo $item_count; ?></span> items)</span></h2>
+            <div id="trust_items_container">
+            <?php 
+            $max_show = max( $item_count + 1, 5 );
+            for ( $i = 1; $i <= $max_show; $i++ ) {
+                $title = get_option( "shopys_trust_title_$i", isset( $defaults[$i] ) ? $defaults[$i]['title'] : '' );
+                $desc  = get_option( "shopys_trust_desc_$i", isset( $defaults[$i] ) ? $defaults[$i]['desc'] : '' );
+            ?>
+            <table class="form-table trust-item-table" role="presentation" style="border-top:1px solid #e5e5e5;padding-top:20px;margin-bottom:0;">
+                <tr>
+                    <th colspan="2" style="padding-left:0;"><strong>Item <?php echo $i; ?></strong></th>
+                    <td style="text-align:right;padding-right:0;">
+                        <button type="button" class="delete-trust-item button" data-item-id="<?php echo $i; ?>" style="color:#d40040;border-color:#d40040;background:#fff;">Delete</button>
+                    </td>
+                </tr>
+                <tr>
+                    <th style="width:30%;"><label for="shopys_trust_title_<?php echo $i; ?>">Title</label></th>
+                    <td colspan="2">
+                        <input type="text" id="shopys_trust_title_<?php echo $i; ?>" name="shopys_trust_title_<?php echo $i; ?>" value="<?php echo esc_attr( $title ); ?>" class="regular-text" placeholder="e.g., Fastest Delivery">
+                    </td>
+                </tr>
+                <tr>
+                    <th><label for="shopys_trust_desc_<?php echo $i; ?>">Description</label></th>
+                    <td colspan="2">
+                        <input type="text" id="shopys_trust_desc_<?php echo $i; ?>" name="shopys_trust_desc_<?php echo $i; ?>" value="<?php echo esc_attr( $desc ); ?>" class="regular-text" placeholder="e.g., Phnom Penh & nationwide">
+                        <p class="description">Supporting text or location</p>
+                    </td>
+                </tr>
+            </table>
+            <?php } ?>
+            </div>
+
+            <p class="submit" style="margin-top:20px;">
+                <button type="button" id="add_trust_item" class="button" style="margin-right:10px;">+ Add New Item</button>
+                <button type="submit" name="shopys_trust_save" class="button button-primary" style="background:#13e800;border-color:#0fb500;color:#000;font-weight:700;">
+                    Save Trust Bar
+                </button>
+            </p>
+        </form>
+
+        <div style="margin-top:30px;padding:20px;background:#f8f9fa;border:1px solid #e2e8f0;border-radius:8px;max-width:600px;">
+            <strong>Live Preview</strong>
+            <div style="margin-top:15px;display:flex;flex-direction:column;gap:12px;" id="preview_container">
+                <?php for ( $i = 1; $i <= $item_count; $i++ ) {
+                    $title = get_option( "shopys_trust_title_$i", isset( $defaults[$i] ) ? $defaults[$i]['title'] : '' );
+                    $desc  = get_option( "shopys_trust_desc_$i", isset( $defaults[$i] ) ? $defaults[$i]['desc'] : '' );
+                    if ( ! empty( $title ) ) {
+                ?>
+                <div style="padding:12px;background:white;border-left:3px solid #13e800;border-radius:4px;">
+                    <strong><?php echo esc_html( $title ); ?></strong><br>
+                    <span style="color:#666;font-size:13px;"><?php echo esc_html( $desc ); ?></span>
+                </div>
+                <?php } } ?>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.getElementById('add_trust_item').addEventListener('click', function(e) {
+        e.preventDefault();
+        const container = document.getElementById('trust_items_container');
+        const tables = container.querySelectorAll('.trust-item-table');
+        const nextNum = tables.length + 1;
+        
+        const newItemHTML = `
+            <table class="form-table trust-item-table" role="presentation" style="border-top:1px solid #e5e5e5;padding-top:20px;margin-bottom:0;">
+                <tr>
+                    <th colspan="2" style="padding-left:0;"><strong>Item ${nextNum}</strong></th>
+                    <td style="text-align:right;padding-right:0;">
+                        <button type="button" class="delete-trust-item button" data-item-id="${nextNum}" style="color:#d40040;border-color:#d40040;background:#fff;">Delete</button>
+                    </td>
+                </tr>
+                <tr>
+                    <th style="width:30%;"><label for="shopys_trust_title_${nextNum}">Title</label></th>
+                    <td colspan="2">
+                        <input type="text" id="shopys_trust_title_${nextNum}" name="shopys_trust_title_${nextNum}" value="" class="regular-text" placeholder="e.g., Fastest Delivery">
+                    </td>
+                </tr>
+                <tr>
+                    <th><label for="shopys_trust_desc_${nextNum}">Description</label></th>
+                    <td colspan="2">
+                        <input type="text" id="shopys_trust_desc_${nextNum}" name="shopys_trust_desc_${nextNum}" value="" class="regular-text" placeholder="e.g., Phnom Penh & nationwide">
+                        <p class="description">Supporting text or location</p>
+                    </td>
+                </tr>
+            </table>
+        `;
+        
+        container.insertAdjacentHTML('beforeend', newItemHTML);
+        attachDeleteListener();
+    });
+
+    function attachDeleteListener() {
+        document.querySelectorAll('.delete-trust-item').forEach(btn => {
+            btn.removeEventListener('click', deleteItem);
+            btn.addEventListener('click', deleteItem);
+        });
+    }
+
+    function deleteItem(e) {
+        e.preventDefault();
+        const btn = e.target;
+        const table = btn.closest('.trust-item-table');
+        if (confirm('Are you sure you want to delete this item?')) {
+            table.remove();
+            updatePreview();
+        }
+    }
+
+    function updatePreview() {
+        const preview = document.getElementById('preview_container');
+        preview.innerHTML = '';
+        let count = 0;
+        
+        for (let i = 1; i <= 50; i++) {
+            const titleEl = document.getElementById(`shopys_trust_title_${i}`);
+            const descEl = document.getElementById(`shopys_trust_desc_${i}`);
+            
+            if (titleEl && titleEl.value.trim()) {
+                count++;
+                const previewItem = `
+                    <div style="padding:12px;background:white;border-left:3px solid #13e800;border-radius:4px;">
+                        <strong>${titleEl.value}</strong><br>
+                        <span style="color:#666;font-size:13px;">${descEl.value}</span>
+                    </div>
+                `;
+                preview.insertAdjacentHTML('beforeend', previewItem);
+            }
+        }
+        
+        document.getElementById('item_count').textContent = count;
+    }
+
+    // Update preview in real-time on input changes
+    document.getElementById('shopys_trust_form').addEventListener('input', updatePreview);
+    
+    // Initial attachment of delete listeners
+    attachDeleteListener();
+    </script>
+    <?php
+}
+
+function shopys_announcement_banner_page() {
+    if ( ! current_user_can( 'edit_posts' ) ) return;
+
+    if ( isset( $_POST['shopys_announcement_save'] ) && check_admin_referer( 'shopys_announcement_save' ) ) {
+        $enabled = isset( $_POST['shopys_announcement_enabled'] ) ? '1' : '0';
+        $text    = isset( $_POST['shopys_announcement_text'] ) ? sanitize_text_field( $_POST['shopys_announcement_text'] ) : '';
+        $badge   = isset( $_POST['shopys_announcement_badge'] ) ? sanitize_text_field( $_POST['shopys_announcement_badge'] ) : '';
+        
+        update_option( 'shopys_announcement_enabled', $enabled );
+        update_option( 'shopys_announcement_text', $text );
+        update_option( 'shopys_announcement_badge', $badge );
+        
+        echo '<div class="notice notice-success is-dismissible"><p><strong>Announcement banner saved!</strong></p></div>';
+    }
+
+    $enabled = get_option( 'shopys_announcement_enabled', '1' );
+    $text    = get_option( 'shopys_announcement_text', 'No Thai Products Here' );
+    $badge   = get_option( 'shopys_announcement_badge', 'Notice' );
+    ?>
+    <div class="wrap">
+        <h1 style="display:flex;align-items:center;gap:10px;">
+            <span style="background:#13e800;color:#000;padding:4px 14px;border-radius:6px;font-size:13px;font-weight:700;">Shopys</span>
+            Announcement Banner
+        </h1>
+        <p style="color:#666;margin-bottom:20px;">Control the top announcement banner visibility and content.</p>
+
+        <form method="POST">
+            <?php wp_nonce_field( 'shopys_announcement_save' ); ?>
+            <table class="form-table" role="presentation">
+                <tr>
+                    <th><label for="shopys_announcement_enabled">Enable Banner</label></th>
+                    <td>
+                        <label>
+                            <input type="checkbox" id="shopys_announcement_enabled" name="shopys_announcement_enabled" value="1" <?php checked( $enabled, '1' ); ?> />
+                            Show announcement banner on homepage
+                        </label>
+                    </td>
+                </tr>
+                <tr>
+                    <th><label for="shopys_announcement_text">Banner Text</label></th>
+                    <td><input type="text" id="shopys_announcement_text" name="shopys_announcement_text" value="<?php echo esc_attr( $text ); ?>" class="regular-text">
+                    <p class="description">Main message to display</p></td>
+                </tr>
+                <tr>
+                    <th><label for="shopys_announcement_badge">Badge Label</label></th>
+                    <td><input type="text" id="shopys_announcement_badge" name="shopys_announcement_badge" value="<?php echo esc_attr( $badge ); ?>" class="regular-text">
+                    <p class="description">Small badge text e.g. "Notice", "Alert", "Info"</p></td>
+                </tr>
+            </table>
+            <p class="submit">
+                <button type="submit" name="shopys_announcement_save" class="button button-primary" style="background:#13e800;border-color:#0fb500;color:#000;font-weight:700;">
+                    Save Announcement Banner
+                </button>
+            </p>
+        </form>
+
+        <div style="margin-top:30px;padding:20px;background:#f8f9fa;border:1px solid #e2e8f0;border-radius:8px;max-width:600px;">
+            <strong>Live Preview</strong>
+            <div style="margin-top:12px;background:linear-gradient(135deg, #13e800 0%, #0fb500 100%);padding:6px 16px;border-radius:8px;display:flex;align-items:center;gap:8px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" style="flex-shrink:0;">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                <span style="font-size:12px;font-weight:700;color:#fff;"><?php echo esc_html( $text ); ?></span>
+                <span style="background:rgb(255,193,212);color:#d40040;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;margin-left:auto;"><?php echo esc_html( $badge ); ?></span>
             </div>
         </div>
     </div>
@@ -535,6 +838,13 @@ add_filter( 'template_include', 'shopys_force_product_brand_template', 999 );
 // Premium Announcement Banner (above search area)
 /**********************/
 function shopys_announcement_banner() {
+    $enabled = get_option( 'shopys_announcement_enabled', '1' );
+    if ( ! $enabled ) {
+        return;
+    }
+
+    $text = get_option( 'shopys_announcement_text', 'No Thai Products Here' );
+    $badge = get_option( 'shopys_announcement_badge', 'Notice' );
     ?>
     <div class="shopys-announcement-bar">
         <div class="shopys-ann-inner">
@@ -545,8 +855,8 @@ function shopys_announcement_banner() {
                     <line x1="12" y1="17" x2="12.01" y2="17"/>
                 </svg>
             </span>
-            <span class="shopys-ann-text">No Thai Products Here</span>
-            <span class="shopys-ann-badge">Notice</span>
+            <span class="shopys-ann-text"><?php echo esc_html( $text ); ?></span>
+            <span class="shopys-ann-badge"><?php echo esc_html( $badge ); ?></span>
         </div>
     </div>
     <style>
