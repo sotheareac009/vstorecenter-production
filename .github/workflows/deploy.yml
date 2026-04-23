@@ -17,43 +17,22 @@ jobs:
         id: vars
         run: |
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "target=/" >> $GITHUB_OUTPUT
+            echo "theme_dir=public_html/wp-content/themes/shopys/" >> $GITHUB_OUTPUT
           else
-            echo "target=/dev/" >> $GITHUB_OUTPUT
+            echo "theme_dir=public_html/dev/wp-content/themes/shopys/" >> $GITHUB_OUTPUT
           fi
 
-      - name: Deploy via FTP
+      - name: Deploy theme via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: ${{ steps.vars.outputs.target }}
-          local-dir: ./
+          local-dir: ./wp-content/themes/shopys/
+          server-dir: ${{ steps.vars.outputs.theme_dir }}
           timeout: 60000
-          log-level: minimal
+          log-level: standard
           exclude: |
             **/.git*
             **/.git*/**
-            **/.github/**
-            **/.private/**
-            **/node_modules/**
-            **/wp-admin/**
-            **/wp-includes/**
-            **/wp-content/uploads/**
-            **/wp-content/cache/**
-            **/wp-content/upgrade/**
-            **/wp-content/backup-db/**
-            **/wp-content/backups/**
-            **/backup/**
-            **/wp-config.php
-            **/wp-config-sample.php
-            **/.env
             **/.DS_Store
-            **/.htaccess
-            **/.htaccess.bk
-            **/.htaccess.old-*
-            **/*.sql
-            **/*.zip
-            **/readme.html
-            **/license.txt
