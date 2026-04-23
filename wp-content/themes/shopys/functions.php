@@ -586,7 +586,7 @@ add_action( 'auth_redirect', function() {
 // Flush rewrite rules whenever the registered rules don't include our route
 add_action( 'init', function() {
     $rules = get_option( 'rewrite_rules' );
-    if ( empty( $rules ) || ! isset( $rules['^new-arrivals/?$'] ) ) {
+    if ( empty( $rules ) || ! isset( $rules['^new-arrivals/?$'] ) || ! isset( $rules['^vstore-admin/?$'] ) ) {
         flush_rewrite_rules();
     }
 }, 99 );
