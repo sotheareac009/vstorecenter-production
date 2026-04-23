@@ -193,6 +193,7 @@ function shopys_hero_slider_customizer( $wp_customize ) {
 add_action( 'customize_register', 'shopys_hero_slider_customizer', 101 );
 
 // ── SHOPYS ADMIN SUBMENUS (attached to existing shopys-dashboard menu) ────
+// Priority 20 — runs AFTER shortcode-guide.php registers the parent menu
 add_action( 'admin_menu', function() {
     add_submenu_page(
         'shopys-dashboard',
@@ -202,7 +203,7 @@ add_action( 'admin_menu', function() {
         'shopys-hero-banner',
         'shopys_hero_banner_page'
     );
-} );
+}, 20 );
 
 // Redirect pretty admin URLs to their real admin.php?page= equivalents
 add_action( 'init', function() {
