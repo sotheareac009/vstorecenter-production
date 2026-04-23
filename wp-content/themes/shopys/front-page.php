@@ -206,45 +206,55 @@ $slide_count = count( $slider_images );
 /* ── CATEGORY QUICK-NAV ──────────────────────────────────────── */
 .fp-cats {
     background: #ffffff;
-    padding: 22px 5%;
+    padding: 32px 5%;
     border-top: 1px solid #eaeaea;
     border-bottom: 1px solid #eaeaea;
 }
 .fp-cats__inner {
     max-width: 1280px;
     margin: 0 auto;
-    display: flex;
-    justify-content: center;
-    gap: 12px;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
 }
 .fp-cats__item {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    gap: 12px;
     text-decoration: none;
-    padding: 13px 22px;
-    border-radius: var(--radius);
+    padding: 22px 16px 18px;
+    border-radius: 12px;
     border: 1.5px solid #e2e6ea;
-    background: #f8f9fa;
-    color: #444;
+    background: #ffffff;
+    color: #2d3748;
     font-size: 12px;
-    font-weight: 700;
-    letter-spacing: .6px;
+    font-weight: 800;
+    letter-spacing: .8px;
     text-transform: uppercase;
     transition: var(--transition);
-    min-width: 100px;
+    text-align: center;
+    position: relative;
 }
 .fp-cats__item:hover {
-    background: #f0fff0;
+    background: #f7fff6;
     border-color: var(--accent);
     color: var(--accent-dim);
     transform: translateY(-3px);
     box-shadow: 0 6px 18px rgba(19,232,0,.15);
     text-decoration: none;
 }
-.fp-cats__icon { width: 34px; height: 34px; fill: currentColor; }
+.fp-cats__icon {
+    width: 32px;
+    height: 32px;
+    stroke: currentColor;
+    fill: none;
+    transition: color var(--transition);
+}
+.fp-cats__item:hover .fp-cats__icon {
+    color: var(--accent);
+}
 
 /* ── TRUST BAR ───────────────────────────────────────────────── */
 .fp-trust {
@@ -361,7 +371,10 @@ $slide_count = count( $slider_images );
     .fp-hero { height: 300px; }
     .fp-products { padding: 34px 4% 50px; }
     .fp-section-head__title { font-size: 18px; }
-    .fp-cats__item { min-width: 80px; padding: 10px 14px; }
+    .fp-cats { padding: 24px 4%; }
+    .fp-cats__inner { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+    .fp-cats__item { padding: 16px 12px 14px; gap: 8px; font-size: 11px; }
+    .fp-cats__icon { width: 26px; height: 26px; }
     .fp-arrow { width: 36px; height: 36px; }
 }
 </style>
@@ -542,7 +555,464 @@ $slide_count = count( $slider_images );
     transition: background .2s;
 }
 .fp-marvo__banner-text a:hover { background: #fff; text-decoration: none; }
+
+/* ── WOOCOMMERCE CATEGORIES GRID ─────────────────────────── */
+.fp-categories {
+    background: #ffffff;
+    padding: 48px 5% 60px;
+}
+.fp-categories__inner { max-width: 1380px; margin: 0 auto; }
+
+.fp-categories__header {
+    margin-bottom: 36px;
+    text-align: center;
+}
+.fp-categories__title {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--dark);
+    margin: 0 0 8px;
+    letter-spacing: -.4px;
+}
+.fp-categories__subtitle {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.fp-categories__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    margin-bottom: 40px;
+}
+
+.fp-cat-card {
+    background: #fff;
+    border: 1.5px solid #e2e6ea;
+    border-radius: 12px;
+    padding: 22px 16px 18px;
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+    text-align: center;
+}
+.fp-cat-card:hover {
+    border-color: var(--accent);
+    background: #f7fff6;
+    box-shadow: 0 6px 18px rgba(19,232,0,.15);
+    transform: translateY(-3px);
+}
+
+.fp-cat-card__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 14px;
+    color: #2d3748;
+    transition: color var(--transition);
+}
+.fp-cat-card:hover .fp-cat-card__icon {
+    color: var(--accent);
+}
+.fp-cat-card__icon svg {
+    width: 32px;
+    height: 32px;
+}
+
+.fp-cat-card__name {
+    font-size: 12px;
+    font-weight: 800;
+    color: #2d3748;
+    margin: 0 0 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+    transition: color var(--transition);
+}
+.fp-cat-card:hover .fp-cat-card__name {
+    color: var(--accent-dim);
+}
+.fp-cat-card__count {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    margin: 0;
+    letter-spacing: .3px;
+}
+
+.fp-cat-card__toggle {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 22px;
+    height: 22px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #9ca3af;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition);
+    border-radius: 4px;
+}
+.fp-cat-card__toggle:hover {
+    background: rgba(19,232,0,.1);
+    color: var(--accent);
+}
+.fp-cat-card:hover .fp-cat-card__toggle {
+    color: var(--accent);
+}
+.fp-cat-card__toggle.active {
+    transform: rotate(180deg);
+    color: var(--accent);
+}
+
+.fp-cat-card__children {
+    display: none;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid #eaedf3;
+    text-align: left;
+    animation: slideDown .25s ease;
+}
+.fp-cat-card__children.active {
+    display: block;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Wrappers to force vertical stacking (header + nested children below) */
+.fp-cat-child-wrap,
+.fp-cat-grandchild-wrap {
+    display: block;
+    width: 100%;
+}
+
+.fp-cat-child {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 11px 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a202c;
+    text-decoration: none;
+    transition: all var(--transition);
+    border-radius: 8px;
+    margin-bottom: 4px;
+}
+.fp-cat-child:hover {
+    color: var(--accent);
+    background: rgba(19,232,0,.08);
+}
+
+.fp-cat-child a {
+    color: inherit;
+    text-decoration: none;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: color var(--transition);
+    font-weight: 600;
+}
+.fp-cat-child a:hover {
+    color: var(--accent);
+}
+
+.fp-cat-child.has-grandchild {
+    cursor: pointer;
+}
+
+.fp-cat-child__toggle {
+    width: 20px;
+    height: 20px;
+    background: rgba(19,232,0,.1);
+    border: none;
+    cursor: pointer;
+    color: var(--accent);
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition);
+    flex-shrink: 0;
+    border-radius: 4px;
+}
+.fp-cat-child__toggle:hover {
+    background: rgba(19,232,0,.2);
+}
+.fp-cat-child__toggle.active {
+    transform: rotate(90deg);
+    background: rgba(19,232,0,.15);
+}
+
+.fp-cat-grandchildren {
+    display: none;
+    margin: 4px 0 10px 12px;
+    padding: 4px 0 4px 14px;
+    border-left: 2px solid rgba(19,232,0,.25);
+    animation: slideDown .25s ease;
+}
+.fp-cat-grandchildren.active {
+    display: block;
+}
+
+.fp-cat-grandchild {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 9px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #2d3748;
+    text-decoration: none;
+    transition: all var(--transition);
+    border-radius: 6px;
+    margin-bottom: 3px;
+}
+.fp-cat-grandchild:hover {
+    color: var(--accent);
+    background: rgba(19,232,0,.06);
+}
+
+.fp-cat-grandchild a {
+    color: inherit;
+    text-decoration: none;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    transition: color var(--transition);
+}
+.fp-cat-grandchild a::before {
+    content: '•';
+    font-size: 14px;
+    color: var(--accent);
+    opacity: 0.8;
+    line-height: 1;
+}
+.fp-cat-grandchild a:hover {
+    color: var(--accent);
+}
+
+.fp-cat-grandchild__toggle {
+    width: 18px;
+    height: 18px;
+    background: rgba(19,232,0,.08);
+    border: none;
+    cursor: pointer;
+    color: var(--accent);
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition);
+    flex-shrink: 0;
+    border-radius: 3px;
+}
+.fp-cat-grandchild__toggle:hover {
+    background: rgba(19,232,0,.18);
+}
+.fp-cat-grandchild__toggle.active {
+    transform: rotate(90deg);
+    background: rgba(19,232,0,.13);
+}
+
+.fp-cat-grandchild.has-grandchild {
+    cursor: pointer;
+}
+
+/* ── RESPONSIVE ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .fp-categories { padding: 36px 4% 48px; }
+    .fp-categories__title { font-size: 22px; }
+    .fp-categories__grid { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; }
+    .fp-cat-card { padding: 20px 16px; }
+    .fp-cat-child { padding: 10px 8px; font-size: 12px; }
+    .fp-cat-grandchild { padding: 9px 6px; font-size: 12px; }
+}
 </style>
+
+<!-- ═══════════════════════════ CATEGORIES SECTION ═════════════════════ -->
+<section class="fp-categories">
+    <div class="fp-categories__inner">
+        <div class="fp-categories__header">
+            <h2 class="fp-categories__title">Shop by Category</h2>
+            <p class="fp-categories__subtitle">Browse our premium collection of products</p>
+        </div>
+
+        <div class="fp-categories__grid" id="fp-categories-grid">
+            <?php
+            if ( ! function_exists( 'shopys_get_category_icon' ) ) {
+                function shopys_get_category_icon( $slug, $name = '' ) {
+                    $slug = strtolower( $slug );
+                    $name = strtolower( $name );
+                    $combined = $slug . ' ' . $name;
+
+                    $icons = array(
+                        'laptop'      => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M1 20h22"/></svg>',
+                        'desktop'     => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>',
+                        'computer'    => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>',
+                        'pc'          => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 7h6M9 11h6M9 15h2"/></svg>',
+                        'component'   => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 15h3M1 9h3M1 15h3"/></svg>',
+                        'monitor'     => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>',
+                        'accessor'    => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 7.28l-7.21 7.21a2 2 0 0 1-2.83 0L8 11.59V7.5l3.5-3.5h4l4 4v-.72z"/><circle cx="14" cy="8" r="1"/></svg>',
+                        'gaming'      => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12h4M8 10v4"/><circle cx="15" cy="13" r="1"/><circle cx="18" cy="11" r="1"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>',
+                        'keyboard'    => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg>',
+                        'mouse'       => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 7v4"/></svg>',
+                        'headset'     => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1v-6h3v4zM3 19a2 2 0 0 0 2 2h1v-6H3v4z"/></svg>',
+                        'headphone'   => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1v-6h3v4zM3 19a2 2 0 0 0 2 2h1v-6H3v4z"/></svg>',
+                        'speaker'     => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><circle cx="12" cy="14" r="4"/><circle cx="12" cy="6" r="1"/></svg>',
+                        'audio'       => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1v-6h3v4zM3 19a2 2 0 0 0 2 2h1v-6H3v4z"/></svg>',
+                        'mousepad'    => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="1"/></svg>',
+                        'phone'       => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>',
+                        'mobile'      => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>',
+                        'camera'      => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>',
+                        'printer'     => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>',
+                        'network'     => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10 15 15 0 0 1-4-10 15 15 0 0 1 4-10z"/></svg>',
+                        'router'      => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="14" width="20" height="8" rx="2"/><path d="M6.01 18H6M10.01 18H10M15 10V5M12.5 2.5 15 5l2.5-2.5M20 10V5M17.5 2.5 20 5l2.5-2.5"/></svg>',
+                        'cable'       => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2v6a6 6 0 0 0 12 0V2M6 22v-4M18 22v-4"/></svg>',
+                        'storage'     => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="4" rx="1"/><rect x="2" y="11" width="20" height="4" rx="1"/><rect x="2" y="17" width="20" height="4" rx="1"/><path d="M6 7h.01M6 13h.01M6 19h.01"/></svg>',
+                        'ssd'         => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="4" rx="1"/><rect x="2" y="11" width="20" height="4" rx="1"/><rect x="2" y="17" width="20" height="4" rx="1"/></svg>',
+                        'ram'         => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 19V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v14M6 19l-2 2M18 19l2 2M10 7v6M14 7v6"/></svg>',
+                        'cpu'         => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 15h3M1 9h3M1 15h3"/></svg>',
+                        'hardware'    => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 15h3M1 9h3M1 15h3"/></svg>',
+                        'office'      => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>',
+                        'software'    => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>',
+                        'used'        => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><polyline points="21 3 21 8 16 8"/></svg>',
+                        'tablet'      => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M10 18h4"/></svg>',
+                        'watch'       => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><path d="M12 9v3l2 2M9 3h6l1 4M9 21h6l1-4"/></svg>',
+                        'battery'     => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="6" width="18" height="12" rx="2"/><path d="M23 13v-2M6 10v4M10 10v4M14 10v4"/></svg>',
+                        'charger'     => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>',
+                        'marvo'       => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12h4M8 10v4"/><circle cx="15" cy="13" r="1"/><circle cx="18" cy="11" r="1"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>',
+                    );
+
+                    foreach ( $icons as $keyword => $svg ) {
+                        if ( strpos( $combined, $keyword ) !== false ) {
+                            return $svg;
+                        }
+                    }
+
+                    // Default icon (box/product)
+                    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>';
+                }
+            }
+
+            function shopys_render_category_tree( $parent_id = 0, $depth = 0 ) {
+                $categories = get_terms( array(
+                    'taxonomy'   => 'product_cat',
+                    'parent'     => $parent_id,
+                    'hide_empty' => false,
+                    'number'     => 100,
+                    'orderby'    => 'name',
+                    'order'      => 'ASC',
+                ) );
+
+                if ( empty( $categories ) || is_wp_error( $categories ) ) {
+                    return;
+                }
+
+                foreach ( $categories as $cat ) :
+                    $cat_link = get_term_link( $cat, 'product_cat' );
+                    $product_count = $cat->count;
+
+                    $grandchildren = get_terms( array(
+                        'taxonomy'   => 'product_cat',
+                        'parent'     => $cat->term_id,
+                        'hide_empty' => false,
+                        'number'     => 100,
+                        'orderby'    => 'name',
+                        'order'      => 'ASC',
+                    ) );
+
+                    $has_children = ! empty( $grandchildren ) && ! is_wp_error( $grandchildren );
+
+                    if ( $depth === 0 ) :
+            ?>
+            <div class="fp-cat-card" onclick="window.location.href='<?php echo esc_js( esc_url( $cat_link ) ); ?>';">
+                <div class="fp-cat-card__icon">
+                    <?php echo shopys_get_category_icon( $cat->slug, $cat->name ); ?>
+                </div>
+                <h3 class="fp-cat-card__name">
+                    <?php echo esc_html( $cat->name ); ?>
+                </h3>
+                <p class="fp-cat-card__count">
+                    <?php echo esc_html( sprintf( _n( '%d product', '%d products', $product_count, 'woocommerce' ), $product_count ) ); ?>
+                    <?php if ( $has_children ) : ?>
+                        <span style="display:inline-block;margin-left:4px;font-size:10px;background:rgba(19,232,0,.12);color:var(--accent-dim);padding:1px 6px;border-radius:10px;font-weight:700;">
+                            <?php echo count( $grandchildren ); ?> sub
+                        </span>
+                    <?php endif; ?>
+                </p>
+
+                <?php if ( $has_children ) : ?>
+                    <button class="fp-cat-card__toggle" onclick="event.stopPropagation(); this.classList.toggle('active'); this.nextElementSibling.classList.toggle('active');">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </button>
+
+                    <div class="fp-cat-card__children" style="margin: 0; padding: 0; border: none;">
+                        <?php shopys_render_category_tree( $cat->term_id, 1 ); ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+            <?php
+                    else :
+                        $great_grandchildren = get_terms( array(
+                            'taxonomy'   => 'product_cat',
+                            'parent'     => $cat->term_id,
+                            'hide_empty' => false,
+                            'orderby'    => 'name',
+                            'order'      => 'ASC',
+                        ) );
+                        $has_more_children = ! empty( $great_grandchildren ) && ! is_wp_error( $great_grandchildren );
+                        $wrapper_class = $depth === 1 ? 'fp-cat-child-wrap' : 'fp-cat-grandchild-wrap';
+                        $row_class = $depth === 1 ? 'fp-cat-child' : 'fp-cat-grandchild';
+                        $toggle_class = $depth === 1 ? 'fp-cat-child__toggle' : 'fp-cat-grandchild__toggle';
+            ?>
+            <div class="<?php echo $wrapper_class; ?>">
+                <div class="<?php echo $row_class; ?> <?php echo $has_more_children ? 'has-grandchild' : ''; ?>">
+                    <a href="<?php echo esc_url( $cat_link ); ?>" onclick="event.stopPropagation();">
+                        <?php echo esc_html( $cat->name ); ?>
+                    </a>
+                    <?php if ( $has_more_children ) : ?>
+                        <button class="<?php echo $toggle_class; ?>" onclick="event.stopPropagation(); this.classList.toggle('active'); this.closest('.<?php echo $wrapper_class; ?>').querySelector('.fp-cat-grandchildren').classList.toggle('active');">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <polyline points="9 6 15 12 9 18"></polyline>
+                            </svg>
+                        </button>
+                    <?php endif; ?>
+                </div>
+                <?php if ( $has_more_children ) : ?>
+                    <div class="fp-cat-grandchildren">
+                        <?php shopys_render_category_tree( $cat->term_id, $depth + 1 ); ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+            <?php
+                    endif;
+                endforeach;
+            }
+
+            shopys_render_category_tree( 0, 0 );
+            ?>
+        </div>
+    </div>
+</section>
 
 <section class="fp-marvo">
     <div class="fp-marvo__banner">
