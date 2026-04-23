@@ -550,11 +550,11 @@ add_action( 'after_switch_theme', function() {
     flush_rewrite_rules();
 } );
 
-// One-time flush so the /new-arrivals/ rule takes effect immediately
+// Flush rewrite rules whenever the registered rules don't include our route
 add_action( 'init', function() {
-    if ( ! get_option( 'shopys_new_arrivals_rules_flushed' ) ) {
+    $rules = get_option( 'rewrite_rules' );
+    if ( empty( $rules ) || ! isset( $rules['^new-arrivals/?$'] ) ) {
         flush_rewrite_rules();
-        update_option( 'shopys_new_arrivals_rules_flushed', true );
     }
 }, 99 );
 
