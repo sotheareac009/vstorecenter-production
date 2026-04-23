@@ -17,9 +17,9 @@ jobs:
         id: vars
         run: |
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "theme_dir=domains/vstorecenter.com/public_html/wp-content/themes/shopys/" >> $GITHUB_OUTPUT
+            echo "theme_dir=/wp-content/themes/shopys/" >> $GITHUB_OUTPUT
           else
-            echo "theme_dir=domains/vstorecenter.com/public_html/dev/wp-content/themes/shopys/" >> $GITHUB_OUTPUT
+            echo "theme_dir=/dev/wp-content/themes/shopys/" >> $GITHUB_OUTPUT
           fi
 
       - name: Deploy theme via FTP
