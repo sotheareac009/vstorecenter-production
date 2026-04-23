@@ -204,6 +204,23 @@ add_action( 'admin_menu', function() {
     );
 } );
 
+// Redirect pretty admin URLs to their real admin.php?page= equivalents
+add_action( 'init', function() {
+    $uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
+    $map = array(
+        'wp-admin/shopys-hero-banner'  => 'shopys-hero-banner',
+        'wp-admin/shopys-hero-slider'  => 'shopys-hero-slider',
+        'wp-admin/shopys-dashboard'    => 'shopys-dashboard',
+        'wp-admin/shopys-product-details' => 'shopys-product-details',
+    );
+    foreach ( $map as $pretty => $page ) {
+        if ( strpos( $uri, $pretty ) !== false && strpos( $uri, 'admin.php' ) === false ) {
+            wp_safe_redirect( admin_url( 'admin.php?page=' . $page ) );
+            exit;
+        }
+    }
+}, 1 );
+
 function shopys_hero_banner_page() {
     if ( ! current_user_can( 'edit_posts' ) ) return;
 
