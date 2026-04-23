@@ -570,11 +570,30 @@ add_action( 'template_redirect', function() {
     }
 }, 1 );
 
-// Redirect unauthenticated wp-admin access to custom login page
+// Redirect all wp-login.php and wp-admin unauthenticated access to /vstore-admin/
+add_filter( 'login_url', function( $login_url, $redirect ) {
+    // Allow logout to work normally
+    if ( isset( $_GET['action'] ) && in_array( $_GET['action'], array( 'logout', 'lostpassword', 'rp', 'resetpass' ) ) ) {
+        return $login_url;
+    }
+    return home_url( '/vstore-admin/' );
+}, 10, 2 );
+
 add_action( 'auth_redirect', function() {
     if ( ! is_user_logged_in() ) {
         wp_redirect( home_url( '/vstore-admin/' ) );
         exit;
+    }
+} );
+
+// Intercept direct wp-login.php access and redirect to /vstore-admin/
+add_action( 'init', function() {
+    if ( isset( $GLOBALS['pagenow'] ) && $GLOBALS['pagenow'] === 'wp-login.php' ) {
+        $action = isset( $_GET['action'] ) ? $_GET['action'] : '';
+        if ( ! in_array( $action, array( 'logout', 'lostpassword', 'rp', 'resetpass', 'postpass' ) ) && ! isset( $_POST['log'] ) ) {
+            wp_redirect( home_url( '/vstore-admin/' ) );
+            exit;
+        }
     }
 } );
 
