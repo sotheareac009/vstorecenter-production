@@ -30,19 +30,30 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           server-dir: ${{ steps.vars.outputs.target }}
           local-dir: ./
+          timeout: 60000
+          log-level: minimal
           exclude: |
             **/.git*
             **/.git*/**
             **/.github/**
+            **/.private/**
             **/node_modules/**
             **/wp-config.php
+            **/wp-config-sample.php
             **/.env
+            **/.htaccess
+            **/.htaccess.bk
             **/*.sql
             **/*.zip
+            **/readme.html
+            **/license.txt
+            **/wp-admin/**
+            **/wp-includes/**
             **/wp-content/uploads/**
             **/wp-content/cache/**
             **/wp-content/upgrade/**
-            **/.htaccess
+            **/wp-content/backup-db/**
+            **/wp-content/backups/**
             **/uat/**
             **/dev/**
             **/backup/**
