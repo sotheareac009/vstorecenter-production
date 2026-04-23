@@ -8,3 +8,8 @@ vstore_prod_db.sql
 wp-content.zip
 *.zip
 wp-config.php
+.env
+node_modules/
+.DS_Store
+wp-content/cache/
+wp-content/upgrade/
