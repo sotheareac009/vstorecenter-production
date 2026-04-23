@@ -550,6 +550,39 @@ add_action( 'after_switch_theme', function() {
     flush_rewrite_rules();
 } );
 
+// ── SECRET ADMIN LOGIN ROUTE /vstore-admin/ ──────────────────────────────
+add_action( 'init', function() {
+    add_rewrite_rule( '^vstore-admin/?$', 'index.php?shopys_admin_login=1', 'top' );
+} );
+
+add_filter( 'query_vars', function( $vars ) {
+    $vars[] = 'shopys_admin_login';
+    return $vars;
+} );
+
+add_action( 'template_redirect', function() {
+    if ( get_query_var( 'shopys_admin_login' ) ) {
+        $template = get_stylesheet_directory() . '/page-vstore-admin.php';
+        if ( file_exists( $template ) ) {
+            include $template;
+            exit;
+        }
+    }
+}, 1 );
+
+// Redirect unauthenticated wp-admin / wp-login.php to custom login page
+add_filter( 'login_url', function( $login_url, $redirect ) {
+    return home_url( '/vstore-admin/' );
+}, 10, 2 );
+
+add_action( 'auth_redirect', function() {
+    if ( ! is_user_logged_in() ) {
+        wp_redirect( home_url( '/vstore-admin/' ) );
+        exit;
+    }
+} );
+
+// ── FLUSH REWRITE RULES ───────────────────────────────────────────────────
 // Flush rewrite rules whenever the registered rules don't include our route
 add_action( 'init', function() {
     $rules = get_option( 'rewrite_rules' );
