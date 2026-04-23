@@ -1,5 +1,7 @@
 wp-content/uploads/
 uat/
+dev/
+backup/
 new_vstore_web.sql
 u808097185_admin_v_04-20-2.sql
 vstore_prod_db.sql
