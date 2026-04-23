@@ -192,6 +192,115 @@ function shopys_hero_slider_customizer( $wp_customize ) {
 }
 add_action( 'customize_register', 'shopys_hero_slider_customizer', 101 );
 
+// ── SHOPYS ADMIN SUBMENUS (attached to existing shopys-dashboard menu) ────
+// Priority 20 — runs AFTER shortcode-guide.php registers the parent menu
+add_action( 'admin_menu', function() {
+    add_submenu_page(
+        'shopys-dashboard',
+        'Hero Banner',
+        'Hero Banner',
+        'edit_posts',
+        'shopys-hero-banner',
+        'shopys_hero_banner_page'
+    );
+}, 20 );
+
+// Redirect pretty admin URLs to their real admin.php?page= equivalents
+add_action( 'init', function() {
+    $uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
+    $map = array(
+        'wp-admin/shopys-hero-banner'  => 'shopys-hero-banner',
+        'wp-admin/shopys-hero-slider'  => 'shopys-hero-slider',
+        'wp-admin/shopys-dashboard'    => 'shopys-dashboard',
+        'wp-admin/shopys-product-details' => 'shopys-product-details',
+    );
+    foreach ( $map as $pretty => $page ) {
+        if ( strpos( $uri, $pretty ) !== false && strpos( $uri, 'admin.php' ) === false ) {
+            wp_safe_redirect( admin_url( 'admin.php?page=' . $page ) );
+            exit;
+        }
+    }
+}, 1 );
+
+function shopys_hero_banner_page() {
+    if ( ! current_user_can( 'edit_posts' ) ) return;
+
+    if ( isset( $_POST['shopys_hero_save'] ) && check_admin_referer( 'shopys_hero_save' ) ) {
+        $fields = array( 'shopys_hero_tag', 'shopys_hero_title', 'shopys_hero_title_highlight', 'shopys_hero_subtitle', 'shopys_hero_cta_text', 'shopys_hero_cta_url' );
+        foreach ( $fields as $key ) {
+            $val = isset( $_POST[ $key ] ) ? sanitize_text_field( $_POST[ $key ] ) : '';
+            update_option( $key, $val );
+        }
+        echo '<div class="notice notice-success is-dismissible"><p><strong>Hero banner saved!</strong></p></div>';
+    }
+
+    $tag       = get_option( 'shopys_hero_tag',             'New Arrivals 2025' );
+    $title     = get_option( 'shopys_hero_title',           'Your Ultimate' );
+    $highlight = get_option( 'shopys_hero_title_highlight', 'Tech Store' );
+    $subtitle  = get_option( 'shopys_hero_subtitle',        'Laptops · Gaming Gear · PC Hardware · Accessories — all under one roof at the best prices.' );
+    $cta_text  = get_option( 'shopys_hero_cta_text',        'Shop Now' );
+    $cta_url   = get_option( 'shopys_hero_cta_url',         '/laptop-v2/' );
+    ?>
+    <div class="wrap">
+        <h1 style="display:flex;align-items:center;gap:10px;">
+            <span style="background:#13e800;color:#000;padding:4px 14px;border-radius:6px;font-size:13px;font-weight:700;">Shopys</span>
+            Hero Banner
+        </h1>
+        <p style="color:#666;margin-bottom:20px;">Edit the text shown on the homepage hero slider overlay.</p>
+
+        <form method="POST">
+            <?php wp_nonce_field( 'shopys_hero_save' ); ?>
+            <table class="form-table" role="presentation">
+                <tr>
+                    <th><label for="shopys_hero_tag">Badge Text</label></th>
+                    <td><input type="text" id="shopys_hero_tag" name="shopys_hero_tag" value="<?php echo esc_attr( $tag ); ?>" class="regular-text">
+                    <p class="description">Small pill above the title e.g. "New Arrivals 2025"</p></td>
+                </tr>
+                <tr>
+                    <th><label for="shopys_hero_title">Title — First Line</label></th>
+                    <td><input type="text" id="shopys_hero_title" name="shopys_hero_title" value="<?php echo esc_attr( $title ); ?>" class="regular-text">
+                    <p class="description">e.g. "Your Ultimate"</p></td>
+                </tr>
+                <tr>
+                    <th><label for="shopys_hero_title_highlight">Title — Highlighted Word</label></th>
+                    <td><input type="text" id="shopys_hero_title_highlight" name="shopys_hero_title_highlight" value="<?php echo esc_attr( $highlight ); ?>" class="regular-text">
+                    <p class="description">Shown in green e.g. "Tech Store"</p></td>
+                </tr>
+                <tr>
+                    <th><label for="shopys_hero_subtitle">Subtitle</label></th>
+                    <td><textarea id="shopys_hero_subtitle" name="shopys_hero_subtitle" class="large-text" rows="3"><?php echo esc_textarea( $subtitle ); ?></textarea></td>
+                </tr>
+                <tr>
+                    <th><label for="shopys_hero_cta_text">Button Text</label></th>
+                    <td><input type="text" id="shopys_hero_cta_text" name="shopys_hero_cta_text" value="<?php echo esc_attr( $cta_text ); ?>" class="regular-text">
+                    <p class="description">e.g. "Shop Now"</p></td>
+                </tr>
+                <tr>
+                    <th><label for="shopys_hero_cta_url">Button URL</label></th>
+                    <td><input type="text" id="shopys_hero_cta_url" name="shopys_hero_cta_url" value="<?php echo esc_attr( $cta_url ); ?>" class="regular-text">
+                    <p class="description">e.g. /laptop-v2/ or full URL</p></td>
+                </tr>
+            </table>
+            <p class="submit">
+                <button type="submit" name="shopys_hero_save" class="button button-primary" style="background:#13e800;border-color:#0fb500;color:#000;font-weight:700;">
+                    Save Hero Banner
+                </button>
+            </p>
+        </form>
+
+        <div style="margin-top:30px;padding:20px;background:#f8f9fa;border:1px solid #e2e8f0;border-radius:8px;max-width:600px;">
+            <strong>Live Preview</strong>
+            <div style="margin-top:12px;background:#0d1117;padding:24px;border-radius:8px;color:#fff;">
+                <div style="display:inline-block;background:rgba(19,232,0,.15);border:1px solid rgba(19,232,0,.35);color:#13e800;font-size:11px;font-weight:700;padding:4px 12px;border-radius:50px;margin-bottom:10px;"><?php echo esc_html( $tag ); ?></div>
+                <div style="font-size:22px;font-weight:800;line-height:1.2;margin-bottom:8px;"><?php echo esc_html( $title ); ?> <span style="color:#13e800;"><?php echo esc_html( $highlight ); ?></span></div>
+                <div style="font-size:13px;opacity:.7;margin-bottom:14px;"><?php echo esc_html( $subtitle ); ?></div>
+                <div style="display:inline-block;background:#13e800;color:#000;font-weight:700;font-size:13px;padding:8px 18px;border-radius:6px;"><?php echo esc_html( $cta_text ); ?> →</div>
+            </div>
+        </div>
+    </div>
+    <?php
+}
+
 /***************************/
 //custom style
 /***************************/
@@ -550,10 +659,58 @@ add_action( 'after_switch_theme', function() {
     flush_rewrite_rules();
 } );
 
+// ── SECRET ADMIN LOGIN ROUTE /vstore-admin/ ──────────────────────────────
+add_action( 'init', function() {
+    add_rewrite_rule( '^vstore-admin/?$', 'index.php?shopys_admin_login=1', 'top' );
+} );
+
+add_filter( 'query_vars', function( $vars ) {
+    $vars[] = 'shopys_admin_login';
+    return $vars;
+} );
+
+add_action( 'template_redirect', function() {
+    if ( get_query_var( 'shopys_admin_login' ) ) {
+        $template = get_stylesheet_directory() . '/page-vstore-admin.php';
+        if ( file_exists( $template ) ) {
+            include $template;
+            exit;
+        }
+    }
+}, 1 );
+
+// Redirect all wp-login.php and wp-admin unauthenticated access to /vstore-admin/
+add_filter( 'login_url', function( $login_url, $redirect ) {
+    // Allow logout to work normally
+    if ( isset( $_GET['action'] ) && in_array( $_GET['action'], array( 'logout', 'lostpassword', 'rp', 'resetpass' ) ) ) {
+        return $login_url;
+    }
+    return home_url( '/vstore-admin/' );
+}, 10, 2 );
+
+add_action( 'auth_redirect', function() {
+    if ( ! is_user_logged_in() ) {
+        wp_redirect( home_url( '/vstore-admin/' ) );
+        exit;
+    }
+} );
+
+// Intercept direct wp-login.php access and redirect to /vstore-admin/
+add_action( 'init', function() {
+    if ( isset( $GLOBALS['pagenow'] ) && $GLOBALS['pagenow'] === 'wp-login.php' ) {
+        $action = isset( $_GET['action'] ) ? $_GET['action'] : '';
+        if ( ! in_array( $action, array( 'logout', 'lostpassword', 'rp', 'resetpass', 'postpass' ) ) && ! isset( $_POST['log'] ) ) {
+            wp_redirect( home_url( '/vstore-admin/' ) );
+            exit;
+        }
+    }
+} );
+
+// ── FLUSH REWRITE RULES ───────────────────────────────────────────────────
 // Flush rewrite rules whenever the registered rules don't include our route
 add_action( 'init', function() {
     $rules = get_option( 'rewrite_rules' );
-    if ( empty( $rules ) || ! isset( $rules['^new-arrivals/?$'] ) ) {
+    if ( empty( $rules ) || ! isset( $rules['^new-arrivals/?$'] ) || ! isset( $rules['^vstore-admin/?$'] ) ) {
         flush_rewrite_rules();
     }
 }, 99 );

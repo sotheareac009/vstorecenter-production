@@ -13,3 +13,5 @@ node_modules/
 .DS_Store
 wp-content/cache/
 wp-content/upgrade/
+.htaccess
+wp-content/debug.log
