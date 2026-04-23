@@ -33,27 +33,26 @@ jobs:
           timeout: 60000
           log-level: minimal
           exclude: |
-            **/.git*
-            **/.git*/**
-            **/.github/**
-            **/.private/**
-            **/node_modules/**
+            .git*/**
+            .github/**
+            .private/**
+            node_modules/**
+            wp-admin/**
+            wp-includes/**
+            wp-content/uploads/**
+            wp-content/cache/**
+            wp-content/upgrade/**
+            wp-content/backup-db/**
+            wp-content/backups/**
+            backup/**
             **/wp-config.php
             **/wp-config-sample.php
             **/.env
+            **/.DS_Store
             **/.htaccess
             **/.htaccess.bk
+            **/.htaccess.old-*
             **/*.sql
             **/*.zip
             **/readme.html
             **/license.txt
-            **/wp-admin/**
-            **/wp-includes/**
-            **/wp-content/uploads/**
-            **/wp-content/cache/**
-            **/wp-content/upgrade/**
-            **/wp-content/backup-db/**
-            **/wp-content/backups/**
-            **/uat/**
-            **/dev/**
-            **/backup/**
