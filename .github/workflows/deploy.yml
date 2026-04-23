@@ -17,9 +17,9 @@ jobs:
         id: vars
         run: |
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "target=/public_html/" >> $GITHUB_OUTPUT
+            echo "target=/" >> $GITHUB_OUTPUT
           else
-            echo "target=/public_html/dev/" >> $GITHUB_OUTPUT
+            echo "target=/dev/" >> $GITHUB_OUTPUT
           fi
 
       - name: Deploy via FTP
