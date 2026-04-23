@@ -506,3 +506,129 @@ add_filter( 'wp_nav_menu_args', function( $args ) {
 
 // Include Product Details admin page
 require_once get_stylesheet_directory() . '/inc/product-details.php';
+
+// Hide New Arrivals from all nav menus
+add_filter( 'wp_nav_menu_objects', function( $items ) {
+    foreach ( $items as $key => $item ) {
+        $slug = $item->object === 'page'
+            ? get_post_field( 'post_name', $item->object_id )
+            : $item->post_name;
+        if ( $slug === 'new-arrivals' ) {
+            unset( $items[ $key ] );
+        }
+    }
+    return $items;
+} );
+
+// ── NEW ARRIVALS virtual route ────────────────────────────────────────────
+// Registers /new-arrivals/ as a virtual URL — no WordPress page required.
+// Works on any environment (dev, staging, production) without DB setup.
+
+add_action( 'init', 'shopys_new_arrivals_rewrite' );
+function shopys_new_arrivals_rewrite() {
+    add_rewrite_rule( '^new-arrivals/?$', 'index.php?shopys_new_arrivals=1', 'top' );
+}
+
+add_filter( 'query_vars', function( $vars ) {
+    $vars[] = 'shopys_new_arrivals';
+    return $vars;
+} );
+
+add_action( 'template_redirect', function() {
+    if ( get_query_var( 'shopys_new_arrivals' ) ) {
+        $template = get_stylesheet_directory() . '/page-new-arrivals.php';
+        if ( file_exists( $template ) ) {
+            include $template;
+            exit;
+        }
+    }
+} );
+
+// Flush rewrite rules once after theme switch so the route is registered
+add_action( 'after_switch_theme', function() {
+    shopys_new_arrivals_rewrite();
+    flush_rewrite_rules();
+} );
+
+// One-time flush so the /new-arrivals/ rule takes effect immediately
+add_action( 'init', function() {
+    if ( ! get_option( 'shopys_new_arrivals_rules_flushed' ) ) {
+        flush_rewrite_rules();
+        update_option( 'shopys_new_arrivals_rules_flushed', true );
+    }
+}, 99 );
+
+// ── OPEN GRAPH / DEEP LINK PREVIEWS ──────────────────────────────────────
+// Injects OG + Twitter Card meta into <head> on product pages so that
+// pasting a product URL in Telegram, Messenger, Facebook etc. shows a
+// rich preview with product image, name, price and description.
+add_action( 'wp_head', function() {
+    if ( ! is_singular( 'product' ) ) {
+        return;
+    }
+
+    $product = wc_get_product( get_the_ID() );
+    if ( ! $product ) {
+        return;
+    }
+
+    // --- collect values ---
+    $title       = wp_strip_all_tags( $product->get_name() );
+    $url         = get_permalink();
+    $site_name   = get_bloginfo( 'name' );
+    $currency    = get_woocommerce_currency();
+
+    // Description: short desc → full desc → product name fallback
+    $desc = wp_strip_all_tags( $product->get_short_description() );
+    if ( empty( $desc ) ) {
+        $desc = wp_strip_all_tags( $product->get_description() );
+    }
+    if ( empty( $desc ) ) {
+        $desc = $title;
+    }
+    $desc = wp_trim_words( $desc, 30 );
+
+    // Price
+    $price = $product->get_price();
+    $price_html = $price ? wc_format_decimal( $price, 2 ) : '';
+
+    // Image — full size for best quality, fallback to placeholder
+    $image_id   = $product->get_image_id();
+    $image_data = $image_id ? wp_get_attachment_image_src( $image_id, 'full' ) : null;
+    $image_url  = $image_data ? $image_data[0] : wc_placeholder_img_src( 'full' );
+    $image_w    = $image_data ? $image_data[1] : 800;
+    $image_h    = $image_data ? $image_data[2] : 800;
+    $image_alt  = $image_id ? trim( get_post_meta( $image_id, '_wp_attachment_image_alt', true ) ) : $title;
+    if ( empty( $image_alt ) ) $image_alt = $title;
+
+    // --- output ---
+    ?>
+<!-- Open Graph / Deep Link Preview -->
+<meta property="og:type"        content="product" />
+<meta property="og:locale"      content="en_US" />
+<meta property="og:site_name"   content="<?php echo esc_attr( $site_name ); ?>" />
+<meta property="og:url"         content="<?php echo esc_url( $url ); ?>" />
+<meta property="og:title"       content="<?php echo esc_attr( $title ); ?>" />
+<meta property="og:description" content="<?php echo esc_attr( $desc ); ?>" />
+<?php if ( $image_url ) : ?>
+<meta property="og:image"             content="<?php echo esc_url( $image_url ); ?>" />
+<meta property="og:image:secure_url"  content="<?php echo esc_url( $image_url ); ?>" />
+<meta property="og:image:width"       content="<?php echo esc_attr( $image_w ); ?>" />
+<meta property="og:image:height"      content="<?php echo esc_attr( $image_h ); ?>" />
+<meta property="og:image:alt"         content="<?php echo esc_attr( $image_alt ); ?>" />
+<meta property="og:image:type"        content="image/jpeg" />
+<?php endif; ?>
+<?php if ( $price_html ) : ?>
+<meta property="product:price:amount"   content="<?php echo esc_attr( $price_html ); ?>" />
+<meta property="product:price:currency" content="<?php echo esc_attr( $currency ); ?>" />
+<?php endif; ?>
+<!-- Twitter / Telegram card -->
+<meta name="twitter:card"        content="summary_large_image" />
+<meta name="twitter:title"       content="<?php echo esc_attr( $title ); ?>" />
+<meta name="twitter:description" content="<?php echo esc_attr( $desc ); ?>" />
+<?php if ( $image_url ) : ?>
+<meta name="twitter:image"       content="<?php echo esc_url( $image_url ); ?>" />
+<meta name="twitter:image:alt"   content="<?php echo esc_attr( $image_alt ); ?>" />
+<?php endif; ?>
+    <?php
+}, 1 );

@@ -1,0 +1,38 @@
+name: Deploy to Hostinger
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set deployment path
+        id: vars
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "theme_dir=/wp-content/themes/shopys/" >> $GITHUB_OUTPUT
+          else
+            echo "theme_dir=/dev/wp-content/themes/shopys/" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy theme via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./wp-content/themes/shopys/
+          server-dir: ${{ steps.vars.outputs.theme_dir }}
+          timeout: 60000
+          log-level: standard
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.DS_Store
