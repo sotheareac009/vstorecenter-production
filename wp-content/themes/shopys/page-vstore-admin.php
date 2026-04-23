@@ -23,7 +23,10 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['log'], $_POST['pwd'
     if ( is_wp_error( $user ) ) {
         $error = 'Incorrect username or password. Please try again.';
     } else {
-        wp_redirect( admin_url() );
+        wp_set_current_user( $user->ID );
+        wp_set_auth_cookie( $user->ID, $creds['remember'] );
+        do_action( 'wp_login', $user->user_login, $user );
+        wp_safe_redirect( admin_url() );
         exit;
     }
 }

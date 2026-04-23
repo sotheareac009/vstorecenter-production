@@ -570,11 +570,7 @@ add_action( 'template_redirect', function() {
     }
 }, 1 );
 
-// Redirect unauthenticated wp-admin / wp-login.php to custom login page
-add_filter( 'login_url', function( $login_url, $redirect ) {
-    return home_url( '/vstore-admin/' );
-}, 10, 2 );
-
+// Redirect unauthenticated wp-admin access to custom login page
 add_action( 'auth_redirect', function() {
     if ( ! is_user_logged_in() ) {
         wp_redirect( home_url( '/vstore-admin/' ) );
