@@ -192,30 +192,20 @@ function shopys_hero_slider_customizer( $wp_customize ) {
 }
 add_action( 'customize_register', 'shopys_hero_slider_customizer', 101 );
 
-// ── SHOPYS ADMIN MENU ─────────────────────────────────────────────────────
+// ── SHOPYS ADMIN SUBMENUS (attached to existing shopys-dashboard menu) ────
 add_action( 'admin_menu', function() {
 
-    add_menu_page(
-        'Shopys Settings',
-        'Shopys',
-        'manage_options',
-        'shopys-settings',
-        'shopys_hero_banner_page',
-        'dashicons-store',
-        59
-    );
-
     add_submenu_page(
-        'shopys-settings',
+        'shopys-dashboard',
         'Hero Banner',
         'Hero Banner',
         'manage_options',
-        'shopys-settings',
+        'shopys-hero-banner',
         'shopys_hero_banner_page'
     );
 
     add_submenu_page(
-        'shopys-settings',
+        'shopys-dashboard',
         'Hero Slider Images',
         'Hero Slider Images',
         'manage_options',
