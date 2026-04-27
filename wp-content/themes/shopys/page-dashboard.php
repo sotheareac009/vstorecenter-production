@@ -50,7 +50,12 @@ if ( $has_vc ) {
 
 // ── All-pages sub-view state ──────────────────────────────────────────────────
 $now_ts_ref = isset( $now_ts ) ? $now_ts : current_time( 'timestamp' );
-$sv_view    = ( isset( $_GET['sv_view'] ) && $_GET['sv_view'] === 'all' ) ? 'all' : 'week';
+$sv_view    = 'week';
+if ( isset( $_GET['sv_view'] ) ) {
+    $v = $_GET['sv_view'];
+    if ( $v === 'all' ) $sv_view = 'all';
+    elseif ( $v === 'locations' ) $sv_view = 'locations';
+}
 $sv_year    = isset( $_GET['sv_year'] )  ? (int) $_GET['sv_year']  : (int) date( 'Y', $now_ts_ref );
 $sv_month   = isset( $_GET['sv_month'] ) ? (int) $_GET['sv_month'] : (int) date( 'n', $now_ts_ref );
 
@@ -72,6 +77,13 @@ if ( $has_vc ) {
         $sv_page        = min( $sv_page, $sv_total_pages );
         $sv_offset      = ( $sv_page - 1 ) * $sv_per_page;
         $all_pages      = shopys_vc_pages_by_period( $sv_year, $sv_month, $sv_per_page, $sv_offset );
+    } elseif ( $sv_view === 'locations' && function_exists( 'shopys_vc_locations_by_url' ) ) {
+        $sv_url         = isset( $_GET['sv_url'] ) ? sanitize_text_field( wp_unslash( $_GET['sv_url'] ) ) : '';
+        $sv_total       = function_exists( 'shopys_vc_count_locations_by_url' ) ? shopys_vc_count_locations_by_url( $sv_url ) : 0;
+        $sv_total_pages = $sv_total > 0 ? (int) ceil( $sv_total / $sv_per_page ) : 1;
+        $sv_page        = min( $sv_page, $sv_total_pages );
+        $sv_offset      = ( $sv_page - 1 ) * $sv_per_page;
+        $all_pages      = shopys_vc_locations_by_url( $sv_url, $sv_per_page, $sv_offset );
     }
 }
 
@@ -958,7 +970,8 @@ body {
                                 $list_html .= '<li>' . esc_html($line) . '</li>';
                             }
                             $list_html .= '</ul>';
-                            $loc_str = '<details style="cursor:pointer;"><summary style="color:var(--accent-dim);font-weight:600;outline:none;">Multiple Locations (' . $loc_count . ')</summary>' . $list_html . '</details>';
+                            $loc_link = esc_url( add_query_arg([ 'tab'=>'siteview', 'sv_view'=>'locations', 'sv_url'=>$row->url ], home_url('/dashboard/')) );
+                            $loc_str = '<details style="cursor:pointer;"><summary style="color:var(--accent-dim);font-weight:600;outline:none;">Multiple Locations (' . $loc_count . ')</summary>' . $list_html . '<div style="margin-top:6px;padding-left:14px;"><a href="' . $loc_link . '" style="font-size:11px;color:var(--green);font-weight:600;text-decoration:none;">View all locations →</a></div></details>';
                             $flag = '🌐';
                         } else {
                             $loc_str = ($row->city ?? '') . ($row->city && $row->country ? ', ' : '') . ($row->country ?? $cc);
@@ -987,7 +1000,122 @@ body {
                 <?php endif; ?>
             </div>
 
-            <?php else : ?>
+            <?php elseif ( $sv_view === 'locations' ) : ?>
+
+                <!-- ── PAGE LOCATIONS TABLE ───────────────── -->
+                <div class="ds-table-wrap">
+                    <div class="ds-table-head" style="display:flex;align-items:center;">
+                        <a href="<?php echo esc_url(add_query_arg('tab', 'siteview', remove_query_arg(['sv_view','sv_url']))); ?>" style="margin-right:12px;text-decoration:none;color:var(--green);font-size:18px;line-height:0;">&larr;</a>
+                        Visitor Locations for specific URL
+                        <span style="color:var(--muted);font-weight:400;font-size:12px;margin-left:auto;text-align:right;">
+                            URL: <a href="<?php echo esc_url($sv_url); ?>" target="_blank" style="color:var(--text);"><?php echo esc_html($sv_url); ?></a><br>
+                            (<?php echo number_format_i18n($sv_total); ?> views)
+                        </span>
+                    </div>
+                    <?php if ( $all_pages ) : ?>
+                    <table class="ds-table">
+                        <thead><tr>
+                            <th style="width:50px;">#</th>
+                            <th>Location</th>
+                            <th>Viewed At</th>
+                        </tr></thead>
+                        <tbody>
+                        <?php foreach ( $all_pages as $i => $row ) : 
+                            $flag = '';
+                            $cc = $row->country_code ?? '';
+                            if ( $cc && strlen($cc) === 2 ) {
+                                list($c1, $c2) = str_split(strtoupper($cc));
+                                $flag = mb_convert_encoding('&#' . (127397 + ord($c1)) . ';', 'UTF-8', 'HTML-ENTITIES') . 
+                                        mb_convert_encoding('&#' . (127397 + ord($c2)) . ';', 'UTF-8', 'HTML-ENTITIES');
+                            }
+                            $loc_str = ($row->city ?? '') . ($row->city && $row->country ? ', ' : '') . ($row->country ?? $cc);
+                            $loc_str = esc_html($loc_str ?: '—');
+                            
+                            $ts = strtotime($row->viewed_at);
+                            $lv_abs = date('j M Y, H:i', $ts);
+                            
+                            $diff = current_time('timestamp') - $ts;
+                            if      ( $diff < 60 )        $lv_disp = 'Just now';
+                            elseif  ( $diff < 3600 )      $lv_disp = round($diff/60).' min ago';
+                            elseif  ( $diff < 86400 )     $lv_disp = round($diff/3600).' hr ago';
+                            elseif  ( $diff < 86400*2 )   $lv_disp = 'Yesterday';
+                            else                           $lv_disp = date('d M', $ts);
+                        ?>
+                        <tr>
+                            <td style="color:var(--muted);font-size:12px;"><?php echo $sv_offset + $i + 1; ?></td>
+                            <td style="font-size:13px;vertical-align:top;">
+                                <div style="display:flex;align-items:flex-start;">
+                                    <?php if ($flag): ?><span style="margin-right:8px;font-size:16px;line-height:1.2;"><?php echo $flag; ?></span><?php endif; ?>
+                                    <div><?php echo $loc_str; ?></div>
+                                </div>
+                            </td>
+                            <td style="font-size:12px;color:var(--muted);white-space:nowrap;">
+                                <span style="color:var(--text);font-weight:600;margin-right:6px;"><?php echo esc_html($lv_disp); ?></span>
+                                <?php echo esc_html($lv_abs); ?>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                    <?php else : ?>
+                        <p style="padding:24px;color:var(--muted);font-size:13px;">No views recorded for this URL.</p>
+                    <?php endif; ?>
+
+                    <?php if ( $sv_total_pages > 1 ) :
+                        $pag_base = add_query_arg( [
+                            'tab'      => 'siteview',
+                            'sv_view'  => 'locations',
+                            'sv_url'   => $sv_url,
+                        ], home_url( '/dashboard/' ) );
+                        $range_start = ( $sv_page - 1 ) * $sv_per_page + 1;
+                        $range_end   = min( $sv_page * $sv_per_page, $sv_total );
+                    ?>
+                    <div class="sv-pagination">
+                        <!-- Prev -->
+                        <?php if ( $sv_page > 1 ) : ?>
+                        <a class="sv-pag-btn" href="<?php echo esc_url( add_query_arg( 'sv_page', $sv_page - 1, $pag_base ) ); ?>">← Prev</a>
+                        <?php else : ?>
+                        <span class="sv-pag-btn disabled">← Prev</span>
+                        <?php endif; ?>
+
+                        <?php
+                        $pages_to_show = [];
+                        if ( $sv_total_pages <= 7 ) {
+                            $pages_to_show = range( 1, $sv_total_pages );
+                        } else {
+                            $pages_to_show = [ 1 ];
+                            $start = max( 2, $sv_page - 2 );
+                            $end   = min( $sv_total_pages - 1, $sv_page + 2 );
+                            if ( $start > 2 ) $pages_to_show[] = '…';
+                            for ( $p = $start; $p <= $end; $p++ ) $pages_to_show[] = $p;
+                            if ( $end < $sv_total_pages - 1 ) $pages_to_show[] = '…';
+                            $pages_to_show[] = $sv_total_pages;
+                        }
+                        foreach ( $pages_to_show as $p ) :
+                            if ( $p === '…' ) :
+                        ?>
+                        <span class="sv-pag-ellipsis">…</span>
+                        <?php else : ?>
+                        <a class="sv-pag-btn <?php echo $p === $sv_page ? 'active' : ''; ?>"
+                           href="<?php echo esc_url( add_query_arg( 'sv_page', $p, $pag_base ) ); ?>">
+                            <?php echo $p; ?>
+                        </a>
+                        <?php endif; endforeach; ?>
+
+                        <!-- Next -->
+                        <?php if ( $sv_page < $sv_total_pages ) : ?>
+                        <a class="sv-pag-btn" href="<?php echo esc_url( add_query_arg( 'sv_page', $sv_page + 1, $pag_base ) ); ?>">Next →</a>
+                        <?php else : ?>
+                        <span class="sv-pag-btn disabled">Next →</span>
+                        <?php endif; ?>
+                    </div>
+                    <p style="text-align:center;font-size:12px;color:var(--muted);margin-top:8px;">
+                        Showing <?php echo number_format_i18n($range_start); ?>–<?php echo number_format_i18n($range_end); ?> of <?php echo number_format_i18n($sv_total); ?> views
+                    </p>
+                    <?php endif; ?>
+                </div>
+
+            <?php elseif ( $sv_view === 'all' ) : ?>
 
             <!-- ── ALL PAGES TABLE with filter ───────────────── -->
             <?php
@@ -1072,7 +1200,8 @@ body {
                                 $list_html .= '<li>' . esc_html($line) . '</li>';
                             }
                             $list_html .= '</ul>';
-                            $loc_str = '<details style="cursor:pointer;"><summary style="color:var(--accent-dim);font-weight:600;outline:none;">Multiple Locations (' . $loc_count . ')</summary>' . $list_html . '</details>';
+                            $loc_link = esc_url( add_query_arg([ 'tab'=>'siteview', 'sv_view'=>'locations', 'sv_url'=>$row->url ], home_url('/dashboard/')) );
+                            $loc_str = '<details style="cursor:pointer;"><summary style="color:var(--accent-dim);font-weight:600;outline:none;">Multiple Locations (' . $loc_count . ')</summary>' . $list_html . '<div style="margin-top:6px;padding-left:14px;"><a href="' . $loc_link . '" style="font-size:11px;color:var(--green);font-weight:600;text-decoration:none;">View all locations →</a></div></details>';
                             $flag = '🌐';
                         } else {
                             $loc_str = ($row->city ?? '') . ($row->city && $row->country ? ', ' : '') . ($row->country ?? $cc);

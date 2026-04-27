@@ -466,6 +466,41 @@ function shopys_vc_available_months() {
     } catch ( \Throwable $e ) { return array(); }
 }
 
+/**
+ * All views/locations for a specific URL.
+ */
+function shopys_vc_locations_by_url( $url, $limit = 50, $offset = 0 ) {
+    if ( ! shopys_vc_ensure_table() ) return array();
+    try {
+        global $wpdb;
+        $limit  = max( 1, min( 1000, (int) $limit ) );
+        $offset = max( 0, (int) $offset );
+        $rows = $wpdb->get_results( $wpdb->prepare(
+            "SELECT country_code, country, region, city, ip_hash, viewed_at, url, title
+               FROM " . shopys_vc_table() . "
+              WHERE url = %s
+              ORDER BY viewed_at DESC
+              LIMIT %d OFFSET %d",
+            $url, $limit, $offset
+        ) );
+        return $rows ?: array();
+    } catch ( \Throwable $e ) { return array(); }
+}
+
+/**
+ * Count of views/locations for a specific URL.
+ */
+function shopys_vc_count_locations_by_url( $url ) {
+    if ( ! shopys_vc_ensure_table() ) return 0;
+    try {
+        global $wpdb;
+        return (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM " . shopys_vc_table() . " WHERE url = %s",
+            $url
+        ) );
+    } catch ( \Throwable $e ) { return 0; }
+}
+
 function shopys_vc_daily_series( $days = 14 ) {
     $days = max( 1, min( 60, (int) $days ) );
     $series = array();
