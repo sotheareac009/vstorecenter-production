@@ -1612,17 +1612,52 @@ body {
                         <div class="an-hbar-uniq" style="color:var(--muted);font-size:11px;">Uniques</div>
                     </div>
                     <?php foreach ( $an_products as $row ) :
-                        $pct = $an_max_pr > 0 ? round( ($row->views / $an_max_pr) * 100 ) : 0;
+                        $pct       = $an_max_pr > 0 ? round( ($row->views / $an_max_pr) * 100 ) : 0;
+                        $loc_count = (int) ($row->location_count ?? 0);
+                        $cc        = $row->country_code ?? '';
+
+                        // Build flag emoji
+                        $pr_flag = '';
+                        if ( $cc && strlen($cc) === 2 ) {
+                            list($c1,$c2) = str_split( strtoupper($cc) );
+                            $pr_flag = mb_convert_encoding('&#'.(127397+ord($c1)).';','UTF-8','HTML-ENTITIES')
+                                     . mb_convert_encoding('&#'.(127397+ord($c2)).';','UTF-8','HTML-ENTITIES');
+                        }
+
+                        // Build location string(s)
+                        if ( $loc_count > 1 ) {
+                            $ll = array_unique( explode( '|', $row->location_list ?? '' ) );
+                            $loc_parts = [];
+                            foreach ( $ll as $l_item ) {
+                                $pts = explode( ':', $l_item );
+                                if ( count($pts) < 3 ) continue;
+                                $l_cc = $pts[0]; $l_country = $pts[1]; $l_city = $pts[2];
+                                $l_flag = '';
+                                if ( $l_cc && strlen($l_cc) === 2 ) {
+                                    list($lc1,$lc2) = str_split(strtoupper($l_cc));
+                                    $l_flag = mb_convert_encoding('&#'.(127397+ord($lc1)).';','UTF-8','HTML-ENTITIES')
+                                            . mb_convert_encoding('&#'.(127397+ord($lc2)).';','UTF-8','HTML-ENTITIES');
+                                }
+                                $loc_parts[] = $l_flag . ' ' . ($l_city ? $l_city.', ' : '') . ($l_country ?: $l_cc);
+                            }
+                            $loc_html = '<span style="color:var(--muted);font-size:11px;">' . esc_html( implode( ' · ', array_slice($loc_parts, 0, 5) ) ) . ( count($loc_parts) > 5 ? ' …' : '' ) . '</span>';
+                        } elseif ( $cc ) {
+                            $loc_str  = ($row->city ?? '') . ($row->city && $row->country ? ', ' : '') . ($row->country ?? $cc);
+                            $loc_html = '<span style="color:var(--muted);font-size:11px;">' . $pr_flag . ' ' . esc_html($loc_str) . '</span>';
+                        } else {
+                            $loc_html = '';
+                        }
                     ?>
-                    <div class="an-hbar-row">
-                        <div class="an-hbar-label" title="<?php echo esc_attr( $row->url ); ?>">
-                            <a href="<?php echo esc_url( $row->url ); ?>" target="_blank" style="color:var(--text);text-decoration:none;"><?php echo esc_html( $row->title ?: 'Product' ); ?></a>
+                    <div class="an-hbar-row" style="align-items:flex-start;padding:4px 0;">
+                        <div class="an-hbar-label" style="padding-top:2px;" title="<?php echo esc_attr( $row->url ); ?>">
+                            <a href="<?php echo esc_url( $row->url ); ?>" target="_blank" style="color:var(--text);text-decoration:none;display:block;"><?php echo esc_html( $row->title ?: 'Product' ); ?></a>
+                            <?php if ( $loc_html ) : ?><div style="margin-top:3px;"><?php echo $loc_html; ?></div><?php endif; ?>
                         </div>
-                        <div class="an-hbar-track">
+                        <div class="an-hbar-track" style="margin-top:4px;">
                             <div class="an-hbar-fill" style="width:<?php echo $pct; ?>%;background:#0af;"></div>
                         </div>
-                        <div class="an-hbar-count"><?php echo number_format_i18n( (int) $row->views ); ?></div>
-                        <div class="an-hbar-uniq"><?php echo number_format_i18n( (int) $row->uniques ); ?> uniq</div>
+                        <div class="an-hbar-count" style="padding-top:2px;"><?php echo number_format_i18n( (int) $row->views ); ?></div>
+                        <div class="an-hbar-uniq" style="padding-top:2px;"><?php echo number_format_i18n( (int) $row->uniques ); ?> uniq</div>
                     </div>
                     <?php endforeach; ?>
                 </div>

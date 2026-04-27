@@ -557,13 +557,19 @@ function shopys_vc_analytics_pages( $since, $until, $limit = 10 ) {
 
 /**
  * Top products (post_type = 'product') by view count within a date range.
+ * Includes location breakdown per product.
  */
 function shopys_vc_analytics_products( $since, $until, $limit = 10 ) {
     if ( ! shopys_vc_ensure_table() ) return [];
     try {
         global $wpdb;
         return $wpdb->get_results( $wpdb->prepare(
-            "SELECT url, MAX(title) AS title, COUNT(*) AS views, COUNT(DISTINCT ip_hash) AS uniques
+            "SELECT url, MAX(title) AS title, COUNT(*) AS views, COUNT(DISTINCT ip_hash) AS uniques,
+                    COUNT(DISTINCT IF(country_code != '', CONCAT(country_code, city), NULL)) AS location_count,
+                    GROUP_CONCAT(DISTINCT IF(country_code != '', CONCAT(country_code, ':', country, ':', city), NULL) ORDER BY viewed_at DESC SEPARATOR '|') AS location_list,
+                    SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country_code, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country_code,
+                    SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country,
+                    SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', city, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS city
                FROM " . shopys_vc_table() . "
               WHERE viewed_at >= %s AND viewed_at < %s AND post_type = 'product'
               GROUP BY url
