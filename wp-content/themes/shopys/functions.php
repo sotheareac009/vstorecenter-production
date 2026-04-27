@@ -694,6 +694,11 @@ require_once get_stylesheet_directory() . '/inc/telegram-login.php';
 // AI Chatbot — always loads so the Settings page is always available
 require_once get_stylesheet_directory() . '/inc/ai-chatbot.php';
 
+// Site view counter — pageviews dashboard inside WP Admin.
+// Wrapped in file_exists so a half-finished FTP deploy can't crash the site.
+$shopys_vc = get_stylesheet_directory() . '/inc/view-counter.php';
+if ( file_exists( $shopys_vc ) ) require_once $shopys_vc;
+
 // Shortcode Guide — admin sidebar reference page
 require_once get_stylesheet_directory() . '/inc/shortcode-guide.php';
 require_once get_stylesheet_directory() . '/inc/hero-slider-settings.php';
@@ -969,6 +974,32 @@ add_action( 'after_switch_theme', function() {
     flush_rewrite_rules();
 } );
 
+// ── CUSTOM DASHBOARD ROUTE /dashboard/ ───────────────────────────────────────
+add_action( 'init', function() {
+    add_rewrite_rule( '^dashboard/?$', 'index.php?shopys_dashboard=1', 'top' );
+} );
+
+add_filter( 'query_vars', function( $vars ) {
+    $vars[] = 'shopys_dashboard';
+    return $vars;
+} );
+
+add_action( 'template_redirect', function() {
+    if ( ! get_query_var( 'shopys_dashboard' ) ) return;
+
+    // Must be logged in to view the dashboard
+    if ( ! is_user_logged_in() ) {
+        wp_safe_redirect( home_url( '/vstore-admin/' ) );
+        exit;
+    }
+
+    $template = get_stylesheet_directory() . '/page-dashboard.php';
+    if ( file_exists( $template ) ) {
+        include $template;
+        exit;
+    }
+}, 1 );
+
 // ── SECRET ADMIN LOGIN ROUTE /vstore-admin/ ──────────────────────────────
 add_action( 'init', function() {
     add_rewrite_rule( '^vstore-admin/?$', 'index.php?shopys_admin_login=1', 'top' );
@@ -1020,7 +1051,7 @@ add_action( 'init', function() {
 // Flush rewrite rules whenever the registered rules don't include our route
 add_action( 'init', function() {
     $rules = get_option( 'rewrite_rules' );
-    if ( empty( $rules ) || ! isset( $rules['^new-arrivals/?$'] ) || ! isset( $rules['^vstore-admin/?$'] ) ) {
+    if ( empty( $rules ) || ! isset( $rules['^new-arrivals/?$'] ) || ! isset( $rules['^vstore-admin/?$'] ) || ! isset( $rules['^dashboard/?$'] ) ) {
         flush_rewrite_rules();
     }
 }, 99 );
