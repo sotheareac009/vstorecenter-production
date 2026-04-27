@@ -24,6 +24,7 @@ $is_site_owner  = ( $current_user->user_login === 'reach' || $current_user->user
 $active_tab     = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'overview';
 // Block non-owners from accessing owner-only tabs via URL
 if ( $active_tab === 'users' && ! $is_site_owner ) $active_tab = 'overview';
+if ( $active_tab === 'telegram-users' && ! $is_site_owner ) $active_tab = 'overview';
 
 // ── Collect Site-View data (safe even if view-counter isn't loaded) ───────────
 $has_vc = function_exists( 'shopys_vc_count_views' );
@@ -117,6 +118,7 @@ $menu_items = [
     'siteview'  => [ 'icon' => 'M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z', 'label' => 'Site View' ],
     'analytics' => [ 'icon' => 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', 'label' => 'Analytics' ],
     'users'     => [ 'icon' => 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z', 'label' => 'Users', 'owner_only' => true ],
+    'telegram-users' => [ 'icon' => 'M21.5 4.5l-3.1 14.6c-.2 1-1 .9-1.6.6l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.9 8.9-8c.4-.4-.1-.6-.6-.3L6.2 12 1.7 10.6c-1-.3-1-1 .2-1.5l17.6-6.8c.8-.3 1.5.2 1.2 1.2z', 'label' => 'Telegram Chatbot Users', 'owner_only' => true ],
     'products'  => [ 'icon' => 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4', 'label' => 'Products', 'href' => admin_url( 'edit.php?post_type=product' ) ],
     'orders'    => [ 'icon' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01', 'label' => 'Orders', 'href' => admin_url( 'edit.php?post_type=shop_order' ) ],
 ];
@@ -1760,6 +1762,158 @@ body {
                 <?php endif; ?>
             </div>
 
+        <?php endif; ?>
+        </div>
+
+        <!-- ── TELEGRAM CHATBOT USERS TAB ───────────────────────────── -->
+        <div class="ds-panel <?php echo $active_tab === 'telegram-users' ? 'active' : ''; ?>" id="panel-telegram-users">
+        <?php if ( $active_tab === 'telegram-users' ) :
+            global $wpdb;
+
+            $tg_table_name = $wpdb->prefix . 'chatbot_telegram_users';
+            $tg_has_table  = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $tg_table_name ) ) === $tg_table_name;
+            $tg_users      = [];
+            $tg_total      = 0;
+            $tg_total_pages = 1;
+            $tg_current_pg = isset( $_GET['tg_pg'] ) ? max( 1, (int) $_GET['tg_pg'] ) : 1;
+            $tg_per_page   = 20;
+
+            if ( $tg_has_table ) {
+                $tg_total       = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$tg_table_name}" );
+                $tg_total_pages = max( 1, (int) ceil( $tg_total / $tg_per_page ) );
+                $tg_current_pg  = min( $tg_current_pg, $tg_total_pages );
+                $tg_offset      = ( $tg_current_pg - 1 ) * $tg_per_page;
+                $tg_users       = $wpdb->get_results(
+                    $wpdb->prepare(
+                        "SELECT * FROM {$tg_table_name} ORDER BY last_active DESC LIMIT %d OFFSET %d",
+                        $tg_per_page,
+                        $tg_offset
+                    ),
+                    ARRAY_A
+                );
+            }
+
+            $tg_vip_count = 0;
+            $tg_sessions  = 0;
+            $tg_messages  = 0;
+            $tg_cost      = 0.0;
+
+            foreach ( $tg_users as $tg_user ) {
+                $tg_vip_count += ! empty( $tg_user['is_vip'] ) ? 1 : 0;
+                $tg_sessions  += (int) ( $tg_user['session_count'] ?? 0 );
+                $tg_messages  += (int) ( $tg_user['message_count'] ?? 0 );
+                $tg_cost      += (float) ( $tg_user['total_cost'] ?? 0 );
+            }
+        ?>
+
+        <div class="ds-cards" style="margin-bottom:24px;">
+            <div class="ds-card">
+                <div class="ds-card-icon">
+                    <svg viewBox="0 0 24 24"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </div>
+                <div class="ds-card-label">Telegram Users</div>
+                <div class="ds-card-value"><?php echo number_format_i18n( $tg_total ); ?></div>
+                <div class="ds-card-sub">Tracked chatbot users</div>
+            </div>
+            <div class="ds-card">
+                <div class="ds-card-icon">
+                    <svg viewBox="0 0 24 24"><path d="M12 8c-2.21 0-4 1.79-4 4 0 .74.2 1.43.55 2.03L7 17h3.11c.57.36 1.25.57 1.94.57 2.21 0 4-1.79 4-4s-1.79-3.57-4-3.57zm-7-4h14a2 2 0 012 2v12a2 2 0 01-2 2h-4l-3 3-3-3H5a2 2 0 01-2-2V6a2 2 0 012-2z"/></svg>
+                </div>
+                <div class="ds-card-label">Messages</div>
+                <div class="ds-card-value"><?php echo number_format_i18n( $tg_messages ); ?></div>
+                <div class="ds-card-sub">Messages on this page</div>
+            </div>
+            <div class="ds-card">
+                <div class="ds-card-icon">
+                    <svg viewBox="0 0 24 24"><path d="M12 8c-4.42 0-8 1.79-8 4s3.58 4 8 4 8-1.79 8-4-3.58-4-8-4zm0 6c-2.21 0-4-.45-4-1s1.79-1 4-1 4 .45 4 1-1.79 1-4 1zm0-8c3.31 0 6 1.34 6 3H6c0-1.66 2.69-3 6-3zm-6 8v3c0 1.66 2.69 3 6 3s6-1.34 6-3v-3c-1.32 1.01-3.49 1.5-6 1.5S7.32 15.01 6 14z"/></svg>
+                </div>
+                <div class="ds-card-label">Sessions</div>
+                <div class="ds-card-value"><?php echo number_format_i18n( $tg_sessions ); ?></div>
+                <div class="ds-card-sub">Sessions on this page</div>
+            </div>
+            <div class="ds-card">
+                <div class="ds-card-icon">
+                    <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5 3.84 9.74 9 11 5.16-1.26 9-6 9-11V5l-9-4zm1 17.93V20h-2v-1.07A8.001 8.001 0 014 11V6.3l8-3.56 8 3.56V11a8.001 8.001 0 01-7 7.93zM11 7h2v5h-2zm0 6h2v2h-2z"/></svg>
+                </div>
+                <div class="ds-card-label">VIP Users</div>
+                <div class="ds-card-value"><?php echo number_format_i18n( $tg_vip_count ); ?></div>
+                <div class="ds-card-sub">On this page</div>
+            </div>
+        </div>
+
+        <div class="ds-table-wrap">
+            <div class="ds-table-head" style="display:flex;align-items:center;justify-content:space-between;">
+                <span>Telegram Chatbot Users <span style="color:var(--muted);font-weight:400;font-size:12px;margin-left:6px;"><?php echo number_format_i18n( $tg_total ); ?> users</span></span>
+                <span style="font-size:12px;color:var(--muted);">Page cost: $<?php echo esc_html( number_format( $tg_cost, 4 ) ); ?></span>
+            </div>
+
+            <?php if ( ! $tg_has_table ) : ?>
+                <div style="padding:18px;color:var(--muted);">The Telegram chatbot users table does not exist yet.</div>
+            <?php elseif ( empty( $tg_users ) ) : ?>
+                <div style="padding:18px;color:var(--muted);">No Telegram chatbot users found yet.</div>
+            <?php else : ?>
+            <table class="ds-table">
+                <thead><tr>
+                    <th>Telegram ID</th>
+                    <th>Name</th>
+                    <th>Username</th>
+                    <th>First Login</th>
+                    <th>Last Active</th>
+                    <th>Sessions</th>
+                    <th>Messages</th>
+                    <th>VIP</th>
+                    <th>API Cost</th>
+                </tr></thead>
+                <tbody>
+                <?php foreach ( $tg_users as $tg_user ) : ?>
+                <tr>
+                    <td><code><?php echo esc_html( $tg_user['telegram_id'] ); ?></code></td>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <?php if ( ! empty( $tg_user['photo_url'] ) ) : ?>
+                                <img src="<?php echo esc_url( $tg_user['photo_url'] ); ?>" alt="" width="34" height="34" style="border-radius:50%;object-fit:cover;">
+                            <?php else : ?>
+                                <div class="user-avatar"><?php echo esc_html( strtoupper( mb_substr( trim( $tg_user['first_name'] . ' ' . $tg_user['last_name'] ) ?: 'T', 0, 1 ) ) ); ?></div>
+                            <?php endif; ?>
+                            <div>
+                                <div style="font-weight:600;font-size:13px;"><?php echo esc_html( trim( $tg_user['first_name'] . ' ' . $tg_user['last_name'] ) ?: 'Unknown User' ); ?></div>
+                                <div style="font-size:11px;color:var(--muted);"><?php echo ! empty( $tg_user['username'] ) ? '@' . esc_html( $tg_user['username'] ) : 'No username'; ?></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <?php if ( ! empty( $tg_user['username'] ) ) : ?>
+                            <a href="<?php echo esc_url( 'https://t.me/' . rawurlencode( $tg_user['username'] ) ); ?>" target="_blank" rel="noopener">@<?php echo esc_html( $tg_user['username'] ); ?></a>
+                        <?php else : ?>
+                            <span style="color:var(--muted);">—</span>
+                        <?php endif; ?>
+                    </td>
+                    <td><?php echo esc_html( $tg_user['logged_in_at'] ?: '—' ); ?></td>
+                    <td><?php echo esc_html( $tg_user['last_active'] ?: '—' ); ?></td>
+                    <td><?php echo number_format_i18n( (int) ( $tg_user['session_count'] ?? 0 ) ); ?></td>
+                    <td><?php echo number_format_i18n( (int) ( $tg_user['message_count'] ?? 0 ) ); ?></td>
+                    <td><?php echo ! empty( $tg_user['is_vip'] ) ? 'Yes' : 'No'; ?></td>
+                    <td><strong>$<?php echo esc_html( number_format( (float) ( $tg_user['total_cost'] ?? 0 ), 4 ) ); ?></strong></td>
+                </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+
+            <?php if ( $tg_total_pages > 1 ) : ?>
+            <div style="display:flex;justify-content:flex-end;gap:8px;padding:14px 16px;border-top:1px solid var(--border);">
+                <?php if ( $tg_current_pg > 1 ) : ?>
+                    <a class="ds-tab" href="<?php echo esc_url( add_query_arg( [ 'tab' => 'telegram-users', 'tg_pg' => 1 ], home_url( '/dashboard/' ) ) ); ?>">&laquo; First</a>
+                    <a class="ds-tab" href="<?php echo esc_url( add_query_arg( [ 'tab' => 'telegram-users', 'tg_pg' => $tg_current_pg - 1 ], home_url( '/dashboard/' ) ) ); ?>">&lsaquo; Prev</a>
+                <?php endif; ?>
+                <span class="ds-tab active">Page <?php echo esc_html( $tg_current_pg ); ?> of <?php echo esc_html( $tg_total_pages ); ?></span>
+                <?php if ( $tg_current_pg < $tg_total_pages ) : ?>
+                    <a class="ds-tab" href="<?php echo esc_url( add_query_arg( [ 'tab' => 'telegram-users', 'tg_pg' => $tg_current_pg + 1 ], home_url( '/dashboard/' ) ) ); ?>">Next &rsaquo;</a>
+                    <a class="ds-tab" href="<?php echo esc_url( add_query_arg( [ 'tab' => 'telegram-users', 'tg_pg' => $tg_total_pages ], home_url( '/dashboard/' ) ) ); ?>">Last &raquo;</a>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
+            <?php endif; ?>
+        </div>
         <?php endif; ?>
         </div>
 

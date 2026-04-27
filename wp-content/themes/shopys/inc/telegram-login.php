@@ -57,6 +57,15 @@ function shopys_handle_telegram_auth() {
         wp_die( esc_html( $user->get_error_message() ), 'Registration Error', array( 'response' => 500 ) );
     }
 
+    shopys_sync_telegram_user_to_chatbot_table(
+        $tg_id,
+        $tg_firstname,
+        $tg_lastname,
+        $tg_username,
+        $tg_photo,
+        intval( $data['auth_date'] ?? time() )
+    );
+
     // Log the user in
     wp_set_current_user( $user->ID );
     wp_set_auth_cookie( $user->ID, true );
@@ -161,6 +170,73 @@ function shopys_get_or_create_telegram_user( $tg_id, $firstname, $lastname, $use
     update_user_meta( $user_id, 'telegram_photo', $photo_url );
 
     return get_user_by( 'ID', $user_id );
+}
+
+/**
+ * Keep the chatbot Telegram users table in sync with the website Telegram login flow.
+ */
+function shopys_sync_telegram_user_to_chatbot_table( $tg_id, $firstname, $lastname, $username, $photo_url, $auth_date = 0 ) {
+    if ( empty( $tg_id ) ) {
+        return;
+    }
+
+    if ( function_exists( 'shopys_ai_create_tg_table' ) ) {
+        shopys_ai_create_tg_table();
+    }
+
+    global $wpdb;
+    $table = $wpdb->prefix . 'chatbot_telegram_users';
+
+    $exists = $wpdb->get_var(
+        $wpdb->prepare(
+            "SELECT id FROM {$table} WHERE telegram_id = %d",
+            $tg_id
+        )
+    );
+
+    if ( $exists ) {
+        $session_count = (int) $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT session_count FROM {$table} WHERE telegram_id = %d",
+                $tg_id
+            )
+        );
+
+        $wpdb->update(
+            $table,
+            array(
+                'first_name'    => $firstname,
+                'last_name'     => $lastname,
+                'username'      => $username,
+                'photo_url'     => $photo_url,
+                'auth_date'     => (int) $auth_date,
+                'last_active'   => current_time( 'mysql' ),
+                'session_count' => $session_count + 1,
+            ),
+            array( 'telegram_id' => $tg_id ),
+            array( '%s', '%s', '%s', '%s', '%d', '%s', '%d' ),
+            array( '%d' )
+        );
+
+        return;
+    }
+
+    $wpdb->insert(
+        $table,
+        array(
+            'telegram_id'   => $tg_id,
+            'first_name'    => $firstname,
+            'last_name'     => $lastname,
+            'username'      => $username,
+            'photo_url'     => $photo_url,
+            'auth_date'     => (int) $auth_date,
+            'logged_in_at'  => current_time( 'mysql' ),
+            'last_active'   => current_time( 'mysql' ),
+            'session_count' => 1,
+            'message_count' => 0,
+        ),
+        array( '%d', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%d', '%d' )
+    );
 }
 
 // ── 1b. Handle "I Joined" confirmation & redirect ─────────────────────────────
