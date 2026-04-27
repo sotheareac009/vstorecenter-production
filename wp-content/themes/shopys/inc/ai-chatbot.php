@@ -391,6 +391,20 @@ function shopys_ai_register_settings() {
 
     // Daily message limit
     register_setting( 'shopys_ai_settings', 'shopys_ai_daily_limit', 'absint' );
+
+    // Free-form store knowledge (return policy, shipping, FAQs, etc.) injected into system prompt.
+    register_setting( 'shopys_ai_settings', 'shopys_ai_store_knowledge', 'sanitize_textarea_field' );
+}
+
+// Flush cached catalog & website map whenever the chatbot settings, products,
+// or pages change so the assistant always works from current data.
+add_action( 'update_option_shopys_ai_store_knowledge', 'shopys_ai_flush_caches' );
+add_action( 'save_post_product',                       'shopys_ai_flush_caches' );
+add_action( 'save_post_page',                          'shopys_ai_flush_caches' );
+add_action( 'save_post_post',                          'shopys_ai_flush_caches' );
+function shopys_ai_flush_caches() {
+    delete_transient( 'shopys_ai_catalog_v2' );
+    delete_transient( 'shopys_ai_website_map_v2' );
 }
 
 /**
@@ -484,6 +498,18 @@ function shopys_ai_settings_page() {
                     <td>
                         <textarea name="shopys_ai_welcome_msg" id="shopys_ai_welcome_msg"
                                   rows="3" class="large-text"><?php echo esc_textarea( $welcome_msg ); ?></textarea>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="shopys_ai_store_knowledge"><?php esc_html_e( 'Store Knowledge Base', 'shopys' ); ?></label></th>
+                    <td>
+                        <?php $store_knowledge = get_option( 'shopys_ai_store_knowledge', '' ); ?>
+                        <textarea name="shopys_ai_store_knowledge" id="shopys_ai_store_knowledge"
+                                  rows="12" class="large-text" placeholder="Return policy: 30 days, original packaging required.&#10;Shipping: Free above $50, otherwise $5.&#10;Warranty: 1-year manufacturer warranty.&#10;Business hours: Mon-Fri 9am-6pm, Sat 10am-4pm.&#10;Contact: support@example.com / +855 12 345 678&#10;FAQ: ..."><?php echo esc_textarea( $store_knowledge ); ?></textarea>
+                        <p class="description">
+                            Custom info the chatbot should know about your store — return policy, shipping, warranty, business hours, contact info, FAQs, brand story, anything customers ask about.
+                            Plain text. The chatbot reads this on every reply, so keep it focused (under ~2000 words for best performance).
+                        </p>
                     </td>
                 </tr>
             </table>
@@ -687,7 +713,7 @@ function shopys_ai_settings_page() {
    ═══════════════════════════════════════════════════════════════════ */
 
 function shopys_ai_get_catalog() {
-    $cached = get_transient( 'shopys_ai_catalog' );
+    $cached = get_transient( 'shopys_ai_catalog_v2' );
     if ( false !== $cached ) return $cached;
 
     if ( ! class_exists( 'WooCommerce' ) ) return array();
@@ -738,7 +764,7 @@ function shopys_ai_get_catalog() {
         );
     }
 
-    set_transient( 'shopys_ai_catalog', $catalog, 10 * MINUTE_IN_SECONDS );
+    set_transient( 'shopys_ai_catalog_v2', $catalog, 10 * MINUTE_IN_SECONDS );
     return $catalog;
 }
 
@@ -747,7 +773,7 @@ function shopys_ai_get_catalog() {
    ═══════════════════════════════════════════════════════════════════ */
 
 function shopys_ai_get_website_map() {
-    $cached = get_transient( 'shopys_ai_website_map' );
+    $cached = get_transient( 'shopys_ai_website_map_v2' );
     if ( false !== $cached ) return $cached;
 
     $map = array(
@@ -759,14 +785,24 @@ function shopys_ai_get_website_map() {
         'product_categories' => array(),
     );
 
-    // Get all pages
+    // Get all pages with a content excerpt so the bot can answer questions
+    // about About Us, Contact, Shipping, Policy, FAQ, etc. without browsing.
     $pages = get_pages( array( 'number' => 100 ) );
     foreach ( $pages as $page ) {
+        $raw_content = $page->post_content;
+        // Strip shortcodes, blocks, HTML — leave only readable text.
+        $raw_content = strip_shortcodes( $raw_content );
+        $raw_content = wp_strip_all_tags( $raw_content );
+        $raw_content = preg_replace( '/\s+/', ' ', $raw_content );
+        $raw_content = trim( $raw_content );
+        $excerpt     = mb_substr( $raw_content, 0, 600 );
+
         $map['pages'][] = array(
-            'id'    => $page->ID,
-            'title' => $page->post_title,
-            'url'   => get_page_link( $page->ID ),
-            'slug'  => $page->post_name,
+            'id'      => $page->ID,
+            'title'   => $page->post_title,
+            'url'     => get_page_link( $page->ID ),
+            'slug'    => $page->post_name,
+            'excerpt' => $excerpt,
         );
     }
 
@@ -863,7 +899,7 @@ function shopys_ai_get_website_map() {
         );
     }
 
-    set_transient( 'shopys_ai_website_map', $map, 10 * MINUTE_IN_SECONDS );
+    set_transient( 'shopys_ai_website_map_v2', $map, 10 * MINUTE_IN_SECONDS );
     return $map;
 }
 
@@ -1847,16 +1883,25 @@ function shopys_ai_chat_handler() {
             array_keys( $p['attributes'] ),
             $p['attributes']
         ) ) : '';
-        $catalog_text .= "ID:{$p['id']} | {$p['name']} | {$p['price']}" . $attrs . "\n";
+        $cats  = ! empty( $p['categories'] ) ? ' | Categories: ' . implode( ', ', $p['categories'] ) : '';
+        $sku   = ! empty( $p['sku'] )        ? ' | SKU: '        . $p['sku']                       : '';
+        $stock = ! empty( $p['stock'] )      ? ' | Stock: '      . $p['stock']                     : '';
+        $sale  = ! empty( $p['sale'] )       ? ' | Sale: '       . $p['sale']                      : '';
+        $desc  = ! empty( $p['description'] ) ? "\n   Description: " . wp_strip_all_tags( $p['description'] ) : '';
+        $catalog_text .= "ID:{$p['id']} | {$p['name']} | {$p['price']}" . $sale . $stock . $cats . $sku . $attrs . $desc . "\n";
     }
 
     // Get website structure (pages, posts, categories)
     $website_map = shopys_ai_get_website_map();
     $pages_list = '';
     if ( ! empty( $website_map['pages'] ) ) {
-        $pages_list = "\n\nWEBSITE PAGES:\n";
+        $pages_list = "\n\nWEBSITE PAGES (with content snippets — use these to answer questions about policies, shipping, contact, about us, etc.):\n";
         foreach ( array_slice( $website_map['pages'], 0, 20 ) as $page ) {
-            $pages_list .= "- {$page['title']}: " . $page['url'] . "\n";
+            $pages_list .= "- {$page['title']}: " . $page['url'];
+            if ( ! empty( $page['excerpt'] ) ) {
+                $pages_list .= "\n   Content: " . $page['excerpt'];
+            }
+            $pages_list .= "\n";
         }
     }
 
@@ -1895,6 +1940,13 @@ function shopys_ai_chat_handler() {
         }
     }
 
+    // Custom store knowledge from admin settings (return policy, shipping, FAQs, etc.)
+    $store_knowledge = trim( (string) get_option( 'shopys_ai_store_knowledge', '' ) );
+    $knowledge_block = '';
+    if ( $store_knowledge !== '' ) {
+        $knowledge_block = "\n\n<store_knowledge>\nThe following is the official, store-owner-provided knowledge about this business. Treat it as the source of truth and use it to answer questions about policies, shipping, returns, warranty, hours, contact info, and anything else covered here. Quote or paraphrase as needed; do not invent facts beyond this.\n\n{$store_knowledge}\n</store_knowledge>";
+    }
+
     // Feature toggle checks
     $is_product_only    = get_option( 'shopys_ai_product_only', '1' ) !== '0';
     $is_image_search    = get_option( 'shopys_ai_image_search', '1' ) !== '0';
@@ -1917,7 +1969,7 @@ You are a knowledgeable, warm, and professional shopping advisor. You combine de
 <product_catalog>
 {$catalog_text}
 </product_catalog>
-{$pages_list}{$posts_list}{$categories_list}{$product_categories_list}{$menus_list}
+{$pages_list}{$posts_list}{$categories_list}{$product_categories_list}{$menus_list}{$knowledge_block}
 
 <response_formatting>
 FORMAT YOUR RESPONSES using proper markdown for a premium reading experience:
