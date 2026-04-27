@@ -233,7 +233,7 @@ function shopys_vc_top_pages( $since, $limit = 15 ) {
         global $wpdb;
         $limit = max( 1, min( 50, (int) $limit ) );
         $rows = $wpdb->get_results( $wpdb->prepare(
-            "SELECT url, MAX(title) AS title, MAX(post_id) AS post_id, COUNT(*) AS views
+            "SELECT url, MAX(title) AS title, MAX(post_id) AS post_id, COUNT(*) AS views, MAX(viewed_at) AS last_viewed
                FROM " . shopys_vc_table() . "
               WHERE viewed_at >= %s
               GROUP BY url

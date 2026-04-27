@@ -74,7 +74,6 @@ $menu_items = [
     'siteview'  => [ 'icon' => 'M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z', 'label' => 'Site View' ],
     'products'  => [ 'icon' => 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4', 'label' => 'Products', 'href' => admin_url( 'edit.php?post_type=product' ) ],
     'orders'    => [ 'icon' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01', 'label' => 'Orders', 'href' => admin_url( 'edit.php?post_type=shop_order' ) ],
-    'wp-admin'  => [ 'icon' => 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z', 'label' => 'WP Admin', 'href' => admin_url() ],
 ];
 ?>
 <!DOCTYPE html>
@@ -785,15 +784,37 @@ body {
                             <th>#</th>
                             <th>Page</th>
                             <th>URL</th>
+                            <th>Last Viewed</th>
+                            <th>Date &amp; Time</th>
                             <th style="text-align:right;">Views</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ( $top_pages as $i => $row ) : ?>
+                        <?php foreach ( $top_pages as $i => $row ) :
+                            $lv_raw  = $row->last_viewed ?? '';
+                            $lv_disp = '—';
+                            $lv_abs  = '—';
+                            if ( $lv_raw ) {
+                                $ts   = strtotime( $lv_raw );
+                                $diff = current_time( 'timestamp' ) - $ts;
+                                if      ( $diff < 60 )         $lv_disp = 'Just now';
+                                elseif  ( $diff < 3600 )       $lv_disp = round( $diff / 60 ) . ' min ago';
+                                elseif  ( $diff < 86400 )      $lv_disp = round( $diff / 3600 ) . ' hr ago';
+                                elseif  ( $diff < 86400 * 2 )  $lv_disp = 'Yesterday';
+                                else                            $lv_disp = date( 'd M', $ts );
+                                $lv_abs = date( 'j M Y, H:i', $ts );
+                            }
+                        ?>
                         <tr>
                             <td style="color:var(--muted);font-size:12px;"><?php echo $i + 1; ?></td>
                             <td><strong><?php echo esc_html( $row->title ?: '(untitled)' ); ?></strong></td>
                             <td><a href="<?php echo esc_url( $row->url ); ?>" target="_blank">open ↗</a></td>
+                            <td style="font-size:12px;color:var(--green);white-space:nowrap;font-weight:600;">
+                                <?php echo esc_html( $lv_disp ); ?>
+                            </td>
+                            <td style="font-size:12px;color:var(--muted);white-space:nowrap;">
+                                <?php echo esc_html( $lv_abs ); ?>
+                            </td>
                             <td class="views-count"><?php echo number_format_i18n( (int) $row->views ); ?></td>
                         </tr>
                         <?php endforeach; ?>
