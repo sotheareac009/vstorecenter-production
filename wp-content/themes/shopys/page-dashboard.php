@@ -41,6 +41,7 @@ if ( $has_vc ) {
     $uniq_30d        = shopys_vc_count_unique( $month_start );
     $top_pages       = shopys_vc_top_pages( $week_start, 10 );
     $series          = shopys_vc_daily_series( 14 );
+    $top_locations   = function_exists( 'shopys_vc_top_locations' ) ? shopys_vc_top_locations( $week_start, 20 ) : [];
     $max_views       = 1;
     foreach ( $series as $row ) {
         if ( $row['views'] > $max_views ) $max_views = $row['views'];
@@ -920,7 +921,7 @@ body {
                 <table class="ds-table">
                     <thead><tr>
                         <th>#</th><th>Page</th><th>URL</th>
-                        <th>Last Viewed</th><th>Date &amp; Time</th>
+                        <th>Last Viewed</th><th>Date &amp; Time</th><th>Location</th>
                         <th style="text-align:right;">Views</th>
                     </tr></thead>
                     <tbody>
@@ -937,6 +938,32 @@ body {
                             else                           $lv_disp = date('d M', $ts);
                             $lv_abs = date('j M Y, H:i', $ts);
                         }
+                        $flag = '';
+                        $cc = $row->country_code ?? '';
+                        if ( $cc && strlen($cc) === 2 ) {
+                            list($c1, $c2) = str_split(strtoupper($cc));
+                            $flag = mb_convert_encoding('&#' . (127397 + ord($c1)) . ';', 'UTF-8', 'HTML-ENTITIES') . 
+                                    mb_convert_encoding('&#' . (127397 + ord($c2)) . ';', 'UTF-8', 'HTML-ENTITIES');
+                        }
+                        $loc_count = (int)($row->location_count ?? 0);
+                        if ( $loc_count > 1 ) {
+                            $list_html = '<ul style="margin:4px 0 0 0;padding-left:14px;font-size:11px;color:var(--muted);list-style:disc;">';
+                            $ll = array_unique(explode('|', $row->location_list ?? ''));
+                            foreach ($ll as $l_item) {
+                                $pts = explode(':', $l_item);
+                                if (count($pts) < 3) continue;
+                                $l_cc = $pts[0]; $l_country = $pts[1]; $l_city = $pts[2];
+                                $line = ($l_city ? $l_city . ($l_country ? ', ' : '') : '') . ($l_country ?: $l_cc);
+                                // Skip flag inside list to keep it super clean, or add string flag if needed
+                                $list_html .= '<li>' . esc_html($line) . '</li>';
+                            }
+                            $list_html .= '</ul>';
+                            $loc_str = '<details style="cursor:pointer;"><summary style="color:var(--accent-dim);font-weight:600;outline:none;">Multiple Locations (' . $loc_count . ')</summary>' . $list_html . '</details>';
+                            $flag = '🌐';
+                        } else {
+                            $loc_str = ($row->city ?? '') . ($row->city && $row->country ? ', ' : '') . ($row->country ?? $cc);
+                            $loc_str = esc_html($loc_str ?: '—');
+                        }
                     ?>
                     <tr>
                         <td style="color:var(--muted);font-size:12px;"><?php echo $i+1; ?></td>
@@ -944,6 +971,12 @@ body {
                         <td><a href="<?php echo esc_url($row->url); ?>" target="_blank">open ↗</a></td>
                         <td style="font-size:12px;color:var(--green);white-space:nowrap;font-weight:600;"><?php echo esc_html($lv_disp); ?></td>
                         <td style="font-size:12px;color:var(--muted);white-space:nowrap;"><?php echo esc_html($lv_abs); ?></td>
+                        <td style="font-size:12px;white-space:nowrap;vertical-align:top;">
+                            <div style="display:flex;align-items:flex-start;">
+                                <?php if ($flag): ?><span style="margin-right:4px;font-size:14px;line-height:1.2;"><?php echo $flag; ?></span><?php endif; ?>
+                                <div><?php echo $loc_str; ?></div>
+                            </div>
+                        </td>
                         <td class="views-count"><?php echo number_format_i18n((int)$row->views); ?></td>
                     </tr>
                     <?php endforeach; ?>
@@ -1002,7 +1035,7 @@ body {
                 <table class="ds-table">
                     <thead><tr>
                         <th>#</th><th>Page</th><th>URL</th>
-                        <th>Last Viewed</th><th>Date &amp; Time</th>
+                        <th>Last Viewed</th><th>Date &amp; Time</th><th>Location</th>
                         <th style="text-align:right;">Views</th>
                     </tr></thead>
                     <tbody>
@@ -1019,6 +1052,32 @@ body {
                             else                           $lv_disp = date('d M', $ts);
                             $lv_abs = date('j M Y, H:i', $ts);
                         }
+                        $flag = '';
+                        $cc = $row->country_code ?? '';
+                        if ( $cc && strlen($cc) === 2 ) {
+                            list($c1, $c2) = str_split(strtoupper($cc));
+                            $flag = mb_convert_encoding('&#' . (127397 + ord($c1)) . ';', 'UTF-8', 'HTML-ENTITIES') . 
+                                    mb_convert_encoding('&#' . (127397 + ord($c2)) . ';', 'UTF-8', 'HTML-ENTITIES');
+                        }
+                        $loc_count = (int)($row->location_count ?? 0);
+                        if ( $loc_count > 1 ) {
+                            $list_html = '<ul style="margin:4px 0 0 0;padding-left:14px;font-size:11px;color:var(--muted);list-style:disc;">';
+                            $ll = array_unique(explode('|', $row->location_list ?? ''));
+                            foreach ($ll as $l_item) {
+                                $pts = explode(':', $l_item);
+                                if (count($pts) < 3) continue;
+                                $l_cc = $pts[0]; $l_country = $pts[1]; $l_city = $pts[2];
+                                $line = ($l_city ? $l_city . ($l_country ? ', ' : '') : '') . ($l_country ?: $l_cc);
+                                // Skip flag inside list to keep it super clean, or add string flag if needed
+                                $list_html .= '<li>' . esc_html($line) . '</li>';
+                            }
+                            $list_html .= '</ul>';
+                            $loc_str = '<details style="cursor:pointer;"><summary style="color:var(--accent-dim);font-weight:600;outline:none;">Multiple Locations (' . $loc_count . ')</summary>' . $list_html . '</details>';
+                            $flag = '🌐';
+                        } else {
+                            $loc_str = ($row->city ?? '') . ($row->city && $row->country ? ', ' : '') . ($row->country ?? $cc);
+                            $loc_str = esc_html($loc_str ?: '—');
+                        }
                     ?>
                     <tr>
                         <td style="color:var(--muted);font-size:12px;"><?php echo $i+1; ?></td>
@@ -1026,6 +1085,12 @@ body {
                         <td><a href="<?php echo esc_url($row->url); ?>" target="_blank">open ↗</a></td>
                         <td style="font-size:12px;color:var(--green);white-space:nowrap;font-weight:600;"><?php echo esc_html($lv_disp); ?></td>
                         <td style="font-size:12px;color:var(--muted);white-space:nowrap;"><?php echo esc_html($lv_abs); ?></td>
+                        <td style="font-size:12px;white-space:nowrap;vertical-align:top;">
+                            <div style="display:flex;align-items:flex-start;">
+                                <?php if ($flag): ?><span style="margin-right:4px;font-size:14px;line-height:1.2;"><?php echo $flag; ?></span><?php endif; ?>
+                                <div><?php echo $loc_str; ?></div>
+                            </div>
+                        </td>
                         <td class="views-count"><?php echo number_format_i18n((int)$row->views); ?></td>
                     </tr>
                     <?php endforeach; ?>
@@ -1094,6 +1159,49 @@ body {
             </div>
 
             <?php endif; // sv_view ?>
+
+            <!-- ── VISITOR LOCATIONS ─────────────────────────────── -->
+            <?php if ( ! empty( $top_locations ) ) : ?>
+            <div class="ds-table-wrap" style="margin-top:28px;">
+                <div class="ds-table-head">
+                    Visitor Locations — Last 7 days
+                    <span style="color:var(--muted);font-weight:400;font-size:12px;margin-left:8px;"><?php echo count($top_locations); ?> cities</span>
+                </div>
+                <table class="ds-table">
+                    <thead><tr>
+                        <th>#</th>
+                        <th>Country</th>
+                        <th>Region</th>
+                        <th>City</th>
+                        <th style="text-align:right;">Visitors</th>
+                        <th style="text-align:right;">Views</th>
+                    </tr></thead>
+                    <tbody>
+                    <?php foreach ( $top_locations as $i => $loc ) :
+                        // Convert country code to flag emoji
+                        $flag = '';
+                        if ( $loc->country_code && strlen($loc->country_code) === 2 ) {
+                            $chars = str_split( strtoupper( $loc->country_code ) );
+                            $flag = mb_convert_encoding('&#' . (127397 + ord($chars[0])) . ';', 'UTF-8', 'HTML-ENTITIES') . 
+                                    mb_convert_encoding('&#' . (127397 + ord($chars[1])) . ';', 'UTF-8', 'HTML-ENTITIES');
+                        }
+                    ?>
+                    <tr>
+                        <td style="color:var(--muted);font-size:12px;"><?php echo $i + 1; ?></td>
+                        <td>
+                            <?php if ( $flag ) : ?><span style="font-size:18px;line-height:1;margin-right:6px;"><?php echo $flag; ?></span><?php endif; ?>
+                            <strong><?php echo esc_html( $loc->country ?: $loc->country_code ?: '—' ); ?></strong>
+                        </td>
+                        <td style="color:var(--muted);font-size:13px;"><?php echo esc_html( $loc->region ?: '—' ); ?></td>
+                        <td style="font-size:13px;"><?php echo esc_html( $loc->city ?: '—' ); ?></td>
+                        <td style="text-align:right;font-size:13px;color:var(--green);font-weight:700;"><?php echo number_format_i18n( (int)$loc->unique_visitors ); ?></td>
+                        <td class="views-count"><?php echo number_format_i18n( (int)$loc->views ); ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php endif; ?>
 
             <?php endif; ?>
         </div>

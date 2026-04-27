@@ -64,7 +64,7 @@ function shopys_vc_ensure_table() {
     if ( $ready !== null ) return $ready;
 
     try {
-        if ( get_option( 'shopys_vc_table_version' ) === '1.0' ) {
+        if ( get_option( 'shopys_vc_table_version' ) === '1.1' ) {
             $ready = true;
             return true;
         }
@@ -90,28 +90,54 @@ function shopys_vc_create_table() {
             url VARCHAR(500) DEFAULT '',
             ip_hash CHAR(64) DEFAULT '',
             user_id BIGINT UNSIGNED DEFAULT 0,
+            country_code CHAR(2) DEFAULT '',
+            country VARCHAR(100) DEFAULT '',
+            region VARCHAR(100) DEFAULT '',
+            city VARCHAR(100) DEFAULT '',
             viewed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY  (id),
             KEY date_idx (viewed_at),
             KEY post_idx (post_id, viewed_at),
-            KEY visitor_idx (ip_hash, viewed_at)
+            KEY visitor_idx (ip_hash, viewed_at),
+            KEY country_idx (country_code)
         ) {$charset};";
 
         if ( ! function_exists( 'dbDelta' ) ) {
             require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         }
         dbDelta( $sql );
-        update_option( 'shopys_vc_table_version', '1.0', false );
+        update_option( 'shopys_vc_table_version', '1.1', false );
     } catch ( \Throwable $e ) {
         // Silently swallow — site keeps working, view just isn't recorded yet.
     }
 }
 
-// Try to create the table eagerly on every request (cheap, just an option check
-// after first success). Hooks BOTH frontend and admin so it's ready everywhere.
-add_action( 'init',          'shopys_vc_ensure_table' );
-add_action( 'admin_init',    'shopys_vc_ensure_table' );
+/**
+ * Migrate existing v1.0 table to v1.1 (add geo columns if missing).
+ */
+function shopys_vc_maybe_migrate() {
+    if ( get_option( 'shopys_vc_table_version' ) === '1.1' ) return;
+    try {
+        global $wpdb;
+        $table = shopys_vc_table();
+        $cols  = $wpdb->get_col( "SHOW COLUMNS FROM {$table}" );
+        if ( ! in_array( 'country_code', $cols, true ) ) {
+            $wpdb->query( "ALTER TABLE {$table}
+                ADD COLUMN country_code CHAR(2)   NOT NULL DEFAULT '',
+                ADD COLUMN country      VARCHAR(100) NOT NULL DEFAULT '',
+                ADD COLUMN region       VARCHAR(100) NOT NULL DEFAULT '',
+                ADD COLUMN city         VARCHAR(100) NOT NULL DEFAULT '',
+                ADD INDEX  country_idx  (country_code)" );
+        }
+        update_option( 'shopys_vc_table_version', '1.1', false );
+    } catch ( \Throwable $e ) {}
+}
+
+// Try to create/migrate the table eagerly on every request.
+add_action( 'init',               'shopys_vc_ensure_table' );
+add_action( 'admin_init',         'shopys_vc_ensure_table' );
 add_action( 'after_switch_theme', 'shopys_vc_create_table' );
+add_action( 'init',               'shopys_vc_maybe_migrate', 5 );
 
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -170,6 +196,9 @@ function shopys_vc_record_view() {
 
         $ip_hash = shopys_vc_hash_ip( $ip );
 
+        // Resolve geo location (cached per IP for 7 days).
+        $geo = shopys_vc_get_geo( $ip );
+
         // Throttle dupes from same visitor within 60s.
         $wpdb->suppress_errors( true );
         $recent = $wpdb->get_var( $wpdb->prepare(
@@ -183,13 +212,17 @@ function shopys_vc_record_view() {
         if ( $recent ) { $wpdb->suppress_errors( false ); return; }
 
         $wpdb->insert( $table, array(
-            'post_id'   => $post_id,
-            'post_type' => $post_type,
-            'title'     => mb_substr( $title, 0, 255 ),
-            'url'       => mb_substr( $url, 0, 500 ),
-            'ip_hash'   => $ip_hash,
-            'user_id'   => get_current_user_id(),
-            'viewed_at' => current_time( 'mysql' ),
+            'post_id'      => $post_id,
+            'post_type'    => $post_type,
+            'title'        => mb_substr( $title, 0, 255 ),
+            'url'          => mb_substr( $url, 0, 500 ),
+            'ip_hash'      => $ip_hash,
+            'user_id'      => get_current_user_id(),
+            'country_code' => $geo['country_code'],
+            'country'      => $geo['country'],
+            'region'       => $geo['region'],
+            'city'         => $geo['city'],
+            'viewed_at'    => current_time( 'mysql' ),
         ) );
         $wpdb->suppress_errors( false );
 
@@ -204,7 +237,87 @@ function shopys_vc_record_view() {
 
 
 /* ═══════════════════════════════════════════════════════════════════
-   4. STATS HELPERS (every helper safe to call before table exists)
+   4. GEO IP LOOKUP (ip-api.com, cached 7 days per unique IP)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/**
+ * Returns geo data array for a given IP address.
+ * Caches the result for 7 days so the API is only ever hit once per unique IP.
+ *
+ * @param  string $ip  Raw IP address.
+ * @return array { country_code, country, region, city }
+ */
+function shopys_vc_get_geo( $ip ) {
+    $empty = [ 'country_code' => '', 'country' => '', 'region' => '', 'city' => '' ];
+    if ( ! $ip || $ip === '127.0.0.1' || $ip === '::1' ) return $empty;
+
+    // Cache key: short hash of the IP (not the salted hash — we need consistency).
+    $cache_key = 'shopys_geo_' . substr( md5( $ip ), 0, 16 );
+    $cached    = get_transient( $cache_key );
+    if ( $cached !== false ) return $cached;
+
+    try {
+        $response = wp_remote_get(
+            'http://ip-api.com/json/' . rawurlencode( $ip ) . '?fields=status,country,countryCode,regionName,city',
+            [ 'timeout' => 3, 'sslverify' => false ]
+        );
+
+        if ( is_wp_error( $response ) ) {
+            set_transient( $cache_key, $empty, HOUR_IN_SECONDS ); // short cache on failure
+            return $empty;
+        }
+
+        $body = json_decode( wp_remote_retrieve_body( $response ), true );
+
+        if ( empty( $body ) || ( $body['status'] ?? '' ) !== 'success' ) {
+            set_transient( $cache_key, $empty, HOUR_IN_SECONDS );
+            return $empty;
+        }
+
+        $geo = [
+            'country_code' => substr( $body['countryCode'] ?? '', 0, 2 ),
+            'country'      => substr( $body['country']     ?? '', 0, 100 ),
+            'region'       => substr( $body['regionName']  ?? '', 0, 100 ),
+            'city'         => substr( $body['city']        ?? '', 0, 100 ),
+        ];
+
+        set_transient( $cache_key, $geo, 7 * DAY_IN_SECONDS );
+        return $geo;
+
+    } catch ( \Throwable $e ) {
+        return $empty;
+    }
+}
+
+/**
+ * Top visitor locations grouped by country + city, for the dashboard.
+ *
+ * @param  string $since  MySQL datetime string.
+ * @param  int    $limit  Max rows.
+ * @return array
+ */
+function shopys_vc_top_locations( $since, $limit = 20 ) {
+    if ( ! shopys_vc_ensure_table() ) return [];
+    try {
+        global $wpdb;
+        return $wpdb->get_results( $wpdb->prepare(
+            "SELECT country_code, country, region, city,
+                    COUNT(*) AS views,
+                    COUNT(DISTINCT ip_hash) AS unique_visitors
+               FROM " . shopys_vc_table() . "
+              WHERE viewed_at >= %s
+                AND country_code != ''
+              GROUP BY country_code, country, region, city
+              ORDER BY views DESC
+              LIMIT %d",
+            $since, $limit
+        ) ) ?: [];
+    } catch ( \Throwable $e ) { return []; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   5. STATS HELPERS (every helper safe to call before table exists)
    ═══════════════════════════════════════════════════════════════════ */
 
 function shopys_vc_count_views( $since ) {
@@ -233,7 +346,13 @@ function shopys_vc_top_pages( $since, $limit = 15 ) {
         global $wpdb;
         $limit = max( 1, min( 50, (int) $limit ) );
         $rows = $wpdb->get_results( $wpdb->prepare(
-            "SELECT url, MAX(title) AS title, MAX(post_id) AS post_id, COUNT(*) AS views, MAX(viewed_at) AS last_viewed
+            "SELECT url, MAX(title) AS title, MAX(post_id) AS post_id, COUNT(*) AS views,
+                    MAX(viewed_at) AS last_viewed,
+                    COUNT(DISTINCT IF(country_code != '', CONCAT(country_code, city), NULL)) AS location_count,
+                        GROUP_CONCAT(DISTINCT IF(country_code != '', CONCAT(country_code, ':', country, ':', city), NULL) ORDER BY viewed_at DESC SEPARATOR '|') AS location_list,
+                    SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country_code, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country_code,
+                    SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country,
+                    SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', city, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS city
                FROM " . shopys_vc_table() . "
               WHERE viewed_at >= %s
               GROUP BY url
@@ -257,7 +376,12 @@ function shopys_vc_pages_by_period( $year = 0, $month = 0, $limit = 25, $offset 
         if ( $year && $month ) {
             $rows = $wpdb->get_results( $wpdb->prepare(
                 "SELECT url, MAX(title) AS title, MAX(post_id) AS post_id,
-                        COUNT(*) AS views, MAX(viewed_at) AS last_viewed
+                        COUNT(*) AS views, MAX(viewed_at) AS last_viewed,
+                        COUNT(DISTINCT IF(country_code != '', CONCAT(country_code, city), NULL)) AS location_count,
+                            GROUP_CONCAT(DISTINCT IF(country_code != '', CONCAT(country_code, ':', country, ':', city), NULL) ORDER BY viewed_at DESC SEPARATOR '|') AS location_list,
+                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country_code, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country_code,
+                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country,
+                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', city, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS city
                    FROM " . shopys_vc_table() . "
                   WHERE YEAR(viewed_at) = %d AND MONTH(viewed_at) = %d
                   GROUP BY url
@@ -268,7 +392,12 @@ function shopys_vc_pages_by_period( $year = 0, $month = 0, $limit = 25, $offset 
         } elseif ( $year ) {
             $rows = $wpdb->get_results( $wpdb->prepare(
                 "SELECT url, MAX(title) AS title, MAX(post_id) AS post_id,
-                        COUNT(*) AS views, MAX(viewed_at) AS last_viewed
+                        COUNT(*) AS views, MAX(viewed_at) AS last_viewed,
+                        COUNT(DISTINCT IF(country_code != '', CONCAT(country_code, city), NULL)) AS location_count,
+                            GROUP_CONCAT(DISTINCT IF(country_code != '', CONCAT(country_code, ':', country, ':', city), NULL) ORDER BY viewed_at DESC SEPARATOR '|') AS location_list,
+                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country_code, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country_code,
+                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country,
+                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', city, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS city
                    FROM " . shopys_vc_table() . "
                   WHERE YEAR(viewed_at) = %d
                   GROUP BY url
@@ -279,7 +408,12 @@ function shopys_vc_pages_by_period( $year = 0, $month = 0, $limit = 25, $offset 
         } else {
             $rows = $wpdb->get_results( $wpdb->prepare(
                 "SELECT url, MAX(title) AS title, MAX(post_id) AS post_id,
-                        COUNT(*) AS views, MAX(viewed_at) AS last_viewed
+                        COUNT(*) AS views, MAX(viewed_at) AS last_viewed,
+                        COUNT(DISTINCT IF(country_code != '', CONCAT(country_code, city), NULL)) AS location_count,
+                            GROUP_CONCAT(DISTINCT IF(country_code != '', CONCAT(country_code, ':', country, ':', city), NULL) ORDER BY viewed_at DESC SEPARATOR '|') AS location_list,
+                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country_code, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country_code,
+                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country,
+                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', city, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS city
                    FROM " . shopys_vc_table() . "
                   GROUP BY url
                   ORDER BY last_viewed DESC
