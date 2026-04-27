@@ -155,7 +155,24 @@ switch ( $an_period ) {
 
 $an_pages    = function_exists( 'shopys_vc_analytics_pages' )    ? shopys_vc_analytics_pages( $an_since, $an_until, 10 )    : [];
 $an_products = function_exists( 'shopys_vc_analytics_products' ) ? shopys_vc_analytics_products( $an_since, $an_until, 10 ) : [];
+$an_sources  = function_exists( 'shopys_vc_traffic_sources' )    ? shopys_vc_traffic_sources( $an_since, $an_until, 15 )    : [];
 $an_base_url = add_query_arg( [ 'tab' => 'analytics' ], home_url( '/dashboard/' ) );
+
+// Source icon map
+$an_source_icons = [
+    'Direct'     => '🔗',
+    'Google'     => '🔍',
+    'Bing'       => '🔍',
+    'Yahoo'      => '🔍',
+    'Facebook'   => '👥',
+    'Instagram'  => '📸',
+    'TikTok'     => '🎵',
+    'Twitter / X'=> '🐦',
+    'YouTube'    => '▶️',
+    'Telegram'   => '✈️',
+    'LinkedIn'   => '💼',
+    'Pinterest'  => '📌',
+];
 ?>
 <!DOCTYPE html>
 <html <?php language_attributes(); ?>>
@@ -1556,6 +1573,47 @@ body {
 
             <div style="font-size:12px;color:var(--muted);margin-bottom:20px;">
                 Showing data for: <strong style="color:var(--text);"><?php echo esc_html( $an_label ); ?></strong>
+            </div>
+
+            <!-- Traffic Sources -->
+            <div class="ds-chart-wrap an-section">
+                <div class="an-section-title">
+                    Traffic Sources
+                    <span><?php echo count( $an_sources ); ?> sources</span>
+                </div>
+                <?php if ( $an_sources ) :
+                    $an_max_src = max( array_column( (array) $an_sources, 'views' ) );
+                ?>
+                <div class="an-hbar-wrap">
+                    <div class="an-hbar-row" style="margin-bottom:4px;">
+                        <div class="an-hbar-label" style="color:var(--muted);font-size:11px;">Source</div>
+                        <div style="flex:1;"></div>
+                        <div class="an-hbar-count" style="color:var(--muted);font-size:11px;">Views</div>
+                        <div class="an-hbar-uniq" style="color:var(--muted);font-size:11px;">Uniques</div>
+                    </div>
+                    <?php foreach ( $an_sources as $src ) :
+                        $pct     = $an_max_src > 0 ? round( ($src->views / $an_max_src) * 100 ) : 0;
+                        $icon    = $an_source_icons[ $src->source ] ?? '🌐';
+                        $is_direct = $src->source === 'Direct';
+                        $bar_color = $is_direct ? 'var(--green)' : '#a78bfa';
+                    ?>
+                    <div class="an-hbar-row">
+                        <div class="an-hbar-label">
+                            <span style="margin-right:6px;"><?php echo $icon; ?></span><?php echo esc_html( $src->source ); ?>
+                        </div>
+                        <div class="an-hbar-track">
+                            <div class="an-hbar-fill" style="width:<?php echo $pct; ?>%;background:<?php echo $bar_color; ?>;"></div>
+                        </div>
+                        <div class="an-hbar-count"><?php echo number_format_i18n( (int) $src->views ); ?></div>
+                        <div class="an-hbar-uniq"><?php echo number_format_i18n( (int) $src->uniques ); ?> uniq</div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php elseif ( empty( $an_sources ) && ! function_exists('shopys_vc_traffic_sources') ) : ?>
+                <div class="an-empty">Traffic source tracking is not active yet.</div>
+                <?php else : ?>
+                <div class="an-empty">No traffic recorded for this period. Sources appear as visitors arrive.</div>
+                <?php endif; ?>
             </div>
 
             <!-- Most Viewed Pages -->

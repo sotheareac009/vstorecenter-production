@@ -64,12 +64,12 @@ function shopys_vc_ensure_table() {
     if ( $ready !== null ) return $ready;
 
     try {
-        if ( get_option( 'shopys_vc_table_version' ) === '1.1' ) {
+        if ( get_option( 'shopys_vc_table_version' ) ) {
             $ready = true;
             return true;
         }
         shopys_vc_create_table();
-        $ready = ( get_option( 'shopys_vc_table_version' ) === '1.1' );
+        $ready = (bool) get_option( 'shopys_vc_table_version' );
     } catch ( \Throwable $e ) {
         $ready = false;
     }
@@ -94,29 +94,31 @@ function shopys_vc_create_table() {
             country VARCHAR(100) DEFAULT '',
             region VARCHAR(100) DEFAULT '',
             city VARCHAR(100) DEFAULT '',
+            referrer_source VARCHAR(100) DEFAULT '',
             viewed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY  (id),
             KEY date_idx (viewed_at),
             KEY post_idx (post_id, viewed_at),
             KEY visitor_idx (ip_hash, viewed_at),
-            KEY country_idx (country_code)
+            KEY country_idx (country_code),
+            KEY referrer_idx (referrer_source)
         ) {$charset};";
 
         if ( ! function_exists( 'dbDelta' ) ) {
             require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         }
         dbDelta( $sql );
-        update_option( 'shopys_vc_table_version', '1.1', false );
+        update_option( 'shopys_vc_table_version', '1.2', false );
     } catch ( \Throwable $e ) {
         // Silently swallow — site keeps working, view just isn't recorded yet.
     }
 }
 
 /**
- * Migrate existing v1.0 table to v1.1 (add geo columns if missing).
+ * Migrate table — runs on every init but each ALTER is guarded by a column check.
  */
 function shopys_vc_maybe_migrate() {
-    if ( get_option( 'shopys_vc_table_version' ) === '1.1' ) return;
+    if ( get_option( 'shopys_vc_table_version' ) === '1.2' ) return;
     try {
         global $wpdb;
         $table = shopys_vc_table();
@@ -129,7 +131,12 @@ function shopys_vc_maybe_migrate() {
                 ADD COLUMN city         VARCHAR(100) NOT NULL DEFAULT '',
                 ADD INDEX  country_idx  (country_code)" );
         }
-        update_option( 'shopys_vc_table_version', '1.1', false );
+        if ( ! in_array( 'referrer_source', $cols, true ) ) {
+            $wpdb->query( "ALTER TABLE {$table}
+                ADD COLUMN referrer_source VARCHAR(100) NOT NULL DEFAULT '',
+                ADD INDEX  referrer_idx (referrer_source)" );
+        }
+        update_option( 'shopys_vc_table_version', '1.2', false );
     } catch ( \Throwable $e ) {}
 }
 
@@ -143,6 +150,25 @@ add_action( 'init',               'shopys_vc_maybe_migrate', 5 );
 /* ═══════════════════════════════════════════════════════════════════
    3. TRACKING: RECORD A VIEW (never throws to caller)
    ═══════════════════════════════════════════════════════════════════ */
+
+function shopys_vc_parse_referrer( $referrer ) {
+    if ( empty( $referrer ) ) return 'Direct';
+    $ref_host = strtolower( (string) parse_url( $referrer, PHP_URL_HOST ) );
+    $own_host = strtolower( (string) parse_url( home_url(), PHP_URL_HOST ) );
+    if ( ! $ref_host || $ref_host === $own_host ) return 'Direct';
+    if ( strpos( $ref_host, 'google' )    !== false ) return 'Google';
+    if ( strpos( $ref_host, 'bing' )      !== false ) return 'Bing';
+    if ( strpos( $ref_host, 'yahoo' )     !== false ) return 'Yahoo';
+    if ( strpos( $ref_host, 'facebook' )  !== false || $ref_host === 'fb.com' || strpos( $ref_host, 'fb.me' ) !== false ) return 'Facebook';
+    if ( strpos( $ref_host, 'instagram' ) !== false ) return 'Instagram';
+    if ( strpos( $ref_host, 'tiktok' )    !== false ) return 'TikTok';
+    if ( strpos( $ref_host, 'twitter' )   !== false || $ref_host === 't.co' ) return 'Twitter / X';
+    if ( strpos( $ref_host, 'youtube' )   !== false || $ref_host === 'youtu.be' ) return 'YouTube';
+    if ( strpos( $ref_host, 't.me' )      !== false || strpos( $ref_host, 'telegram' ) !== false ) return 'Telegram';
+    if ( strpos( $ref_host, 'linkedin' )  !== false ) return 'LinkedIn';
+    if ( strpos( $ref_host, 'pinterest' ) !== false ) return 'Pinterest';
+    return preg_replace( '/^www\./', '', $ref_host ) ?: 'Other';
+}
 
 function shopys_vc_should_skip() {
     if ( shopys_vc_is_disabled() ) return true;
@@ -190,8 +216,9 @@ function shopys_vc_record_view() {
             $title = 'Archive: ' . wp_strip_all_tags( get_the_archive_title() );
         }
 
-        $host = isset( $_SERVER['HTTP_HOST'] )    ? $_SERVER['HTTP_HOST']    : parse_url( home_url(), PHP_URL_HOST );
-        $uri  = isset( $_SERVER['REQUEST_URI'] )  ? $_SERVER['REQUEST_URI']  : '/';
+        $host     = isset( $_SERVER['HTTP_HOST'] )   ? $_SERVER['HTTP_HOST']   : parse_url( home_url(), PHP_URL_HOST );
+        $uri      = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '/';
+        $referrer = isset( $_SERVER['HTTP_REFERER'] ) ? esc_url_raw( $_SERVER['HTTP_REFERER'] ) : '';
         $url  = ( is_ssl() ? 'https://' : 'http://' ) . $host . strtok( $uri, '?' );
 
         $ip_hash = shopys_vc_hash_ip( $ip );
@@ -216,9 +243,10 @@ function shopys_vc_record_view() {
             'post_type'    => $post_type,
             'title'        => mb_substr( $title, 0, 255 ),
             'url'          => mb_substr( $url, 0, 500 ),
-            'ip_hash'      => $ip_hash,
-            'user_id'      => get_current_user_id(),
-            'country_code' => $geo['country_code'],
+            'ip_hash'        => $ip_hash,
+            'user_id'        => get_current_user_id(),
+            'referrer_source' => shopys_vc_parse_referrer( $referrer ),
+            'country_code'   => $geo['country_code'],
             'country'      => $geo['country'],
             'region'       => $geo['region'],
             'city'         => $geo['city'],
@@ -534,6 +562,28 @@ function shopys_vc_daily_series( $days = 14 ) {
     } catch ( \Throwable $e ) {}
 
     return array_values( $series );
+}
+
+/**
+ * Traffic sources (referrer_source) by view count within a date range.
+ * Returns empty array safely if the column hasn't been migrated yet.
+ */
+function shopys_vc_traffic_sources( $since, $until, $limit = 15 ) {
+    if ( ! shopys_vc_ensure_table() ) return [];
+    try {
+        global $wpdb;
+        $cols = $wpdb->get_col( "SHOW COLUMNS FROM " . shopys_vc_table() );
+        if ( ! in_array( 'referrer_source', $cols, true ) ) return [];
+        return $wpdb->get_results( $wpdb->prepare(
+            "SELECT referrer_source AS source, COUNT(*) AS views, COUNT(DISTINCT ip_hash) AS uniques
+               FROM " . shopys_vc_table() . "
+              WHERE viewed_at >= %s AND viewed_at < %s
+              GROUP BY referrer_source
+              ORDER BY views DESC
+              LIMIT %d",
+            $since, $until, (int) $limit
+        ) ) ?: [];
+    } catch ( \Throwable $e ) { return []; }
 }
 
 /**
