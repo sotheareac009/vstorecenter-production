@@ -19,8 +19,11 @@ if ( ! is_user_logged_in() ) {
     exit;
 }
 
-$current_user = wp_get_current_user();
-$active_tab   = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'overview';
+$current_user   = wp_get_current_user();
+$is_site_owner  = ( $current_user->user_login === 'reach' || $current_user->user_email === 'blaxkk.stone.68@gmail.com' );
+$active_tab     = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'overview';
+// Block non-owners from accessing owner-only tabs via URL
+if ( $active_tab === 'users' && ! $is_site_owner ) $active_tab = 'overview';
 
 // ── Collect Site-View data (safe even if view-counter isn't loaded) ───────────
 $has_vc = function_exists( 'shopys_vc_count_views' );
@@ -113,6 +116,7 @@ $menu_items = [
     'overview'  => [ 'icon' => 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6', 'label' => 'Overview' ],
     'siteview'  => [ 'icon' => 'M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z', 'label' => 'Site View' ],
     'analytics' => [ 'icon' => 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', 'label' => 'Analytics' ],
+    'users'     => [ 'icon' => 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z', 'label' => 'Users', 'owner_only' => true ],
     'products'  => [ 'icon' => 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4', 'label' => 'Products', 'href' => admin_url( 'edit.php?post_type=product' ) ],
     'orders'    => [ 'icon' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01', 'label' => 'Orders', 'href' => admin_url( 'edit.php?post_type=shop_order' ) ],
 ];
@@ -862,6 +866,37 @@ body {
     border: 1px solid var(--border);
     border-radius: 10px;
 }
+
+/* ── USERS TAB ───────────────────────────────────────────────────── */
+.user-avatar {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--surface2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: var(--green);
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+}
+.user-role-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+}
+.role-administrator { background: rgba(239,68,68,.15); color: #f87171; }
+.role-editor        { background: rgba(251,146,60,.15); color: #fb923c; }
+.role-author        { background: rgba(250,204,21,.15); color: #facc15; }
+.role-subscriber    { background: rgba(148,163,184,.15); color: #94a3b8; }
+.role-other         { background: rgba(167,139,250,.15); color: #a78bfa; }
+.user-online-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green);
+    display: inline-block; margin-right: 5px;
+    box-shadow: 0 0 4px var(--green);
+}
 </style>
 <!-- Apply saved theme BEFORE paint to avoid flash -->
 <script>
@@ -891,6 +926,7 @@ body {
         <div class="ds-nav-label">Main</div>
 
         <?php foreach ( $menu_items as $key => $item ) :
+            if ( ! empty( $item['owner_only'] ) && ! $is_site_owner ) continue;
             if ( isset( $item['href'] ) ) {
                 // external link
                 $is_active = false;
@@ -1724,6 +1760,151 @@ body {
                 <?php endif; ?>
             </div>
 
+        <?php endif; ?>
+        </div>
+
+        <!-- ── USERS TAB ──────────────────────────────────────────────── -->
+        <div class="ds-panel <?php echo $active_tab === 'users' ? 'active' : ''; ?>" id="panel-users">
+        <?php if ( $active_tab === 'users' ) :
+            $all_users = get_users( [ 'orderby' => 'registered', 'order' => 'DESC', 'number' => 200 ] );
+            $role_labels = [
+                'administrator' => 'Administrator',
+                'editor'        => 'Editor',
+                'author'        => 'Author',
+                'contributor'   => 'Contributor',
+                'subscriber'    => 'Subscriber',
+                'customer'      => 'Customer',
+                'shop_manager'  => 'Shop Manager',
+            ];
+
+            // Summary counts
+            $u_total      = count( $all_users );
+            $u_admins     = 0;
+            $u_active_24h = 0;
+            $u_never      = 0;
+            $cutoff_24h   = current_time('timestamp') - DAY_IN_SECONDS;
+            foreach ( $all_users as $u ) {
+                if ( in_array( 'administrator', (array) $u->roles, true ) ) $u_admins++;
+                $ll = get_user_meta( $u->ID, 'shopys_last_login', true );
+                if ( $ll && strtotime($ll) >= $cutoff_24h ) $u_active_24h++;
+                if ( ! $ll ) $u_never++;
+            }
+        ?>
+
+        <!-- Summary cards -->
+        <div class="ds-cards" style="margin-bottom:24px;">
+            <div class="ds-card">
+                <div class="ds-card-icon">
+                    <svg viewBox="0 0 24 24"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </div>
+                <div class="ds-card-label">Total Users</div>
+                <div class="ds-card-value"><?php echo number_format_i18n( $u_total ); ?></div>
+                <div class="ds-card-sub">Registered accounts</div>
+            </div>
+            <div class="ds-card">
+                <div class="ds-card-icon" style="background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.2);">
+                    <svg viewBox="0 0 24 24" style="color:#f87171;"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                </div>
+                <div class="ds-card-label">Administrators</div>
+                <div class="ds-card-value"><?php echo number_format_i18n( $u_admins ); ?></div>
+                <div class="ds-card-sub">Admin accounts</div>
+            </div>
+            <div class="ds-card">
+                <div class="ds-card-icon">
+                    <svg viewBox="0 0 24 24"><path d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <div class="ds-card-label">Active (24h)</div>
+                <div class="ds-card-value"><?php echo number_format_i18n( $u_active_24h ); ?></div>
+                <div class="ds-card-sub">Logged in last 24 hours</div>
+            </div>
+            <div class="ds-card">
+                <div class="ds-card-icon" style="background:rgba(148,163,184,.1);border-color:rgba(148,163,184,.2);">
+                    <svg viewBox="0 0 24 24" style="color:#94a3b8;"><path d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                </div>
+                <div class="ds-card-label">Never Logged In</div>
+                <div class="ds-card-value"><?php echo number_format_i18n( $u_never ); ?></div>
+                <div class="ds-card-sub">No login recorded yet</div>
+            </div>
+        </div>
+
+        <div class="ds-table-wrap">
+            <div class="ds-table-head" style="display:flex;align-items:center;justify-content:space-between;">
+                <span>All Users <span style="color:var(--muted);font-weight:400;font-size:12px;margin-left:6px;"><?php echo count($all_users); ?> accounts</span></span>
+            </div>
+            <?php if ( $all_users ) : ?>
+            <table class="ds-table">
+                <thead><tr>
+                    <th>#</th>
+                    <th>User</th>
+                    <th>Role</th>
+                    <th>Registered</th>
+                    <th>Last Login</th>
+                    <th>Login IP</th>
+                </tr></thead>
+                <tbody>
+                <?php foreach ( $all_users as $i => $u ) :
+                    $last_login    = get_user_meta( $u->ID, 'shopys_last_login',    true );
+                    $last_login_ip = get_user_meta( $u->ID, 'shopys_last_login_ip', true );
+                    $role_key      = ! empty( $u->roles ) ? $u->roles[0] : 'other';
+                    $role_label    = $role_labels[ $role_key ] ?? ucfirst( $role_key );
+                    $role_class    = isset( $role_labels[ $role_key ] ) ? 'role-' . $role_key : 'role-other';
+
+                    // Registered date
+                    $reg_ts   = strtotime( $u->user_registered );
+                    $reg_disp = date( 'j M Y', $reg_ts );
+                    $reg_time = date( 'H:i', $reg_ts );
+
+                    // Last login
+                    if ( $last_login ) {
+                        $ll_ts    = strtotime( $last_login );
+                        $ll_diff  = current_time('timestamp') - $ll_ts;
+                        if      ( $ll_diff < 300 )        $ll_disp = '<span class="user-online-dot"></span>Online now';
+                        elseif  ( $ll_diff < 3600 )       $ll_disp = round($ll_diff/60).' min ago';
+                        elseif  ( $ll_diff < 86400 )      $ll_disp = round($ll_diff/3600).' hr ago';
+                        elseif  ( $ll_diff < 86400*2 )    $ll_disp = 'Yesterday';
+                        else                               $ll_disp = date( 'j M Y', $ll_ts );
+                        $ll_abs  = date( 'j M Y, H:i', $ll_ts );
+                    } else {
+                        $ll_disp = '—';
+                        $ll_abs  = '';
+                    }
+
+                    // Avatar initial
+                    $initial = strtoupper( mb_substr( $u->display_name ?: $u->user_login, 0, 1 ) );
+                ?>
+                <tr>
+                    <td style="color:var(--muted);font-size:12px;"><?php echo $i + 1; ?></td>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div class="user-avatar"><?php echo esc_html($initial); ?></div>
+                            <div>
+                                <div style="font-weight:600;font-size:13px;"><?php echo esc_html( $u->display_name ?: $u->user_login ); ?></div>
+                                <div style="font-size:11px;color:var(--muted);"><?php echo esc_html( $u->user_email ); ?></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><span class="user-role-badge <?php echo $role_class; ?>"><?php echo esc_html($role_label); ?></span></td>
+                    <td style="font-size:12px;white-space:nowrap;">
+                        <div><?php echo esc_html($reg_disp); ?></div>
+                        <div style="color:var(--muted);font-size:11px;"><?php echo esc_html($reg_time); ?></div>
+                    </td>
+                    <td style="font-size:12px;white-space:nowrap;">
+                        <?php if ( $last_login ) : ?>
+                        <div style="color:var(--green);font-weight:600;"><?php echo $ll_disp; ?></div>
+                        <div style="color:var(--muted);font-size:11px;"><?php echo esc_html($ll_abs); ?></div>
+                        <?php else : ?>
+                        <span style="color:var(--muted);">Never logged in</span>
+                        <?php endif; ?>
+                    </td>
+                    <td style="font-size:11px;font-family:monospace;color:var(--muted);"><?php echo esc_html( $last_login_ip ?: '—' ); ?></td>
+                </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+            <?php else : ?>
+            <p style="padding:24px;color:var(--muted);font-size:13px;">No users found.</p>
+            <?php endif; ?>
+        </div>
         <?php endif; ?>
         </div>
 

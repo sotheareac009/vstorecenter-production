@@ -1130,3 +1130,23 @@ add_action( 'wp_head', function() {
 <?php endif; ?>
     <?php
 }, 1 );
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   USER LOGIN TRACKING — records last login time + IP to user meta
+   ═══════════════════════════════════════════════════════════════════ */
+
+add_action( 'wp_login', 'shopys_track_user_login', 10, 2 );
+function shopys_track_user_login( $user_login, $user ) {
+    $now = current_time( 'mysql' );
+    $ip  = '';
+    foreach ( [ 'HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR', 'HTTP_X_REAL_IP', 'REMOTE_ADDR' ] as $h ) {
+        if ( ! empty( $_SERVER[ $h ] ) ) {
+            $ip = trim( explode( ',', $_SERVER[ $h ] )[0] );
+            if ( filter_var( $ip, FILTER_VALIDATE_IP ) ) break;
+            $ip = '';
+        }
+    }
+    update_user_meta( $user->ID, 'shopys_last_login',    $now );
+    update_user_meta( $user->ID, 'shopys_last_login_ip', $ip  );
+}
