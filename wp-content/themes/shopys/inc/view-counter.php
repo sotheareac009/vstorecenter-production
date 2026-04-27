@@ -245,6 +245,93 @@ function shopys_vc_top_pages( $since, $limit = 15 ) {
     } catch ( \Throwable $e ) { return array(); }
 }
 
+/**
+ * All pages grouped and filtered by an optional year+month (0 = all time).
+ */
+function shopys_vc_pages_by_period( $year = 0, $month = 0, $limit = 25, $offset = 0 ) {
+    if ( ! shopys_vc_ensure_table() ) return array();
+    try {
+        global $wpdb;
+        $limit  = max( 1, min( 1000, (int) $limit ) );
+        $offset = max( 0, (int) $offset );
+        if ( $year && $month ) {
+            $rows = $wpdb->get_results( $wpdb->prepare(
+                "SELECT url, MAX(title) AS title, MAX(post_id) AS post_id,
+                        COUNT(*) AS views, MAX(viewed_at) AS last_viewed
+                   FROM " . shopys_vc_table() . "
+                  WHERE YEAR(viewed_at) = %d AND MONTH(viewed_at) = %d
+                  GROUP BY url
+                  ORDER BY views DESC
+                  LIMIT %d OFFSET %d",
+                $year, $month, $limit, $offset
+            ) );
+        } elseif ( $year ) {
+            $rows = $wpdb->get_results( $wpdb->prepare(
+                "SELECT url, MAX(title) AS title, MAX(post_id) AS post_id,
+                        COUNT(*) AS views, MAX(viewed_at) AS last_viewed
+                   FROM " . shopys_vc_table() . "
+                  WHERE YEAR(viewed_at) = %d
+                  GROUP BY url
+                  ORDER BY views DESC
+                  LIMIT %d OFFSET %d",
+                $year, $limit, $offset
+            ) );
+        } else {
+            $rows = $wpdb->get_results( $wpdb->prepare(
+                "SELECT url, MAX(title) AS title, MAX(post_id) AS post_id,
+                        COUNT(*) AS views, MAX(viewed_at) AS last_viewed
+                   FROM " . shopys_vc_table() . "
+                  GROUP BY url
+                  ORDER BY views DESC
+                  LIMIT %d OFFSET %d",
+                $limit, $offset
+            ) );
+        }
+        return $rows ?: array();
+    } catch ( \Throwable $e ) { return array(); }
+}
+
+/**
+ * Count of distinct URLs for a given period (used for pagination).
+ */
+function shopys_vc_count_pages_by_period( $year = 0, $month = 0 ) {
+    if ( ! shopys_vc_ensure_table() ) return 0;
+    try {
+        global $wpdb;
+        if ( $year && $month ) {
+            return (int) $wpdb->get_var( $wpdb->prepare(
+                "SELECT COUNT(DISTINCT url) FROM " . shopys_vc_table() . " WHERE YEAR(viewed_at) = %d AND MONTH(viewed_at) = %d",
+                $year, $month
+            ) );
+        } elseif ( $year ) {
+            return (int) $wpdb->get_var( $wpdb->prepare(
+                "SELECT COUNT(DISTINCT url) FROM " . shopys_vc_table() . " WHERE YEAR(viewed_at) = %d",
+                $year
+            ) );
+        } else {
+            return (int) $wpdb->get_var(
+                "SELECT COUNT(DISTINCT url) FROM " . shopys_vc_table()
+            );
+        }
+    } catch ( \Throwable $e ) { return 0; }
+}
+
+/**
+ * Returns distinct year+month combos that have at least one recorded view.
+ */
+function shopys_vc_available_months() {
+    if ( ! shopys_vc_ensure_table() ) return array();
+    try {
+        global $wpdb;
+        return $wpdb->get_results(
+            "SELECT YEAR(viewed_at) AS yr, MONTH(viewed_at) AS mo
+               FROM " . shopys_vc_table() . "
+              GROUP BY YEAR(viewed_at), MONTH(viewed_at)
+              ORDER BY yr DESC, mo DESC"
+        ) ?: array();
+    } catch ( \Throwable $e ) { return array(); }
+}
+
 function shopys_vc_daily_series( $days = 14 ) {
     $days = max( 1, min( 60, (int) $days ) );
     $series = array();

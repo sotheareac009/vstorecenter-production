@@ -47,6 +47,33 @@ if ( $has_vc ) {
     }
 }
 
+// ── All-pages sub-view state ──────────────────────────────────────────────────
+$now_ts_ref = isset( $now_ts ) ? $now_ts : current_time( 'timestamp' );
+$sv_view    = ( isset( $_GET['sv_view'] ) && $_GET['sv_view'] === 'all' ) ? 'all' : 'week';
+$sv_year    = isset( $_GET['sv_year'] )  ? (int) $_GET['sv_year']  : (int) date( 'Y', $now_ts_ref );
+$sv_month   = isset( $_GET['sv_month'] ) ? (int) $_GET['sv_month'] : (int) date( 'n', $now_ts_ref );
+
+$all_pages    = [];
+$avail_months = [];
+$sv_total     = 0;
+$sv_per_page  = 20;
+$sv_page      = isset( $_GET['sv_page'] ) ? max( 1, (int) $_GET['sv_page'] ) : 1;
+$sv_offset    = ( $sv_page - 1 ) * $sv_per_page;
+$sv_total_pages = 1;
+
+if ( $has_vc ) {
+    $avail_months = function_exists( 'shopys_vc_available_months' ) ? shopys_vc_available_months() : [];
+    if ( $sv_view === 'all' && function_exists( 'shopys_vc_pages_by_period' ) ) {
+        $sv_total       = function_exists( 'shopys_vc_count_pages_by_period' )
+                          ? shopys_vc_count_pages_by_period( $sv_year, $sv_month )
+                          : 0;
+        $sv_total_pages = $sv_total > 0 ? (int) ceil( $sv_total / $sv_per_page ) : 1;
+        $sv_page        = min( $sv_page, $sv_total_pages );
+        $sv_offset      = ( $sv_page - 1 ) * $sv_per_page;
+        $all_pages      = shopys_vc_pages_by_period( $sv_year, $sv_month, $sv_per_page, $sv_offset );
+    }
+}
+
 // ── WooCommerce quick stats ───────────────────────────────────────────────────
 $total_products = 0;
 $total_orders   = 0;
@@ -482,7 +509,107 @@ body {
 .ds-table td a:hover { color: var(--green); }
 .ds-table .views-count { font-weight: 700; color: var(--green); text-align: right; }
 
-/* ── THEME TOGGLE BUTTON ──────────────────────────────────────── */
+/* ── INNER TABS (sv-tab) ──────────────────────────────────────── */
+.sv-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0;
+}
+.sv-tab {
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    text-decoration: none;
+    border-radius: 6px 6px 0 0;
+    border: 1px solid transparent;
+    border-bottom: none;
+    margin-bottom: -1px;
+    transition: color .15s, background .15s;
+}
+.sv-tab:hover { color: var(--text); background: var(--surface2); }
+.sv-tab.active {
+    color: var(--green);
+    background: var(--surface);
+    border-color: var(--border);
+    border-bottom-color: var(--surface);
+}
+
+/* ── FILTER BAR ───────────────────────────────────────────────── */
+.sv-filter {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+.sv-filter select {
+    padding: 7px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+    transition: border-color .15s;
+}
+.sv-filter select:focus { border-color: var(--green); }
+.sv-filter-btn {
+    padding: 7px 18px;
+    background: var(--green);
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: opacity .15s;
+}
+.sv-filter-btn:hover { opacity: .85; }
+.sv-filter label {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* ── PAGINATION ───────────────────────────────────────────────── */
+.sv-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 16px 0 4px;
+    flex-wrap: wrap;
+}
+.sv-pag-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    text-decoration: none;
+    transition: background .15s, color .15s, border-color .15s;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+}
+.sv-pag-btn:hover { color: var(--text); border-color: var(--green); background: var(--green-dim); }
+.sv-pag-btn.active { background: var(--green); color: #000; border-color: var(--green); cursor: default; font-weight: 800; }
+.sv-pag-btn.disabled { opacity: .4; pointer-events: none; }
+.sv-pag-ellipsis { color: var(--muted); font-size: 13px; padding: 0 4px; }
 .ds-theme-toggle {
     display: flex;
     align-items: center;
@@ -774,56 +901,199 @@ body {
                 </div>
             </div>
 
-            <!-- Top pages table -->
+            <!-- ── Inner tabs ───────────────────────────────── -->
+            <?php
+            $week_tab_url = esc_url( add_query_arg( [ 'tab' => 'siteview', 'sv_view' => 'week' ], home_url( '/dashboard/' ) ) );
+            $all_tab_url  = esc_url( add_query_arg( [ 'tab' => 'siteview', 'sv_view' => 'all', 'sv_year' => $sv_year, 'sv_month' => $sv_month ], home_url( '/dashboard/' ) ) );
+            ?>
+            <div class="sv-tabs">
+                <a href="<?php echo $week_tab_url; ?>" class="sv-tab <?php echo $sv_view === 'week' ? 'active' : ''; ?>">Top Pages — Last 7 days</a>
+                <a href="<?php echo $all_tab_url; ?>"  class="sv-tab <?php echo $sv_view === 'all'  ? 'active' : ''; ?>">All Pages</a>
+            </div>
+
+            <?php if ( $sv_view === 'week' ) : ?>
+
+            <!-- ── LAST 7 DAYS TABLE ──────────────────────────── -->
             <div class="ds-table-wrap">
-                <div class="ds-table-head">Top Pages — Last 7 days</div>
+                <div class="ds-table-head">Top 10 Pages — Last 7 days</div>
                 <?php if ( $top_pages ) : ?>
                 <table class="ds-table">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Page</th>
-                            <th>URL</th>
-                            <th>Last Viewed</th>
-                            <th>Date &amp; Time</th>
-                            <th style="text-align:right;">Views</th>
-                        </tr>
-                    </thead>
+                    <thead><tr>
+                        <th>#</th><th>Page</th><th>URL</th>
+                        <th>Last Viewed</th><th>Date &amp; Time</th>
+                        <th style="text-align:right;">Views</th>
+                    </tr></thead>
                     <tbody>
-                        <?php foreach ( $top_pages as $i => $row ) :
-                            $lv_raw  = $row->last_viewed ?? '';
-                            $lv_disp = '—';
-                            $lv_abs  = '—';
-                            if ( $lv_raw ) {
-                                $ts   = strtotime( $lv_raw );
-                                $diff = current_time( 'timestamp' ) - $ts;
-                                if      ( $diff < 60 )         $lv_disp = 'Just now';
-                                elseif  ( $diff < 3600 )       $lv_disp = round( $diff / 60 ) . ' min ago';
-                                elseif  ( $diff < 86400 )      $lv_disp = round( $diff / 3600 ) . ' hr ago';
-                                elseif  ( $diff < 86400 * 2 )  $lv_disp = 'Yesterday';
-                                else                            $lv_disp = date( 'd M', $ts );
-                                $lv_abs = date( 'j M Y, H:i', $ts );
-                            }
-                        ?>
-                        <tr>
-                            <td style="color:var(--muted);font-size:12px;"><?php echo $i + 1; ?></td>
-                            <td><strong><?php echo esc_html( $row->title ?: '(untitled)' ); ?></strong></td>
-                            <td><a href="<?php echo esc_url( $row->url ); ?>" target="_blank">open ↗</a></td>
-                            <td style="font-size:12px;color:var(--green);white-space:nowrap;font-weight:600;">
-                                <?php echo esc_html( $lv_disp ); ?>
-                            </td>
-                            <td style="font-size:12px;color:var(--muted);white-space:nowrap;">
-                                <?php echo esc_html( $lv_abs ); ?>
-                            </td>
-                            <td class="views-count"><?php echo number_format_i18n( (int) $row->views ); ?></td>
-                        </tr>
-                        <?php endforeach; ?>
+                    <?php foreach ( $top_pages as $i => $row ) :
+                        $lv_raw = $row->last_viewed ?? '';
+                        $lv_disp = $lv_abs = '—';
+                        if ( $lv_raw ) {
+                            $ts = strtotime( $lv_raw );
+                            $diff = current_time('timestamp') - $ts;
+                            if      ( $diff < 60 )        $lv_disp = 'Just now';
+                            elseif  ( $diff < 3600 )      $lv_disp = round($diff/60).' min ago';
+                            elseif  ( $diff < 86400 )     $lv_disp = round($diff/3600).' hr ago';
+                            elseif  ( $diff < 86400*2 )   $lv_disp = 'Yesterday';
+                            else                           $lv_disp = date('d M', $ts);
+                            $lv_abs = date('j M Y, H:i', $ts);
+                        }
+                    ?>
+                    <tr>
+                        <td style="color:var(--muted);font-size:12px;"><?php echo $i+1; ?></td>
+                        <td><strong><?php echo esc_html($row->title ?: '(untitled)'); ?></strong></td>
+                        <td><a href="<?php echo esc_url($row->url); ?>" target="_blank">open ↗</a></td>
+                        <td style="font-size:12px;color:var(--green);white-space:nowrap;font-weight:600;"><?php echo esc_html($lv_disp); ?></td>
+                        <td style="font-size:12px;color:var(--muted);white-space:nowrap;"><?php echo esc_html($lv_abs); ?></td>
+                        <td class="views-count"><?php echo number_format_i18n((int)$row->views); ?></td>
+                    </tr>
+                    <?php endforeach; ?>
                     </tbody>
                 </table>
                 <?php else : ?>
-                    <p style="padding:24px;color:var(--muted);font-size:13px;">No views recorded yet. Visit your store in incognito mode — admin visits are excluded by default.</p>
+                    <p style="padding:24px;color:var(--muted);font-size:13px;">No views recorded yet.</p>
                 <?php endif; ?>
             </div>
+
+            <?php else : ?>
+
+            <!-- ── ALL PAGES TABLE with filter ───────────────── -->
+            <?php
+            $month_names = [ 1=>'Jan',2=>'Feb',3=>'Mar',4=>'Apr',5=>'May',6=>'Jun',
+                             7=>'Jul',8=>'Aug',9=>'Sep',10=>'Oct',11=>'Nov',12=>'Dec' ];
+            ?>
+            <form class="sv-filter" method="GET" action="<?php echo esc_url(home_url('/dashboard/')); ?>">
+                <input type="hidden" name="tab" value="siteview">
+                <input type="hidden" name="sv_view" value="all">
+                <label>Month</label>
+                <select name="sv_month">
+                    <option value="0" <?php selected($sv_month,0); ?>>All months</option>
+                    <?php foreach ( $avail_months as $am ) : ?>
+                    <option value="<?php echo (int)$am->mo; ?>"
+                            data-yr="<?php echo (int)$am->yr; ?>"
+                            <?php echo ($am->yr==$sv_year && $am->mo==$sv_month) ? 'selected' : ''; ?>>
+                        <?php echo esc_html( ($month_names[$am->mo]??$am->mo) . ' ' . $am->yr ); ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+                <label>Year</label>
+                <select name="sv_year">
+                    <option value="0" <?php selected($sv_year,0); ?>>All years</option>
+                    <?php
+                    $seen_yr = [];
+                    foreach ( $avail_months as $am ) :
+                        if ( isset($seen_yr[$am->yr]) ) continue;
+                        $seen_yr[$am->yr] = true;
+                    ?>
+                    <option value="<?php echo (int)$am->yr; ?>" <?php selected($sv_year,(int)$am->yr); ?>>
+                        <?php echo (int)$am->yr; ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+                <button type="submit" class="sv-filter-btn">Filter</button>
+            </form>
+
+            <div class="ds-table-wrap">
+                <div class="ds-table-head">
+                    All Pages
+                    <?php if ($sv_month && $sv_year) echo '&mdash; ' . esc_html(($month_names[$sv_month]??'') . ' ' . $sv_year); elseif ($sv_year) echo '&mdash; ' . $sv_year; ?>
+                    <span style="color:var(--muted);font-weight:400;font-size:12px;margin-left:8px;"><?php echo count($all_pages); ?> pages</span>
+                </div>
+                <?php if ( $all_pages ) : ?>
+                <table class="ds-table">
+                    <thead><tr>
+                        <th>#</th><th>Page</th><th>URL</th>
+                        <th>Last Viewed</th><th>Date &amp; Time</th>
+                        <th style="text-align:right;">Views</th>
+                    </tr></thead>
+                    <tbody>
+                    <?php foreach ( $all_pages as $i => $row ) :
+                        $lv_raw = $row->last_viewed ?? '';
+                        $lv_disp = $lv_abs = '—';
+                        if ( $lv_raw ) {
+                            $ts = strtotime( $lv_raw );
+                            $diff = current_time('timestamp') - $ts;
+                            if      ( $diff < 60 )        $lv_disp = 'Just now';
+                            elseif  ( $diff < 3600 )      $lv_disp = round($diff/60).' min ago';
+                            elseif  ( $diff < 86400 )     $lv_disp = round($diff/3600).' hr ago';
+                            elseif  ( $diff < 86400*2 )   $lv_disp = 'Yesterday';
+                            else                           $lv_disp = date('d M', $ts);
+                            $lv_abs = date('j M Y, H:i', $ts);
+                        }
+                    ?>
+                    <tr>
+                        <td style="color:var(--muted);font-size:12px;"><?php echo $i+1; ?></td>
+                        <td><strong><?php echo esc_html($row->title ?: '(untitled)'); ?></strong></td>
+                        <td><a href="<?php echo esc_url($row->url); ?>" target="_blank">open ↗</a></td>
+                        <td style="font-size:12px;color:var(--green);white-space:nowrap;font-weight:600;"><?php echo esc_html($lv_disp); ?></td>
+                        <td style="font-size:12px;color:var(--muted);white-space:nowrap;"><?php echo esc_html($lv_abs); ?></td>
+                        <td class="views-count"><?php echo number_format_i18n((int)$row->views); ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+                <?php else : ?>
+                    <p style="padding:24px;color:var(--muted);font-size:13px;">No pages found for this period.</p>
+                <?php endif; ?>
+
+                <?php if ( $sv_total_pages > 1 ) :
+                    // Build base URL preserving all filters except sv_page
+                    $pag_base = add_query_arg( [
+                        'tab'      => 'siteview',
+                        'sv_view'  => 'all',
+                        'sv_year'  => $sv_year,
+                        'sv_month' => $sv_month,
+                    ], home_url( '/dashboard/' ) );
+
+                    $range_start = ( $sv_page - 1 ) * $sv_per_page + 1;
+                    $range_end   = min( $sv_page * $sv_per_page, $sv_total );
+                ?>
+                <div class="sv-pagination">
+                    <!-- Prev -->
+                    <?php if ( $sv_page > 1 ) : ?>
+                    <a class="sv-pag-btn" href="<?php echo esc_url( add_query_arg( 'sv_page', $sv_page - 1, $pag_base ) ); ?>">← Prev</a>
+                    <?php else : ?>
+                    <span class="sv-pag-btn disabled">← Prev</span>
+                    <?php endif; ?>
+
+                    <?php
+                    // Show up to 7 page buttons with ellipsis
+                    $pages_to_show = [];
+                    if ( $sv_total_pages <= 7 ) {
+                        $pages_to_show = range( 1, $sv_total_pages );
+                    } else {
+                        $pages_to_show = [ 1 ];
+                        $start = max( 2, $sv_page - 2 );
+                        $end   = min( $sv_total_pages - 1, $sv_page + 2 );
+                        if ( $start > 2 ) $pages_to_show[] = '…';
+                        for ( $p = $start; $p <= $end; $p++ ) $pages_to_show[] = $p;
+                        if ( $end < $sv_total_pages - 1 ) $pages_to_show[] = '…';
+                        $pages_to_show[] = $sv_total_pages;
+                    }
+                    foreach ( $pages_to_show as $p ) :
+                        if ( $p === '…' ) :
+                    ?>
+                    <span class="sv-pag-ellipsis">…</span>
+                    <?php else : ?>
+                    <a class="sv-pag-btn <?php echo $p === $sv_page ? 'active' : ''; ?>"
+                       href="<?php echo esc_url( add_query_arg( 'sv_page', $p, $pag_base ) ); ?>">
+                        <?php echo $p; ?>
+                    </a>
+                    <?php endif; endforeach; ?>
+
+                    <!-- Next -->
+                    <?php if ( $sv_page < $sv_total_pages ) : ?>
+                    <a class="sv-pag-btn" href="<?php echo esc_url( add_query_arg( 'sv_page', $sv_page + 1, $pag_base ) ); ?>">Next →</a>
+                    <?php else : ?>
+                    <span class="sv-pag-btn disabled">Next →</span>
+                    <?php endif; ?>
+                </div>
+                <p style="text-align:center;font-size:12px;color:var(--muted);margin-top:8px;">
+                    Showing <?php echo number_format_i18n($range_start); ?>–<?php echo number_format_i18n($range_end); ?> of <?php echo number_format_i18n($sv_total); ?> pages
+                </p>
+                <?php endif; ?>
+            </div>
+
+            <?php endif; // sv_view ?>
 
             <?php endif; ?>
         </div>
