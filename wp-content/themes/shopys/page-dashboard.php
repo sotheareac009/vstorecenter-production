@@ -62,9 +62,11 @@ if ( isset( $_GET['sv_view'] ) ) {
 }
 $sv_year    = isset( $_GET['sv_year'] )  ? (int) $_GET['sv_year']  : (int) date( 'Y', $now_ts_ref );
 $sv_month   = isset( $_GET['sv_month'] ) ? (int) $_GET['sv_month'] : (int) date( 'n', $now_ts_ref );
+$sv_country = isset( $_GET['sv_country'] ) ? substr( strtoupper( sanitize_text_field( wp_unslash( $_GET['sv_country'] ) ) ), 0, 2 ) : '';
 
 $all_pages    = [];
 $avail_months = [];
+$avail_countries = [];
 $sv_total     = 0;
 $sv_per_page  = 20;
 $sv_page      = isset( $_GET['sv_page'] ) ? max( 1, (int) $_GET['sv_page'] ) : 1;
@@ -73,14 +75,15 @@ $sv_total_pages = 1;
 
 if ( $has_vc ) {
     $avail_months = function_exists( 'shopys_vc_available_months' ) ? shopys_vc_available_months() : [];
+    $avail_countries = function_exists( 'shopys_vc_available_countries' ) ? shopys_vc_available_countries() : [];
     if ( $sv_view === 'all' && function_exists( 'shopys_vc_pages_by_period' ) ) {
         $sv_total       = function_exists( 'shopys_vc_count_pages_by_period' )
-                          ? shopys_vc_count_pages_by_period( $sv_year, $sv_month )
+                          ? shopys_vc_count_pages_by_period( $sv_year, $sv_month, $sv_country )
                           : 0;
         $sv_total_pages = $sv_total > 0 ? (int) ceil( $sv_total / $sv_per_page ) : 1;
         $sv_page        = min( $sv_page, $sv_total_pages );
         $sv_offset      = ( $sv_page - 1 ) * $sv_per_page;
-        $all_pages      = shopys_vc_pages_by_period( $sv_year, $sv_month, $sv_per_page, $sv_offset );
+        $all_pages      = shopys_vc_pages_by_period( $sv_year, $sv_month, $sv_per_page, $sv_offset, $sv_country );
     } elseif ( $sv_view === 'locations' && function_exists( 'shopys_vc_locations_by_url' ) ) {
         $sv_url         = isset( $_GET['sv_url'] ) ? sanitize_text_field( wp_unslash( $_GET['sv_url'] ) ) : '';
         $sv_total       = function_exists( 'shopys_vc_count_locations_by_url' ) ? shopys_vc_count_locations_by_url( $sv_url ) : 0;
@@ -1368,6 +1371,15 @@ body {
                     </option>
                     <?php endforeach; ?>
                 </select>
+                <label>Country</label>
+                <select name="sv_country">
+                    <option value="" <?php selected($sv_country,''); ?>>All countries</option>
+                    <?php foreach ( $avail_countries as $country_row ) : ?>
+                    <option value="<?php echo esc_attr( $country_row->country_code ); ?>" <?php selected( $sv_country, $country_row->country_code ); ?>>
+                        <?php echo esc_html( ( $country_row->country ?: $country_row->country_code ) . ' (' . $country_row->country_code . ')' ); ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
                 <button type="submit" class="sv-filter-btn">Filter</button>
             </form>
 
@@ -1375,6 +1387,7 @@ body {
                 <div class="ds-table-head">
                     All Pages
                     <?php if ($sv_month && $sv_year) echo '&mdash; ' . esc_html(($month_names[$sv_month]??'') . ' ' . $sv_year); elseif ($sv_year) echo '&mdash; ' . $sv_year; ?>
+                    <?php if ($sv_country) echo ' &mdash; ' . esc_html($sv_country); ?>
                     <span style="color:var(--muted);font-weight:400;font-size:12px;margin-left:8px;"><?php echo count($all_pages); ?> pages</span>
                 </div>
                 <?php if ( $all_pages ) : ?>
@@ -1459,6 +1472,7 @@ body {
                         'sv_view'  => 'all',
                         'sv_year'  => $sv_year,
                         'sv_month' => $sv_month,
+                        'sv_country' => $sv_country,
                     ], home_url( '/dashboard/' ) );
 
                     $range_start = ( $sv_page - 1 ) * $sv_per_page + 1;
@@ -1838,6 +1852,14 @@ body {
                 <div class="ds-card-label">VIP Users</div>
                 <div class="ds-card-value"><?php echo number_format_i18n( $tg_vip_count ); ?></div>
                 <div class="ds-card-sub">On this page</div>
+            </div>
+            <div class="ds-card">
+                <div class="ds-card-icon">
+                    <svg viewBox="0 0 24 24"><path d="M12 1a9 9 0 100 18 9 9 0 000-18zm1 14.93V17h-2v-1.09A4.002 4.002 0 018 12h2a2 2 0 104 0c0-1.1-.9-2-2-2a4 4 0 110-8V1h2v1.07A4.002 4.002 0 0116 6h-2a2 2 0 10-4 0c0 1.1.9 2 2 2a4 4 0 110 8z"/></svg>
+                </div>
+                <div class="ds-card-label">API Total Cost</div>
+                <div class="ds-card-value">$<?php echo esc_html( number_format( $tg_cost, 4 ) ); ?></div>
+                <div class="ds-card-sub">Users on this page</div>
             </div>
         </div>
 
