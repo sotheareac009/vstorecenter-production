@@ -987,7 +987,12 @@ body {
                         <td style="font-size:12px;white-space:nowrap;vertical-align:top;">
                             <div style="display:flex;align-items:flex-start;">
                                 <?php if ($flag): ?><span style="margin-right:4px;font-size:14px;line-height:1.2;"><?php echo $flag; ?></span><?php endif; ?>
-                                <div><?php echo $loc_str; ?></div>
+                                <div>
+                                    <?php echo $loc_str; ?>
+                                    <?php if ( !empty($row->last_ip_hash) ) : ?>
+                                    <div style="font-size:10px;color:var(--muted);margin-top:2px;font-family:monospace;word-break:break-all;"><?php echo esc_html($row->last_ip_hash); ?></div>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         </td>
                         <td class="views-count"><?php echo number_format_i18n((int)$row->views); ?></td>
@@ -1046,7 +1051,12 @@ body {
                             <td style="font-size:13px;vertical-align:top;">
                                 <div style="display:flex;align-items:flex-start;">
                                     <?php if ($flag): ?><span style="margin-right:8px;font-size:16px;line-height:1.2;"><?php echo $flag; ?></span><?php endif; ?>
-                                    <div><?php echo $loc_str; ?></div>
+                                    <div>
+                                        <?php echo $loc_str; ?>
+                                        <?php if ( !empty($row->ip_hash) ) : ?>
+                                        <div style="font-size:10px;color:var(--muted);margin-top:2px;font-family:monospace;word-break:break-all;"><?php echo esc_html($row->ip_hash); ?></div>
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
                             </td>
                             <td style="font-size:12px;color:var(--muted);white-space:nowrap;">
@@ -1217,7 +1227,12 @@ body {
                         <td style="font-size:12px;white-space:nowrap;vertical-align:top;">
                             <div style="display:flex;align-items:flex-start;">
                                 <?php if ($flag): ?><span style="margin-right:4px;font-size:14px;line-height:1.2;"><?php echo $flag; ?></span><?php endif; ?>
-                                <div><?php echo $loc_str; ?></div>
+                                <div>
+                                    <?php echo $loc_str; ?>
+                                    <?php if ( !empty($row->last_ip_hash) ) : ?>
+                                    <div style="font-size:10px;color:var(--muted);margin-top:2px;font-family:monospace;word-break:break-all;"><?php echo esc_html($row->last_ip_hash); ?></div>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         </td>
                         <td class="views-count"><?php echo number_format_i18n((int)$row->views); ?></td>

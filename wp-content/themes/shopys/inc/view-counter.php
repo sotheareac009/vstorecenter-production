@@ -69,7 +69,7 @@ function shopys_vc_ensure_table() {
             return true;
         }
         shopys_vc_create_table();
-        $ready = ( get_option( 'shopys_vc_table_version' ) === '1.0' );
+        $ready = ( get_option( 'shopys_vc_table_version' ) === '1.1' );
     } catch ( \Throwable $e ) {
         $ready = false;
     }
@@ -352,7 +352,8 @@ function shopys_vc_top_pages( $since, $limit = 15 ) {
                         GROUP_CONCAT(DISTINCT IF(country_code != '', CONCAT(country_code, ':', country, ':', city), NULL) ORDER BY viewed_at DESC SEPARATOR '|') AS location_list,
                     SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country_code, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country_code,
                     SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country,
-                    SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', city, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS city
+                    SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', city, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS city,
+                    SUBSTRING_INDEX(GROUP_CONCAT(ip_hash ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS last_ip_hash
                FROM " . shopys_vc_table() . "
               WHERE viewed_at >= %s
               GROUP BY url
@@ -381,7 +382,8 @@ function shopys_vc_pages_by_period( $year = 0, $month = 0, $limit = 25, $offset 
                             GROUP_CONCAT(DISTINCT IF(country_code != '', CONCAT(country_code, ':', country, ':', city), NULL) ORDER BY viewed_at DESC SEPARATOR '|') AS location_list,
                         SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country_code, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country_code,
                         SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country,
-                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', city, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS city
+                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', city, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS city,
+                        SUBSTRING_INDEX(GROUP_CONCAT(ip_hash ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS last_ip_hash
                    FROM " . shopys_vc_table() . "
                   WHERE YEAR(viewed_at) = %d AND MONTH(viewed_at) = %d
                   GROUP BY url
@@ -397,7 +399,8 @@ function shopys_vc_pages_by_period( $year = 0, $month = 0, $limit = 25, $offset 
                             GROUP_CONCAT(DISTINCT IF(country_code != '', CONCAT(country_code, ':', country, ':', city), NULL) ORDER BY viewed_at DESC SEPARATOR '|') AS location_list,
                         SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country_code, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country_code,
                         SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country,
-                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', city, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS city
+                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', city, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS city,
+                        SUBSTRING_INDEX(GROUP_CONCAT(ip_hash ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS last_ip_hash
                    FROM " . shopys_vc_table() . "
                   WHERE YEAR(viewed_at) = %d
                   GROUP BY url
@@ -413,7 +416,8 @@ function shopys_vc_pages_by_period( $year = 0, $month = 0, $limit = 25, $offset 
                             GROUP_CONCAT(DISTINCT IF(country_code != '', CONCAT(country_code, ':', country, ':', city), NULL) ORDER BY viewed_at DESC SEPARATOR '|') AS location_list,
                         SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country_code, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country_code,
                         SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country,
-                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', city, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS city
+                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', city, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS city,
+                        SUBSTRING_INDEX(GROUP_CONCAT(ip_hash ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS last_ip_hash
                    FROM " . shopys_vc_table() . "
                   GROUP BY url
                   ORDER BY last_viewed DESC
