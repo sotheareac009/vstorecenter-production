@@ -261,7 +261,7 @@ function shopys_vc_pages_by_period( $year = 0, $month = 0, $limit = 25, $offset 
                    FROM " . shopys_vc_table() . "
                   WHERE YEAR(viewed_at) = %d AND MONTH(viewed_at) = %d
                   GROUP BY url
-                  ORDER BY views DESC
+                  ORDER BY last_viewed DESC
                   LIMIT %d OFFSET %d",
                 $year, $month, $limit, $offset
             ) );
@@ -272,7 +272,7 @@ function shopys_vc_pages_by_period( $year = 0, $month = 0, $limit = 25, $offset 
                    FROM " . shopys_vc_table() . "
                   WHERE YEAR(viewed_at) = %d
                   GROUP BY url
-                  ORDER BY views DESC
+                  ORDER BY last_viewed DESC
                   LIMIT %d OFFSET %d",
                 $year, $limit, $offset
             ) );
@@ -282,7 +282,7 @@ function shopys_vc_pages_by_period( $year = 0, $month = 0, $limit = 25, $offset 
                         COUNT(*) AS views, MAX(viewed_at) AS last_viewed
                    FROM " . shopys_vc_table() . "
                   GROUP BY url
-                  ORDER BY views DESC
+                  ORDER BY last_viewed DESC
                   LIMIT %d OFFSET %d",
                 $limit, $offset
             ) );
