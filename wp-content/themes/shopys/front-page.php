@@ -368,14 +368,62 @@ $slide_count = count( $slider_images );
 
 /* ── RESPONSIVE ──────────────────────────────────────────────── */
 @media (max-width: 768px) {
-    .fp-hero { height: 300px; }
-    .fp-products { padding: 34px 4% 50px; }
-    .fp-section-head__title { font-size: 18px; }
-    .fp-cats { padding: 24px 4%; }
-    .fp-cats__inner { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
-    .fp-cats__item { padding: 16px 12px 14px; gap: 8px; font-size: 11px; }
-    .fp-cats__icon { width: 26px; height: 26px; }
-    .fp-arrow { width: 36px; height: 36px; }
+    /* ── Hero banner ── */
+    .fp-hero { height: 220px; }
+    .fp-slide__overlay {
+        padding: 0 5%;
+        background: linear-gradient(90deg, rgba(13,17,23,.78) 0%, rgba(13,17,23,.3) 70%, transparent 100%);
+        align-items: flex-end;
+        padding-bottom: 28px;
+    }
+    .fp-slide__content { max-width: 100%; }
+    .fp-hero__tag { font-size: 9px; letter-spacing: 1.2px; padding: 4px 10px; margin-bottom: 8px; }
+    .fp-hero__title { font-size: 22px; margin-bottom: 8px; letter-spacing: -.3px; }
+    .fp-hero__sub { display: none; } /* hide long subtitle — too crowded */
+    .fp-hero__cta {
+        font-size: 12px;
+        padding: 9px 18px;
+        gap: 7px;
+    }
+    .fp-arrow { display: none; } /* touch devices swipe; arrows waste space */
+    .fp-dots { bottom: 10px; gap: 6px; }
+    .fp-dot { width: 6px; height: 6px; }
+
+    /* ── Trust bar (Fastest Delivery, etc.) ── */
+    .fp-trust { padding: 12px 4%; }
+    .fp-trust__inner {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px 8px;
+        justify-items: start;
+    }
+    .fp-trust__item {
+        gap: 8px;
+        font-size: 11.5px;
+        background: #fff;
+        border: 1px solid #eaeaea;
+        border-radius: 8px;
+        padding: 10px 12px;
+        width: 100%;
+        align-items: flex-start;
+    }
+    .fp-trust__item svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
+    .fp-trust__item strong { font-size: 12px; margin-bottom: 1px; }
+
+    /* ── Other sections ── */
+    .fp-products { padding: 24px 4% 40px; }
+    .fp-section-head__title { font-size: 17px; }
+    .fp-cats { padding: 18px 4%; }
+    .fp-cats__inner { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .fp-cats__item { padding: 14px 8px 12px; gap: 7px; font-size: 10px; }
+    .fp-cats__icon { width: 24px; height: 24px; }
+}
+
+@media (max-width: 400px) {
+    .fp-hero { height: 190px; }
+    .fp-hero__title { font-size: 19px; }
+    .fp-trust__inner { grid-template-columns: 1fr; }
+    .fp-cats__inner { grid-template-columns: repeat(2, 1fr); }
 }
 </style>
 
