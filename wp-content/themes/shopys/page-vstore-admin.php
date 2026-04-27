@@ -4,9 +4,9 @@
  * @package Shopys
  */
 
-// Already logged in → go straight to dashboard
+// Already logged in → go straight to custom dashboard
 if ( function_exists('is_user_logged_in') && is_user_logged_in() ) {
-    wp_redirect( admin_url() );
+    wp_redirect( home_url( '/dashboard/' ) );
     exit;
 }
 
@@ -26,7 +26,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['log'], $_POST['pwd'
         wp_set_current_user( $user->ID );
         wp_set_auth_cookie( $user->ID, $creds['remember'] );
         do_action( 'wp_login', $user->user_login, $user );
-        wp_safe_redirect( admin_url() );
+        wp_safe_redirect( home_url( '/dashboard/' ) );
         exit;
     }
 }
