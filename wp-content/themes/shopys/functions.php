@@ -694,6 +694,11 @@ require_once get_stylesheet_directory() . '/inc/telegram-login.php';
 // AI Chatbot — always loads so the Settings page is always available
 require_once get_stylesheet_directory() . '/inc/ai-chatbot.php';
 
+// Site view counter — pageviews dashboard inside WP Admin.
+// Wrapped in file_exists so a half-finished FTP deploy can't crash the site.
+$shopys_vc = get_stylesheet_directory() . '/inc/view-counter.php';
+if ( file_exists( $shopys_vc ) ) require_once $shopys_vc;
+
 // Shortcode Guide — admin sidebar reference page
 require_once get_stylesheet_directory() . '/inc/shortcode-guide.php';
 require_once get_stylesheet_directory() . '/inc/hero-slider-settings.php';
