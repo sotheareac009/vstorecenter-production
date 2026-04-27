@@ -112,9 +112,50 @@ $logo_url = $logo_id ? wp_get_attachment_image_url( $logo_id, 'medium' ) : '';
 $menu_items = [
     'overview'  => [ 'icon' => 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6', 'label' => 'Overview' ],
     'siteview'  => [ 'icon' => 'M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z', 'label' => 'Site View' ],
+    'analytics' => [ 'icon' => 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', 'label' => 'Analytics' ],
     'products'  => [ 'icon' => 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4', 'label' => 'Products', 'href' => admin_url( 'edit.php?post_type=product' ) ],
     'orders'    => [ 'icon' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01', 'label' => 'Orders', 'href' => admin_url( 'edit.php?post_type=shop_order' ) ],
 ];
+
+// ── Analytics tab — period resolution ────────────────────────────────────────
+$an_period = isset( $_GET['an_period'] ) ? sanitize_key( $_GET['an_period'] ) : '7d';
+if ( ! in_array( $an_period, [ '7d', '30d', 'day', 'month', 'year' ], true ) ) $an_period = '7d';
+$an_now   = current_time( 'timestamp' );
+$an_year  = isset( $_GET['an_year'] )  ? (int) $_GET['an_year']  : (int) date( 'Y', $an_now );
+$an_month = isset( $_GET['an_month'] ) ? (int) $_GET['an_month'] : (int) date( 'n', $an_now );
+$an_day   = isset( $_GET['an_day'] )   ? sanitize_text_field( $_GET['an_day'] ) : date( 'Y-m-d', $an_now );
+
+switch ( $an_period ) {
+    case 'day':
+        $an_since = $an_day . ' 00:00:00';
+        $an_until = $an_day . ' 23:59:59';
+        $an_label = 'Day: ' . date( 'j M Y', strtotime( $an_day ) );
+        break;
+    case 'month':
+        $an_since = sprintf( '%04d-%02d-01 00:00:00', $an_year, $an_month );
+        $an_until = date( 'Y-m-t 23:59:59', strtotime( $an_since ) );
+        $an_label = date( 'F Y', strtotime( $an_since ) );
+        break;
+    case 'year':
+        $an_since = "{$an_year}-01-01 00:00:00";
+        $an_until = "{$an_year}-12-31 23:59:59";
+        $an_label = "Year: {$an_year}";
+        break;
+    case '30d':
+        $an_since = date( 'Y-m-d 00:00:00', $an_now - 30 * DAY_IN_SECONDS );
+        $an_until = date( 'Y-m-d 23:59:59', $an_now );
+        $an_label = 'Last 30 Days';
+        break;
+    default: // 7d
+        $an_since = date( 'Y-m-d 00:00:00', $an_now - 7 * DAY_IN_SECONDS );
+        $an_until = date( 'Y-m-d 23:59:59', $an_now );
+        $an_label = 'Last 7 Days';
+        break;
+}
+
+$an_pages    = function_exists( 'shopys_vc_analytics_pages' )    ? shopys_vc_analytics_pages( $an_since, $an_until, 10 )    : [];
+$an_products = function_exists( 'shopys_vc_analytics_products' ) ? shopys_vc_analytics_products( $an_since, $an_until, 10 ) : [];
+$an_base_url = add_query_arg( [ 'tab' => 'analytics' ], home_url( '/dashboard/' ) );
 ?>
 <!DOCTYPE html>
 <html <?php language_attributes(); ?>>
@@ -691,6 +732,118 @@ body {
     border-radius: 20px;
     text-transform: uppercase;
     letter-spacing: .4px;
+}
+
+/* ── ANALYTICS TAB ───────────────────────────────────────────────── */
+.an-filter-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+.an-period-btn {
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all .15s;
+}
+.an-period-btn:hover { border-color: var(--green); color: var(--green); }
+.an-period-btn.active { background: var(--green); border-color: var(--green); color: #000; }
+.an-date-inputs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 8px;
+}
+.an-date-inputs select,
+.an-date-inputs input[type=date],
+.an-date-inputs input[type=number] {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 12px;
+    padding: 5px 8px;
+    outline: none;
+}
+.an-date-inputs select:focus,
+.an-date-inputs input:focus { border-color: var(--green); }
+.an-apply-btn {
+    padding: 5px 12px;
+    background: var(--green);
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.an-section { margin-bottom: 32px; }
+.an-section-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.an-section-title span { color: var(--muted); font-weight: 400; font-size: 12px; }
+.an-hbar-wrap { display: flex; flex-direction: column; gap: 10px; }
+.an-hbar-row { display: flex; align-items: center; gap: 10px; }
+.an-hbar-label {
+    width: 180px;
+    min-width: 180px;
+    font-size: 12px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.an-hbar-track {
+    flex: 1;
+    background: var(--surface2);
+    border-radius: 4px;
+    height: 22px;
+    position: relative;
+    overflow: hidden;
+}
+.an-hbar-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: var(--green);
+    opacity: .85;
+    transition: width .4s ease;
+    min-width: 2px;
+}
+.an-hbar-count {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--green);
+    min-width: 36px;
+    text-align: right;
+}
+.an-hbar-uniq {
+    font-size: 11px;
+    color: var(--muted);
+    min-width: 60px;
+    text-align: right;
+}
+.an-empty {
+    padding: 32px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
 }
 </style>
 <!-- Apply saved theme BEFORE paint to avoid flash -->
@@ -1348,6 +1501,137 @@ body {
             <?php endif; ?>
 
             <?php endif; ?>
+        </div>
+
+        <!-- ── ANALYTICS TAB ──────────────────────────────────────────── -->
+        <div class="ds-panel <?php echo $active_tab === 'analytics' ? 'active' : ''; ?>" id="panel-analytics">
+        <?php if ( $active_tab === 'analytics' ) : ?>
+
+            <!-- Filter bar -->
+            <form method="get" action="<?php echo esc_url( home_url( '/dashboard/' ) ); ?>" style="margin-bottom:0;">
+                <input type="hidden" name="tab" value="analytics">
+                <div class="an-filter-bar">
+                    <?php
+                    $periods = [ '7d' => 'Last 7 Days', '30d' => 'Last 30 Days', 'day' => 'Day', 'month' => 'Month', 'year' => 'Year' ];
+                    foreach ( $periods as $pk => $pl ) :
+                        $href = esc_url( add_query_arg( [ 'tab' => 'analytics', 'an_period' => $pk ], home_url( '/dashboard/' ) ) );
+                    ?>
+                    <a href="<?php echo $href; ?>" class="an-period-btn <?php echo $an_period === $pk ? 'active' : ''; ?>"><?php echo $pl; ?></a>
+                    <?php endforeach; ?>
+
+                    <?php if ( $an_period === 'day' ) : ?>
+                    <div class="an-date-inputs">
+                        <input type="hidden" name="an_period" value="day">
+                        <input type="date" name="an_day" value="<?php echo esc_attr( $an_day ); ?>" max="<?php echo date('Y-m-d'); ?>">
+                        <button type="submit" class="an-apply-btn">Go</button>
+                    </div>
+                    <?php elseif ( $an_period === 'month' ) : ?>
+                    <div class="an-date-inputs">
+                        <input type="hidden" name="an_period" value="month">
+                        <select name="an_month">
+                            <?php for ( $m = 1; $m <= 12; $m++ ) : ?>
+                            <option value="<?php echo $m; ?>" <?php selected( $an_month, $m ); ?>><?php echo date( 'F', mktime( 0,0,0,$m,1 ) ); ?></option>
+                            <?php endfor; ?>
+                        </select>
+                        <select name="an_year">
+                            <?php for ( $y = (int) date('Y'); $y >= 2024; $y-- ) : ?>
+                            <option value="<?php echo $y; ?>" <?php selected( $an_year, $y ); ?>><?php echo $y; ?></option>
+                            <?php endfor; ?>
+                        </select>
+                        <button type="submit" class="an-apply-btn">Go</button>
+                    </div>
+                    <?php elseif ( $an_period === 'year' ) : ?>
+                    <div class="an-date-inputs">
+                        <input type="hidden" name="an_period" value="year">
+                        <select name="an_year">
+                            <?php for ( $y = (int) date('Y'); $y >= 2024; $y-- ) : ?>
+                            <option value="<?php echo $y; ?>" <?php selected( $an_year, $y ); ?>><?php echo $y; ?></option>
+                            <?php endfor; ?>
+                        </select>
+                        <button type="submit" class="an-apply-btn">Go</button>
+                    </div>
+                    <?php endif; ?>
+                </div>
+            </form>
+
+            <div style="font-size:12px;color:var(--muted);margin-bottom:20px;">
+                Showing data for: <strong style="color:var(--text);"><?php echo esc_html( $an_label ); ?></strong>
+            </div>
+
+            <!-- Most Viewed Pages -->
+            <div class="ds-chart-wrap an-section">
+                <div class="an-section-title">
+                    Most Viewed Pages
+                    <span><?php echo count( $an_pages ); ?> pages</span>
+                </div>
+                <?php if ( $an_pages ) :
+                    $an_max_p = max( array_column( (array) $an_pages, 'views' ) );
+                ?>
+                <div class="an-hbar-wrap">
+                    <div class="an-hbar-row" style="margin-bottom:4px;">
+                        <div class="an-hbar-label" style="color:var(--muted);font-size:11px;">Page</div>
+                        <div style="flex:1;"></div>
+                        <div class="an-hbar-count" style="color:var(--muted);font-size:11px;">Views</div>
+                        <div class="an-hbar-uniq" style="color:var(--muted);font-size:11px;">Uniques</div>
+                    </div>
+                    <?php foreach ( $an_pages as $row ) :
+                        $pct = $an_max_p > 0 ? round( ($row->views / $an_max_p) * 100 ) : 0;
+                        $title = $row->title ?: basename( rtrim( $row->url, '/' ) ) ?: 'Home';
+                    ?>
+                    <div class="an-hbar-row">
+                        <div class="an-hbar-label" title="<?php echo esc_attr( $row->url ); ?>">
+                            <a href="<?php echo esc_url( $row->url ); ?>" target="_blank" style="color:var(--text);text-decoration:none;" title="<?php echo esc_attr($row->url); ?>"><?php echo esc_html( $title ); ?></a>
+                        </div>
+                        <div class="an-hbar-track">
+                            <div class="an-hbar-fill" style="width:<?php echo $pct; ?>%;"></div>
+                        </div>
+                        <div class="an-hbar-count"><?php echo number_format_i18n( (int) $row->views ); ?></div>
+                        <div class="an-hbar-uniq"><?php echo number_format_i18n( (int) $row->uniques ); ?> uniq</div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php else : ?>
+                <div class="an-empty">No page views recorded for this period.</div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Most Viewed Products -->
+            <div class="ds-chart-wrap an-section">
+                <div class="an-section-title">
+                    Most Viewed Products
+                    <span><?php echo count( $an_products ); ?> products</span>
+                </div>
+                <?php if ( $an_products ) :
+                    $an_max_pr = max( array_column( (array) $an_products, 'views' ) );
+                ?>
+                <div class="an-hbar-wrap">
+                    <div class="an-hbar-row" style="margin-bottom:4px;">
+                        <div class="an-hbar-label" style="color:var(--muted);font-size:11px;">Product</div>
+                        <div style="flex:1;"></div>
+                        <div class="an-hbar-count" style="color:var(--muted);font-size:11px;">Views</div>
+                        <div class="an-hbar-uniq" style="color:var(--muted);font-size:11px;">Uniques</div>
+                    </div>
+                    <?php foreach ( $an_products as $row ) :
+                        $pct = $an_max_pr > 0 ? round( ($row->views / $an_max_pr) * 100 ) : 0;
+                    ?>
+                    <div class="an-hbar-row">
+                        <div class="an-hbar-label" title="<?php echo esc_attr( $row->url ); ?>">
+                            <a href="<?php echo esc_url( $row->url ); ?>" target="_blank" style="color:var(--text);text-decoration:none;"><?php echo esc_html( $row->title ?: 'Product' ); ?></a>
+                        </div>
+                        <div class="an-hbar-track">
+                            <div class="an-hbar-fill" style="width:<?php echo $pct; ?>%;background:#0af;"></div>
+                        </div>
+                        <div class="an-hbar-count"><?php echo number_format_i18n( (int) $row->views ); ?></div>
+                        <div class="an-hbar-uniq"><?php echo number_format_i18n( (int) $row->uniques ); ?> uniq</div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php else : ?>
+                <div class="an-empty">No product views recorded for this period.</div>
+                <?php endif; ?>
+            </div>
+
+        <?php endif; ?>
         </div>
 
     </div><!-- .ds-content -->

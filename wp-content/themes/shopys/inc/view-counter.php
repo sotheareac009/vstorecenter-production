@@ -536,6 +536,44 @@ function shopys_vc_daily_series( $days = 14 ) {
     return array_values( $series );
 }
 
+/**
+ * Top pages by view count within a date range.
+ */
+function shopys_vc_analytics_pages( $since, $until, $limit = 10 ) {
+    if ( ! shopys_vc_ensure_table() ) return [];
+    try {
+        global $wpdb;
+        return $wpdb->get_results( $wpdb->prepare(
+            "SELECT url, MAX(title) AS title, COUNT(*) AS views, COUNT(DISTINCT ip_hash) AS uniques
+               FROM " . shopys_vc_table() . "
+              WHERE viewed_at >= %s AND viewed_at < %s
+              GROUP BY url
+              ORDER BY views DESC
+              LIMIT %d",
+            $since, $until, (int) $limit
+        ) ) ?: [];
+    } catch ( \Throwable $e ) { return []; }
+}
+
+/**
+ * Top products (post_type = 'product') by view count within a date range.
+ */
+function shopys_vc_analytics_products( $since, $until, $limit = 10 ) {
+    if ( ! shopys_vc_ensure_table() ) return [];
+    try {
+        global $wpdb;
+        return $wpdb->get_results( $wpdb->prepare(
+            "SELECT url, MAX(title) AS title, COUNT(*) AS views, COUNT(DISTINCT ip_hash) AS uniques
+               FROM " . shopys_vc_table() . "
+              WHERE viewed_at >= %s AND viewed_at < %s AND post_type = 'product'
+              GROUP BY url
+              ORDER BY views DESC
+              LIMIT %d",
+            $since, $until, (int) $limit
+        ) ) ?: [];
+    } catch ( \Throwable $e ) { return []; }
+}
+
 
 /* ═══════════════════════════════════════════════════════════════════
    5. ADMIN: MENU, SETTINGS, DASHBOARD PAGE
