@@ -159,7 +159,7 @@ function shopys_vc_parse_referrer( $referrer ) {
     if ( strpos( $ref_host, 'google' )    !== false ) return 'Google';
     if ( strpos( $ref_host, 'bing' )      !== false ) return 'Bing';
     if ( strpos( $ref_host, 'yahoo' )     !== false ) return 'Yahoo';
-    if ( strpos( $ref_host, 'facebook' )  !== false || $ref_host === 'fb.com' || strpos( $ref_host, 'fb.me' ) !== false ) return 'Facebook';
+    if ( strpos( $ref_host, 'facebook' ) !== false || strpos( $ref_host, 'fb.com' ) !== false || strpos( $ref_host, 'fb.me' ) !== false || strpos( $ref_host, 'fbcdn' ) !== false ) return 'Facebook';
     if ( strpos( $ref_host, 'instagram' ) !== false ) return 'Instagram';
     if ( strpos( $ref_host, 'tiktok' )    !== false ) return 'TikTok';
     if ( strpos( $ref_host, 'twitter' )   !== false || $ref_host === 't.co' ) return 'Twitter / X';
