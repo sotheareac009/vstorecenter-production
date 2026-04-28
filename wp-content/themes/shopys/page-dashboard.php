@@ -2028,8 +2028,9 @@ body {
                         ?>
                         <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;cursor:default;" title="<?php echo esc_attr($title); ?>">
                             <?php if ( $is_top && $hd['views'] > 0 ) : ?>
-                            <div style="font-size:10px;color:<?php echo $color; ?>;font-weight:700;margin-bottom:2px;">
+                            <div style="font-size:10px;color:<?php echo $color; ?>;font-weight:700;line-height:1.1;text-align:center;margin-bottom:2px;white-space:nowrap;">
                                 #<?php echo $rank_n + 1; ?>
+                                <div style="font-size:11px;color:<?php echo $color; ?>;font-weight:800;"><?php echo number_format($hd['views']); ?></div>
                             </div>
                             <?php elseif ( $hd['views'] > 0 ) : ?>
                             <div style="font-size:9px;color:var(--muted);margin-bottom:2px;"><?php echo number_format($hd['views']); ?></div>
@@ -2039,13 +2040,14 @@ body {
                         <?php endforeach; ?>
                     </div>
 
-                    <!-- Hour labels -->
-                    <div style="display:flex;gap:4px;padding-left:34px;margin-top:8px;">
+                    <!-- Hour labels — every hour 12AM to 11PM -->
+                    <div style="display:flex;gap:4px;padding-left:34px;margin-top:10px;">
                         <?php foreach ( $hour_labels as $h => $lbl ) :
-                            $show = in_array( $h, [0,3,6,9,12,15,18,21,23], true );
+                            // Highlight the major hours (every 6h) so the eye can anchor
+                            $is_major = in_array( $h, [0,6,12,18], true );
                         ?>
-                        <div style="flex:1;text-align:center;font-size:10px;color:<?php echo $show ? 'var(--text)' : 'transparent'; ?>;font-weight:<?php echo $show ? '600' : '400'; ?>;">
-                            <?php echo esc_html( $show ? str_replace(' ','',$lbl) : '·' ); ?>
+                        <div style="flex:1;text-align:center;font-size:9px;color:<?php echo $is_major ? 'var(--text)' : 'var(--muted)'; ?>;font-weight:<?php echo $is_major ? '700' : '500'; ?>;line-height:1.2;letter-spacing:-0.3px;">
+                            <?php echo esc_html( str_replace(' ','',$lbl) ); ?>
                         </div>
                         <?php endforeach; ?>
                     </div>
