@@ -715,6 +715,40 @@ function shopys_vc_analytics_products( $since, $until, $limit = 10, $country = '
 }
 
 
+/**
+ * Views grouped by hour-of-day (0–23) within a date range, optional country filter.
+ * Returns array keyed 0–23, each with 'views' and 'uniques'.
+ */
+function shopys_vc_hourly_views( $since, $until, $country = '' ) {
+    $hours = array_fill( 0, 24, [ 'views' => 0, 'uniques' => 0 ] );
+    if ( ! shopys_vc_ensure_table() ) return $hours;
+    try {
+        global $wpdb;
+        if ( $country ) {
+            $rows = $wpdb->get_results( $wpdb->prepare(
+                "SELECT HOUR(viewed_at) AS hr, COUNT(*) AS views, COUNT(DISTINCT ip_hash) AS uniques
+                   FROM " . shopys_vc_table() . "
+                  WHERE viewed_at >= %s AND viewed_at < %s AND country_code = %s
+                  GROUP BY HOUR(viewed_at)",
+                $since, $until, $country
+            ) );
+        } else {
+            $rows = $wpdb->get_results( $wpdb->prepare(
+                "SELECT HOUR(viewed_at) AS hr, COUNT(*) AS views, COUNT(DISTINCT ip_hash) AS uniques
+                   FROM " . shopys_vc_table() . "
+                  WHERE viewed_at >= %s AND viewed_at < %s
+                  GROUP BY HOUR(viewed_at)",
+                $since, $until
+            ) );
+        }
+        foreach ( $rows as $r ) {
+            $hours[ (int) $r->hr ] = [ 'views' => (int) $r->views, 'uniques' => (int) $r->uniques ];
+        }
+    } catch ( \Throwable $e ) {}
+    return $hours;
+}
+
+
 /* ═══════════════════════════════════════════════════════════════════
    5. ADMIN: MENU, SETTINGS, DASHBOARD PAGE
    ═══════════════════════════════════════════════════════════════════ */

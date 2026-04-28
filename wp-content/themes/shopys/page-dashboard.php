@@ -183,10 +183,12 @@ switch ( $an_period ) {
         break;
 }
 
-$an_country    = isset( $_GET['an_country'] )    ? substr( strtoupper( sanitize_text_field( wp_unslash( $_GET['an_country'] ) ) ), 0, 2 )    : 'KH';
-$an_pr_country = isset( $_GET['an_pr_country'] ) ? substr( strtoupper( sanitize_text_field( wp_unslash( $_GET['an_pr_country'] ) ) ), 0, 2 ) : 'KH';
+$an_country        = isset( $_GET['an_country'] )        ? substr( strtoupper( sanitize_text_field( wp_unslash( $_GET['an_country'] ) ) ), 0, 2 )        : 'KH';
+$an_pr_country     = isset( $_GET['an_pr_country'] )     ? substr( strtoupper( sanitize_text_field( wp_unslash( $_GET['an_pr_country'] ) ) ), 0, 2 )     : 'KH';
+$an_hourly_country = isset( $_GET['an_hourly_country'] ) ? substr( strtoupper( sanitize_text_field( wp_unslash( $_GET['an_hourly_country'] ) ) ), 0, 2 ) : 'KH';
 $an_pages    = function_exists( 'shopys_vc_analytics_pages' )    ? shopys_vc_analytics_pages( $an_since, $an_until, 10, $an_country )       : [];
 $an_products = function_exists( 'shopys_vc_analytics_products' ) ? shopys_vc_analytics_products( $an_since, $an_until, 10, $an_pr_country ) : [];
+$an_hourly   = function_exists( 'shopys_vc_hourly_views' )       ? shopys_vc_hourly_views( $an_since, $an_until, $an_hourly_country )       : array_fill( 0, 24, ['views'=>0,'uniques'=>0] );
 $an_sources  = function_exists( 'shopys_vc_traffic_sources' )    ? shopys_vc_traffic_sources( $an_since, $an_until, 15 )    : [];
 $an_base_url = add_query_arg( [ 'tab' => 'analytics' ], home_url( '/dashboard/' ) );
 
@@ -1904,6 +1906,171 @@ body {
                 </div>
                 <?php else : ?>
                 <div class="an-empty">No product views recorded for this period.</div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Peak Hours Chart -->
+            <?php
+            $hour_labels = [
+                '12 AM','1 AM','2 AM','3 AM','4 AM','5 AM','6 AM','7 AM','8 AM','9 AM','10 AM','11 AM',
+                '12 PM','1 PM','2 PM','3 PM','4 PM','5 PM','6 PM','7 PM','8 PM','9 PM','10 PM','11 PM'
+            ];
+            $views_only = array_column( $an_hourly, 'views' );
+            $an_hourly_max = max( 1, max( $views_only ?: [0] ) );
+            $an_hourly_total = array_sum( $views_only );
+
+            // Period totals: Night (0-5), Morning (6-11), Afternoon (12-17), Evening (18-23)
+            $periods = [
+                'Night'     => [ 'range' => [0,5],   'icon' => '🌙', 'views' => 0, 'uniques' => 0 ],
+                'Morning'   => [ 'range' => [6,11],  'icon' => '☀️', 'views' => 0, 'uniques' => 0 ],
+                'Afternoon' => [ 'range' => [12,17], 'icon' => '🌤️', 'views' => 0, 'uniques' => 0 ],
+                'Evening'   => [ 'range' => [18,23], 'icon' => '🌆', 'views' => 0, 'uniques' => 0 ],
+            ];
+            foreach ( $periods as $pn => &$p ) {
+                for ( $h = $p['range'][0]; $h <= $p['range'][1]; $h++ ) {
+                    $p['views']   += $an_hourly[$h]['views'];
+                    $p['uniques'] += $an_hourly[$h]['uniques'];
+                }
+            }
+            unset($p);
+
+            // Find top 3 hours by views for ranking
+            $ranked = $an_hourly;
+            uasort( $ranked, function($a,$b){ return $b['views'] - $a['views']; } );
+            $top_hours = array_slice( array_keys( $ranked ), 0, 3, true );
+            $rank_color = [ $top_hours[0] ?? -1 => '#13e800', $top_hours[1] ?? -1 => '#f6c343', $top_hours[2] ?? -1 => '#ff8a3d' ];
+
+            $hourly_countries = [];
+            if ( function_exists('shopys_vc_ensure_table') && shopys_vc_ensure_table() ) {
+                global $wpdb;
+                $hourly_countries = $wpdb->get_results(
+                    "SELECT DISTINCT country_code, country FROM " . shopys_vc_table() . " WHERE country_code != '' ORDER BY country ASC"
+                ) ?: [];
+            }
+            ?>
+            <div class="ds-chart-wrap an-section">
+                <div class="an-section-title">
+                    Peak Hours
+                    <span>When visitors are most active</span>
+                    <form method="get" style="display:inline-flex;align-items:center;gap:6px;margin-left:auto;font-size:12px;font-weight:400;">
+                        <?php
+                        foreach ( $_GET as $k => $v ) {
+                            if ( $k === 'an_hourly_country' ) continue;
+                            echo '<input type="hidden" name="' . esc_attr($k) . '" value="' . esc_attr($v) . '">';
+                        }
+                        ?>
+                        <label style="color:var(--muted);">Country:</label>
+                        <select name="an_hourly_country" onchange="this.form.submit()" style="background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:2px 6px;font-size:12px;cursor:pointer;">
+                            <option value="" <?php selected($an_hourly_country,''); ?>>All</option>
+                            <option value="KH" <?php selected($an_hourly_country,'KH'); ?>>🇰🇭 Cambodia (KH)</option>
+                            <?php foreach ( $hourly_countries as $cr ) :
+                                if ( $cr->country_code === 'KH' ) continue;
+                            ?>
+                            <option value="<?php echo esc_attr($cr->country_code); ?>" <?php selected($an_hourly_country,$cr->country_code); ?>>
+                                <?php echo esc_html( ($cr->country ?: $cr->country_code) . ' (' . $cr->country_code . ')' ); ?>
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <?php if ( $an_hourly_country ) : ?>
+                        <a href="<?php echo esc_url( add_query_arg('an_hourly_country','',remove_query_arg('an_hourly_country')) ); ?>" style="color:var(--muted);font-size:11px;text-decoration:none;" title="Clear">✕</a>
+                        <?php endif; ?>
+                    </form>
+                </div>
+
+                <?php if ( $an_hourly_total > 0 ) : ?>
+
+                <!-- Time Period Summary Cards -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:24px;">
+                    <?php foreach ( $periods as $pname => $pd ) :
+                        $pct = $an_hourly_total > 0 ? round( ($pd['views'] / $an_hourly_total) * 100 ) : 0;
+                        $is_busiest = ( $pd['views'] === max( array_column($periods,'views') ) && $pd['views'] > 0 );
+                    ?>
+                    <div style="background:var(--card);border:1px solid <?php echo $is_busiest ? '#13e800' : 'var(--border)'; ?>;border-radius:8px;padding:12px;<?php echo $is_busiest ? 'box-shadow:0 0 0 2px rgba(19,232,0,.1);' : ''; ?>">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                            <span style="font-size:13px;color:var(--muted);font-weight:500;">
+                                <span style="font-size:16px;margin-right:4px;"><?php echo $pd['icon']; ?></span><?php echo esc_html($pname); ?>
+                            </span>
+                            <?php if ( $is_busiest ) : ?>
+                            <span style="font-size:9px;background:#13e800;color:#000;padding:2px 6px;border-radius:10px;font-weight:700;">BUSIEST</span>
+                            <?php endif; ?>
+                        </div>
+                        <div style="font-size:22px;font-weight:700;color:var(--text);"><?php echo number_format($pd['views']); ?></div>
+                        <div style="font-size:11px;color:var(--muted);">
+                            <?php echo $pct; ?>% &middot; <?php echo number_format($pd['uniques']); ?> unique
+                        </div>
+                        <div style="font-size:10px;color:var(--muted);margin-top:4px;">
+                            <?php echo $hour_labels[$pd['range'][0]] . ' – ' . $hour_labels[$pd['range'][1]]; ?>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+
+                <!-- Hourly bar chart -->
+                <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px 12px;">
+                    <div style="display:flex;align-items:flex-end;gap:4px;height:200px;padding-left:34px;position:relative;">
+
+                        <!-- Y-axis grid lines -->
+                        <div style="position:absolute;inset:0 0 0 34px;pointer-events:none;">
+                            <?php for ( $i = 0; $i <= 4; $i++ ) :
+                                $val = round( $an_hourly_max * ( 4 - $i ) / 4 );
+                            ?>
+                            <div style="position:absolute;left:0;right:0;top:<?php echo $i * 25; ?>%;border-top:1px dashed rgba(255,255,255,.06);"></div>
+                            <div style="position:absolute;left:-32px;top:calc(<?php echo $i * 25; ?>% - 6px);font-size:10px;color:var(--muted);width:28px;text-align:right;"><?php echo number_format($val); ?></div>
+                            <?php endfor; ?>
+                        </div>
+
+                        <?php foreach ( $an_hourly as $h => $hd ) :
+                            $bar_h   = $hd['views'] > 0 ? max( 3, round( ($hd['views'] / $an_hourly_max) * 180 ) ) : 0;
+                            $is_top  = isset( $rank_color[$h] );
+                            $rank_n  = array_search( $h, $top_hours, true );
+                            $color   = $is_top ? $rank_color[$h] : 'rgba(99,179,237,.45)';
+                            $title   = $hour_labels[$h] . ': ' . number_format($hd['views']) . ' views, ' . number_format($hd['uniques']) . ' unique';
+                        ?>
+                        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;cursor:default;" title="<?php echo esc_attr($title); ?>">
+                            <?php if ( $is_top && $hd['views'] > 0 ) : ?>
+                            <div style="font-size:10px;color:<?php echo $color; ?>;font-weight:700;margin-bottom:2px;">
+                                #<?php echo $rank_n + 1; ?>
+                            </div>
+                            <?php elseif ( $hd['views'] > 0 ) : ?>
+                            <div style="font-size:9px;color:var(--muted);margin-bottom:2px;"><?php echo number_format($hd['views']); ?></div>
+                            <?php endif; ?>
+                            <div style="width:100%;max-width:24px;height:<?php echo $bar_h; ?>px;background:<?php echo $color; ?>;border-radius:4px 4px 0 0;<?php echo $is_top ? 'box-shadow:0 0 8px ' . $color . '88;' : ''; ?>"></div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <!-- Hour labels -->
+                    <div style="display:flex;gap:4px;padding-left:34px;margin-top:8px;">
+                        <?php foreach ( $hour_labels as $h => $lbl ) :
+                            $show = in_array( $h, [0,3,6,9,12,15,18,21,23], true );
+                        ?>
+                        <div style="flex:1;text-align:center;font-size:10px;color:<?php echo $show ? 'var(--text)' : 'transparent'; ?>;font-weight:<?php echo $show ? '600' : '400'; ?>;">
+                            <?php echo esc_html( $show ? str_replace(' ','',$lbl) : '·' ); ?>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <!-- Top 5 leaderboard -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:16px;">
+                    <?php
+                    $i = 0;
+                    foreach ( $ranked as $h => $hd ) :
+                        if ( $i >= 5 ) break;
+                        if ( $hd['views'] === 0 ) break;
+                        $medals = ['🥇','🥈','🥉','4.','5.'];
+                        $i++;
+                    ?>
+                    <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:8px 10px;">
+                        <div style="font-size:11px;color:var(--muted);margin-bottom:2px;"><?php echo $medals[$i-1]; ?> <?php echo esc_html($hour_labels[$h]); ?></div>
+                        <div style="font-size:16px;font-weight:700;"><?php echo number_format($hd['views']); ?> <span style="font-size:11px;color:var(--muted);font-weight:400;">views</span></div>
+                        <div style="font-size:10px;color:var(--muted);"><?php echo number_format($hd['uniques']); ?> unique</div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+
+                <?php else : ?>
+                <div class="an-empty">No data for this period<?php echo $an_hourly_country ? ' in ' . esc_html($an_hourly_country) : ''; ?>.</div>
                 <?php endif; ?>
             </div>
 
