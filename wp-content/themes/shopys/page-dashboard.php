@@ -183,9 +183,10 @@ switch ( $an_period ) {
         break;
 }
 
-$an_country  = isset( $_GET['an_country'] ) ? substr( strtoupper( sanitize_text_field( wp_unslash( $_GET['an_country'] ) ) ), 0, 2 ) : 'KH';
-$an_pages    = function_exists( 'shopys_vc_analytics_pages' )    ? shopys_vc_analytics_pages( $an_since, $an_until, 10, $an_country )    : [];
-$an_products = function_exists( 'shopys_vc_analytics_products' ) ? shopys_vc_analytics_products( $an_since, $an_until, 10 ) : [];
+$an_country    = isset( $_GET['an_country'] )    ? substr( strtoupper( sanitize_text_field( wp_unslash( $_GET['an_country'] ) ) ), 0, 2 )    : 'KH';
+$an_pr_country = isset( $_GET['an_pr_country'] ) ? substr( strtoupper( sanitize_text_field( wp_unslash( $_GET['an_pr_country'] ) ) ), 0, 2 ) : 'KH';
+$an_pages    = function_exists( 'shopys_vc_analytics_pages' )    ? shopys_vc_analytics_pages( $an_since, $an_until, 10, $an_country )       : [];
+$an_products = function_exists( 'shopys_vc_analytics_products' ) ? shopys_vc_analytics_products( $an_since, $an_until, 10, $an_pr_country ) : [];
 $an_sources  = function_exists( 'shopys_vc_traffic_sources' )    ? shopys_vc_traffic_sources( $an_since, $an_until, 15 )    : [];
 $an_base_url = add_query_arg( [ 'tab' => 'analytics' ], home_url( '/dashboard/' ) );
 
@@ -1809,6 +1810,37 @@ body {
                 <div class="an-section-title">
                     Most Viewed Products
                     <span><?php echo count( $an_products ); ?> products</span>
+                    <form method="get" style="display:inline-flex;align-items:center;gap:6px;margin-left:auto;font-size:12px;font-weight:400;">
+                        <?php
+                        foreach ( $_GET as $k => $v ) {
+                            if ( $k === 'an_pr_country' ) continue;
+                            echo '<input type="hidden" name="' . esc_attr($k) . '" value="' . esc_attr($v) . '">';
+                        }
+                        $pr_countries = [];
+                        if ( function_exists('shopys_vc_ensure_table') && shopys_vc_ensure_table() ) {
+                            global $wpdb;
+                            $pr_countries = $wpdb->get_results(
+                                "SELECT DISTINCT country_code, country FROM " . shopys_vc_table() . "
+                                  WHERE country_code != '' AND post_type = 'product' ORDER BY country ASC"
+                            ) ?: [];
+                        }
+                        ?>
+                        <label for="an_pr_country_select" style="color:var(--muted);">Country:</label>
+                        <select id="an_pr_country_select" name="an_pr_country" onchange="this.form.submit()" style="background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:2px 6px;font-size:12px;cursor:pointer;">
+                            <option value="" <?php selected($an_pr_country,''); ?>>All</option>
+                            <option value="KH" <?php selected($an_pr_country,'KH'); ?>>🇰🇭 Cambodia (KH)</option>
+                            <?php foreach ( $pr_countries as $cr ) :
+                                if ( $cr->country_code === 'KH' ) continue;
+                            ?>
+                            <option value="<?php echo esc_attr($cr->country_code); ?>" <?php selected($an_pr_country,$cr->country_code); ?>>
+                                <?php echo esc_html( ($cr->country ?: $cr->country_code) . ' (' . $cr->country_code . ')' ); ?>
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <?php if ( $an_pr_country ) : ?>
+                        <a href="<?php echo esc_url( add_query_arg( 'an_pr_country', '', remove_query_arg('an_pr_country') ) ); ?>" style="color:var(--muted);font-size:11px;text-decoration:none;" title="Clear filter">✕</a>
+                        <?php endif; ?>
+                    </form>
                 </div>
                 <?php if ( $an_products ) :
                     $an_max_pr = max( array_column( (array) $an_products, 'views' ) );
