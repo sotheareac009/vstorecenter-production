@@ -348,22 +348,62 @@ function shopys_vc_top_locations( $since, $limit = 20 ) {
    5. STATS HELPERS (every helper safe to call before table exists)
    ═══════════════════════════════════════════════════════════════════ */
 
-function shopys_vc_count_views( $since ) {
+function shopys_vc_count_views( $since, $country = '' ) {
     if ( ! shopys_vc_ensure_table() ) return 0;
     try {
         global $wpdb;
+        if ( $country ) {
+            return (int) $wpdb->get_var( $wpdb->prepare(
+                "SELECT COUNT(*) FROM " . shopys_vc_table() . " WHERE viewed_at >= %s AND country_code = %s", $since, $country
+            ) );
+        }
         return (int) $wpdb->get_var( $wpdb->prepare(
             "SELECT COUNT(*) FROM " . shopys_vc_table() . " WHERE viewed_at >= %s", $since
         ) );
     } catch ( \Throwable $e ) { return 0; }
 }
 
-function shopys_vc_count_unique( $since ) {
+function shopys_vc_count_unique( $since, $country = '' ) {
     if ( ! shopys_vc_ensure_table() ) return 0;
     try {
         global $wpdb;
+        if ( $country ) {
+            return (int) $wpdb->get_var( $wpdb->prepare(
+                "SELECT COUNT(DISTINCT ip_hash) FROM " . shopys_vc_table() . " WHERE viewed_at >= %s AND country_code = %s", $since, $country
+            ) );
+        }
         return (int) $wpdb->get_var( $wpdb->prepare(
             "SELECT COUNT(DISTINCT ip_hash) FROM " . shopys_vc_table() . " WHERE viewed_at >= %s", $since
+        ) );
+    } catch ( \Throwable $e ) { return 0; }
+}
+
+function shopys_vc_count_views_date( $date, $country = '' ) {
+    if ( ! shopys_vc_ensure_table() ) return 0;
+    try {
+        global $wpdb;
+        if ( $country ) {
+            return (int) $wpdb->get_var( $wpdb->prepare(
+                "SELECT COUNT(*) FROM " . shopys_vc_table() . " WHERE DATE(viewed_at) = %s AND country_code = %s", $date, $country
+            ) );
+        }
+        return (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM " . shopys_vc_table() . " WHERE DATE(viewed_at) = %s", $date
+        ) );
+    } catch ( \Throwable $e ) { return 0; }
+}
+
+function shopys_vc_count_unique_date( $date, $country = '' ) {
+    if ( ! shopys_vc_ensure_table() ) return 0;
+    try {
+        global $wpdb;
+        if ( $country ) {
+            return (int) $wpdb->get_var( $wpdb->prepare(
+                "SELECT COUNT(DISTINCT ip_hash) FROM " . shopys_vc_table() . " WHERE DATE(viewed_at) = %s AND country_code = %s", $date, $country
+            ) );
+        }
+        return (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(DISTINCT ip_hash) FROM " . shopys_vc_table() . " WHERE DATE(viewed_at) = %s", $date
         ) );
     } catch ( \Throwable $e ) { return 0; }
 }
@@ -401,112 +441,60 @@ function shopys_vc_normalize_country_filter( $country = '' ) {
 /**
  * All pages grouped and filtered by an optional year+month (0 = all time).
  */
-function shopys_vc_pages_by_period( $year = 0, $month = 0, $limit = 25, $offset = 0, $country = '' ) {
+function shopys_vc_pages_by_period( $year = 0, $month = 0, $limit = 25, $offset = 0, $country = '', $date = '' ) {
     if ( ! shopys_vc_ensure_table() ) return array();
     try {
         global $wpdb;
         $limit  = max( 1, min( 1000, (int) $limit ) );
         $offset = max( 0, (int) $offset );
         $country = shopys_vc_normalize_country_filter( $country );
-        if ( $year && $month && $country ) {
-            $rows = $wpdb->get_results( $wpdb->prepare(
-                "SELECT url, MAX(title) AS title, MAX(post_id) AS post_id,
+        $sel = "SELECT url, MAX(title) AS title, MAX(post_id) AS post_id,
                         COUNT(*) AS views, MAX(viewed_at) AS last_viewed,
                         COUNT(DISTINCT IF(country_code != '', CONCAT(country_code, city), NULL)) AS location_count,
-                            GROUP_CONCAT(DISTINCT IF(country_code != '', CONCAT(country_code, ':', country, ':', city), NULL) ORDER BY viewed_at DESC SEPARATOR '|') AS location_list,
+                        GROUP_CONCAT(DISTINCT IF(country_code != '', CONCAT(country_code, ':', country, ':', city), NULL) ORDER BY viewed_at DESC SEPARATOR '|') AS location_list,
                         SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country_code, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country_code,
                         SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country,
                         SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', city, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS city,
                         SUBSTRING_INDEX(GROUP_CONCAT(ip_hash ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS last_ip_hash
-                   FROM " . shopys_vc_table() . "
-                  WHERE YEAR(viewed_at) = %d AND MONTH(viewed_at) = %d AND country_code = %s
-                  GROUP BY url
-                  ORDER BY last_viewed DESC
-                  LIMIT %d OFFSET %d",
+                   FROM " . shopys_vc_table();
+        if ( $date && $country ) {
+            $rows = $wpdb->get_results( $wpdb->prepare(
+                $sel . " WHERE DATE(viewed_at) = %s AND country_code = %s GROUP BY url ORDER BY last_viewed DESC LIMIT %d OFFSET %d",
+                $date, $country, $limit, $offset
+            ) );
+        } elseif ( $date ) {
+            $rows = $wpdb->get_results( $wpdb->prepare(
+                $sel . " WHERE DATE(viewed_at) = %s GROUP BY url ORDER BY last_viewed DESC LIMIT %d OFFSET %d",
+                $date, $limit, $offset
+            ) );
+        } elseif ( $year && $month && $country ) {
+            $rows = $wpdb->get_results( $wpdb->prepare(
+                $sel . " WHERE YEAR(viewed_at) = %d AND MONTH(viewed_at) = %d AND country_code = %s GROUP BY url ORDER BY last_viewed DESC LIMIT %d OFFSET %d",
                 $year, $month, $country, $limit, $offset
             ) );
         } elseif ( $year && $month ) {
             $rows = $wpdb->get_results( $wpdb->prepare(
-                "SELECT url, MAX(title) AS title, MAX(post_id) AS post_id,
-                        COUNT(*) AS views, MAX(viewed_at) AS last_viewed,
-                        COUNT(DISTINCT IF(country_code != '', CONCAT(country_code, city), NULL)) AS location_count,
-                            GROUP_CONCAT(DISTINCT IF(country_code != '', CONCAT(country_code, ':', country, ':', city), NULL) ORDER BY viewed_at DESC SEPARATOR '|') AS location_list,
-                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country_code, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country_code,
-                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country,
-                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', city, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS city,
-                        SUBSTRING_INDEX(GROUP_CONCAT(ip_hash ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS last_ip_hash
-                   FROM " . shopys_vc_table() . "
-                  WHERE YEAR(viewed_at) = %d AND MONTH(viewed_at) = %d
-                  GROUP BY url
-                  ORDER BY last_viewed DESC
-                  LIMIT %d OFFSET %d",
+                $sel . " WHERE YEAR(viewed_at) = %d AND MONTH(viewed_at) = %d GROUP BY url ORDER BY last_viewed DESC LIMIT %d OFFSET %d",
                 $year, $month, $limit, $offset
             ) );
         } elseif ( $year && $country ) {
             $rows = $wpdb->get_results( $wpdb->prepare(
-                "SELECT url, MAX(title) AS title, MAX(post_id) AS post_id,
-                        COUNT(*) AS views, MAX(viewed_at) AS last_viewed,
-                        COUNT(DISTINCT IF(country_code != '', CONCAT(country_code, city), NULL)) AS location_count,
-                            GROUP_CONCAT(DISTINCT IF(country_code != '', CONCAT(country_code, ':', country, ':', city), NULL) ORDER BY viewed_at DESC SEPARATOR '|') AS location_list,
-                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country_code, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country_code,
-                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country,
-                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', city, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS city,
-                        SUBSTRING_INDEX(GROUP_CONCAT(ip_hash ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS last_ip_hash
-                   FROM " . shopys_vc_table() . "
-                  WHERE YEAR(viewed_at) = %d AND country_code = %s
-                  GROUP BY url
-                  ORDER BY last_viewed DESC
-                  LIMIT %d OFFSET %d",
+                $sel . " WHERE YEAR(viewed_at) = %d AND country_code = %s GROUP BY url ORDER BY last_viewed DESC LIMIT %d OFFSET %d",
                 $year, $country, $limit, $offset
             ) );
         } elseif ( $year ) {
             $rows = $wpdb->get_results( $wpdb->prepare(
-                "SELECT url, MAX(title) AS title, MAX(post_id) AS post_id,
-                        COUNT(*) AS views, MAX(viewed_at) AS last_viewed,
-                        COUNT(DISTINCT IF(country_code != '', CONCAT(country_code, city), NULL)) AS location_count,
-                            GROUP_CONCAT(DISTINCT IF(country_code != '', CONCAT(country_code, ':', country, ':', city), NULL) ORDER BY viewed_at DESC SEPARATOR '|') AS location_list,
-                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country_code, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country_code,
-                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country,
-                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', city, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS city,
-                        SUBSTRING_INDEX(GROUP_CONCAT(ip_hash ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS last_ip_hash
-                   FROM " . shopys_vc_table() . "
-                  WHERE YEAR(viewed_at) = %d
-                  GROUP BY url
-                  ORDER BY last_viewed DESC
-                  LIMIT %d OFFSET %d",
+                $sel . " WHERE YEAR(viewed_at) = %d GROUP BY url ORDER BY last_viewed DESC LIMIT %d OFFSET %d",
                 $year, $limit, $offset
             ) );
         } elseif ( $country ) {
             $rows = $wpdb->get_results( $wpdb->prepare(
-                "SELECT url, MAX(title) AS title, MAX(post_id) AS post_id,
-                        COUNT(*) AS views, MAX(viewed_at) AS last_viewed,
-                        COUNT(DISTINCT IF(country_code != '', CONCAT(country_code, city), NULL)) AS location_count,
-                            GROUP_CONCAT(DISTINCT IF(country_code != '', CONCAT(country_code, ':', country, ':', city), NULL) ORDER BY viewed_at DESC SEPARATOR '|') AS location_list,
-                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country_code, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country_code,
-                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country,
-                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', city, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS city,
-                        SUBSTRING_INDEX(GROUP_CONCAT(ip_hash ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS last_ip_hash
-                   FROM " . shopys_vc_table() . "
-                  WHERE country_code = %s
-                  GROUP BY url
-                  ORDER BY last_viewed DESC
-                  LIMIT %d OFFSET %d",
+                $sel . " WHERE country_code = %s GROUP BY url ORDER BY last_viewed DESC LIMIT %d OFFSET %d",
                 $country, $limit, $offset
             ) );
         } else {
             $rows = $wpdb->get_results( $wpdb->prepare(
-                "SELECT url, MAX(title) AS title, MAX(post_id) AS post_id,
-                        COUNT(*) AS views, MAX(viewed_at) AS last_viewed,
-                        COUNT(DISTINCT IF(country_code != '', CONCAT(country_code, city), NULL)) AS location_count,
-                            GROUP_CONCAT(DISTINCT IF(country_code != '', CONCAT(country_code, ':', country, ':', city), NULL) ORDER BY viewed_at DESC SEPARATOR '|') AS location_list,
-                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country_code, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country_code,
-                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', country, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS country,
-                        SUBSTRING_INDEX(GROUP_CONCAT(IF(country_code != '', city, NULL) ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS city,
-                        SUBSTRING_INDEX(GROUP_CONCAT(ip_hash ORDER BY viewed_at DESC SEPARATOR '|'), '|', 1) AS last_ip_hash
-                   FROM " . shopys_vc_table() . "
-                  GROUP BY url
-                  ORDER BY last_viewed DESC
-                  LIMIT %d OFFSET %d",
+                $sel . " GROUP BY url ORDER BY last_viewed DESC LIMIT %d OFFSET %d",
                 $limit, $offset
             ) );
         }
@@ -517,40 +505,34 @@ function shopys_vc_pages_by_period( $year = 0, $month = 0, $limit = 25, $offset 
 /**
  * Count of distinct URLs for a given period (used for pagination).
  */
-function shopys_vc_count_pages_by_period( $year = 0, $month = 0, $country = '' ) {
+function shopys_vc_count_pages_by_period( $year = 0, $month = 0, $country = '', $date = '' ) {
     if ( ! shopys_vc_ensure_table() ) return 0;
     try {
         global $wpdb;
         $country = shopys_vc_normalize_country_filter( $country );
-        if ( $year && $month && $country ) {
+        $tbl = "SELECT COUNT(DISTINCT url) FROM " . shopys_vc_table();
+        if ( $date && $country ) {
+            return (int) $wpdb->get_var( $wpdb->prepare( $tbl . " WHERE DATE(viewed_at) = %s AND country_code = %s", $date, $country ) );
+        } elseif ( $date ) {
+            return (int) $wpdb->get_var( $wpdb->prepare( $tbl . " WHERE DATE(viewed_at) = %s", $date ) );
+        } elseif ( $year && $month && $country ) {
             return (int) $wpdb->get_var( $wpdb->prepare(
-                "SELECT COUNT(DISTINCT url) FROM " . shopys_vc_table() . " WHERE YEAR(viewed_at) = %d AND MONTH(viewed_at) = %d AND country_code = %s",
+                $tbl . " WHERE YEAR(viewed_at) = %d AND MONTH(viewed_at) = %d AND country_code = %s",
                 $year, $month, $country
             ) );
         } elseif ( $year && $month ) {
             return (int) $wpdb->get_var( $wpdb->prepare(
-                "SELECT COUNT(DISTINCT url) FROM " . shopys_vc_table() . " WHERE YEAR(viewed_at) = %d AND MONTH(viewed_at) = %d",
+                $tbl . " WHERE YEAR(viewed_at) = %d AND MONTH(viewed_at) = %d",
                 $year, $month
             ) );
         } elseif ( $year && $country ) {
-            return (int) $wpdb->get_var( $wpdb->prepare(
-                "SELECT COUNT(DISTINCT url) FROM " . shopys_vc_table() . " WHERE YEAR(viewed_at) = %d AND country_code = %s",
-                $year, $country
-            ) );
+            return (int) $wpdb->get_var( $wpdb->prepare( $tbl . " WHERE YEAR(viewed_at) = %d AND country_code = %s", $year, $country ) );
         } elseif ( $year ) {
-            return (int) $wpdb->get_var( $wpdb->prepare(
-                "SELECT COUNT(DISTINCT url) FROM " . shopys_vc_table() . " WHERE YEAR(viewed_at) = %d",
-                $year
-            ) );
+            return (int) $wpdb->get_var( $wpdb->prepare( $tbl . " WHERE YEAR(viewed_at) = %d", $year ) );
         } elseif ( $country ) {
-            return (int) $wpdb->get_var( $wpdb->prepare(
-                "SELECT COUNT(DISTINCT url) FROM " . shopys_vc_table() . " WHERE country_code = %s",
-                $country
-            ) );
+            return (int) $wpdb->get_var( $wpdb->prepare( $tbl . " WHERE country_code = %s", $country ) );
         } else {
-            return (int) $wpdb->get_var(
-                "SELECT COUNT(DISTINCT url) FROM " . shopys_vc_table()
-            );
+            return (int) $wpdb->get_var( $tbl );
         }
     } catch ( \Throwable $e ) { return 0; }
 }
@@ -679,10 +661,21 @@ function shopys_vc_traffic_sources( $since, $until, $limit = 15 ) {
 /**
  * Top pages by view count within a date range.
  */
-function shopys_vc_analytics_pages( $since, $until, $limit = 10 ) {
+function shopys_vc_analytics_pages( $since, $until, $limit = 10, $country = '' ) {
     if ( ! shopys_vc_ensure_table() ) return [];
     try {
         global $wpdb;
+        if ( $country !== '' ) {
+            return $wpdb->get_results( $wpdb->prepare(
+                "SELECT url, MAX(title) AS title, COUNT(*) AS views, COUNT(DISTINCT ip_hash) AS uniques
+                   FROM " . shopys_vc_table() . "
+                  WHERE viewed_at >= %s AND viewed_at < %s AND country_code = %s
+                  GROUP BY url
+                  ORDER BY views DESC
+                  LIMIT %d",
+                $since, $until, $country, (int) $limit
+            ) ) ?: [];
+        }
         return $wpdb->get_results( $wpdb->prepare(
             "SELECT url, MAX(title) AS title, COUNT(*) AS views, COUNT(DISTINCT ip_hash) AS uniques
                FROM " . shopys_vc_table() . "

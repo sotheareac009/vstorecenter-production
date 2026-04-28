@@ -36,17 +36,30 @@ if ( $has_vc ) {
     $week_start      = date( 'Y-m-d 00:00:00', $now_ts - 7 * DAY_IN_SECONDS );
     $month_start     = date( 'Y-m-d 00:00:00', $now_ts - 30 * DAY_IN_SECONDS );
 
-    $views_today     = shopys_vc_count_views( $today_start );
-    $views_yesterday = max( 0, shopys_vc_count_views( $yesterday_start ) - $views_today );
-    $views_7d        = shopys_vc_count_views( $week_start );
-    $views_30d       = shopys_vc_count_views( $month_start );
-    $uniq_today      = shopys_vc_count_unique( $today_start );
-    $uniq_7d         = shopys_vc_count_unique( $week_start );
-    $uniq_30d        = shopys_vc_count_unique( $month_start );
+    $sv_card_country = isset( $_GET['sv_card_country'] ) ? substr( strtoupper( sanitize_text_field( wp_unslash( $_GET['sv_card_country'] ) ) ), 0, 2 ) : 'KH';
+
+    $views_today     = shopys_vc_count_views( $today_start,     $sv_card_country );
+    $views_yesterday = max( 0, shopys_vc_count_views( $yesterday_start, $sv_card_country ) - $views_today );
+    $views_7d        = shopys_vc_count_views( $week_start,      $sv_card_country );
+    $views_30d       = shopys_vc_count_views( $month_start,     $sv_card_country );
+    $uniq_today      = shopys_vc_count_unique( $today_start,    $sv_card_country );
+    $uniq_7d         = shopys_vc_count_unique( $week_start,     $sv_card_country );
+    $uniq_30d        = shopys_vc_count_unique( $month_start,    $sv_card_country );
     $top_pages       = shopys_vc_top_pages( $week_start, 10 );
     $series          = shopys_vc_daily_series( 14 );
     $top_locations   = function_exists( 'shopys_vc_top_locations' ) ? shopys_vc_top_locations( $week_start, 20 ) : [];
     $max_views       = 1;
+
+    // Custom date card stats
+    $sv_card_date = '';
+    if ( ! empty( $_GET['sv_card_date'] ) ) {
+        $raw = sanitize_text_field( wp_unslash( $_GET['sv_card_date'] ) );
+        if ( preg_match( '/^\d{4}-\d{2}-\d{2}$/', $raw ) ) {
+            $sv_card_date = $raw;
+        }
+    }
+    $views_card_date = $sv_card_date && function_exists('shopys_vc_count_views_date')  ? shopys_vc_count_views_date( $sv_card_date,  $sv_card_country ) : 0;
+    $uniq_card_date  = $sv_card_date && function_exists('shopys_vc_count_unique_date') ? shopys_vc_count_unique_date( $sv_card_date, $sv_card_country ) : 0;
     foreach ( $series as $row ) {
         if ( $row['views'] > $max_views ) $max_views = $row['views'];
     }
@@ -62,7 +75,14 @@ if ( isset( $_GET['sv_view'] ) ) {
 }
 $sv_year    = isset( $_GET['sv_year'] )  ? (int) $_GET['sv_year']  : (int) date( 'Y', $now_ts_ref );
 $sv_month   = isset( $_GET['sv_month'] ) ? (int) $_GET['sv_month'] : (int) date( 'n', $now_ts_ref );
-$sv_country = isset( $_GET['sv_country'] ) ? substr( strtoupper( sanitize_text_field( wp_unslash( $_GET['sv_country'] ) ) ), 0, 2 ) : '';
+$sv_country = isset( $_GET['sv_country'] ) ? substr( strtoupper( sanitize_text_field( wp_unslash( $_GET['sv_country'] ) ) ), 0, 2 ) : 'KH';
+$sv_date    = '';
+if ( ! empty( $_GET['sv_date'] ) ) {
+    $raw = sanitize_text_field( wp_unslash( $_GET['sv_date'] ) );
+    if ( preg_match( '/^\d{4}-\d{2}-\d{2}$/', $raw ) ) {
+        $sv_date = $raw; // validated YYYY-MM-DD
+    }
+}
 
 $all_pages    = [];
 $avail_months = [];
@@ -78,12 +98,12 @@ if ( $has_vc ) {
     $avail_countries = function_exists( 'shopys_vc_available_countries' ) ? shopys_vc_available_countries() : [];
     if ( $sv_view === 'all' && function_exists( 'shopys_vc_pages_by_period' ) ) {
         $sv_total       = function_exists( 'shopys_vc_count_pages_by_period' )
-                          ? shopys_vc_count_pages_by_period( $sv_year, $sv_month, $sv_country )
+                          ? shopys_vc_count_pages_by_period( $sv_year, $sv_month, $sv_country, $sv_date )
                           : 0;
         $sv_total_pages = $sv_total > 0 ? (int) ceil( $sv_total / $sv_per_page ) : 1;
         $sv_page        = min( $sv_page, $sv_total_pages );
         $sv_offset      = ( $sv_page - 1 ) * $sv_per_page;
-        $all_pages      = shopys_vc_pages_by_period( $sv_year, $sv_month, $sv_per_page, $sv_offset, $sv_country );
+        $all_pages      = shopys_vc_pages_by_period( $sv_year, $sv_month, $sv_per_page, $sv_offset, $sv_country, $sv_date );
     } elseif ( $sv_view === 'locations' && function_exists( 'shopys_vc_locations_by_url' ) ) {
         $sv_url         = isset( $_GET['sv_url'] ) ? sanitize_text_field( wp_unslash( $_GET['sv_url'] ) ) : '';
         $sv_total       = function_exists( 'shopys_vc_count_locations_by_url' ) ? shopys_vc_count_locations_by_url( $sv_url ) : 0;
@@ -124,6 +144,7 @@ $menu_items = [
     'telegram-users' => [ 'icon' => 'M21.5 4.5l-3.1 14.6c-.2 1-1 .9-1.6.6l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.9 8.9-8c.4-.4-.1-.6-.6-.3L6.2 12 1.7 10.6c-1-.3-1-1 .2-1.5l17.6-6.8c.8-.3 1.5.2 1.2 1.2z', 'label' => 'Telegram Chatbot Users', 'owner_only' => true ],
     'products'  => [ 'icon' => 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4', 'label' => 'Products', 'href' => admin_url( 'edit.php?post_type=product' ) ],
     'orders'    => [ 'icon' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01', 'label' => 'Orders', 'href' => admin_url( 'edit.php?post_type=shop_order' ) ],
+    'wp-admin'  => [ 'icon' => 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z', 'label' => 'WP Admin', 'href' => admin_url(), 'owner_only' => true ],
 ];
 
 // ── Analytics tab — period resolution ────────────────────────────────────────
@@ -162,7 +183,8 @@ switch ( $an_period ) {
         break;
 }
 
-$an_pages    = function_exists( 'shopys_vc_analytics_pages' )    ? shopys_vc_analytics_pages( $an_since, $an_until, 10 )    : [];
+$an_country  = isset( $_GET['an_country'] ) ? substr( strtoupper( sanitize_text_field( wp_unslash( $_GET['an_country'] ) ) ), 0, 2 ) : 'KH';
+$an_pages    = function_exists( 'shopys_vc_analytics_pages' )    ? shopys_vc_analytics_pages( $an_since, $an_until, 10, $an_country )    : [];
 $an_products = function_exists( 'shopys_vc_analytics_products' ) ? shopys_vc_analytics_products( $an_since, $an_until, 10 ) : [];
 $an_sources  = function_exists( 'shopys_vc_traffic_sources' )    ? shopys_vc_traffic_sources( $an_since, $an_until, 15 )    : [];
 $an_base_url = add_query_arg( [ 'tab' => 'analytics' ], home_url( '/dashboard/' ) );
@@ -1078,6 +1100,31 @@ body {
                 <p style="color:var(--muted);padding:40px 0;text-align:center;">View-counter module not loaded.</p>
             <?php else : ?>
 
+            <!-- Date filter for cards -->
+            <form method="GET" action="<?php echo esc_url( home_url('/dashboard/') ); ?>" style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+                <input type="hidden" name="tab" value="siteview">
+                <?php if ($sv_view !== 'week') : ?><input type="hidden" name="sv_view" value="<?php echo esc_attr($sv_view); ?>"><?php endif; ?>
+                <label style="color:var(--muted);font-size:13px;font-weight:500;">Country:</label>
+                <select name="sv_card_country" style="background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:13px;">
+                    <option value="" <?php selected($sv_card_country,''); ?>>All countries</option>
+                    <option value="KH" <?php selected($sv_card_country,'KH'); ?>>🇰🇭 Cambodia (KH)</option>
+                    <?php foreach ( $avail_countries as $cr ) :
+                        if ( $cr->country_code === 'KH' ) continue;
+                    ?>
+                    <option value="<?php echo esc_attr($cr->country_code); ?>" <?php selected($sv_card_country,$cr->country_code); ?>>
+                        <?php echo esc_html( ($cr->country ?: $cr->country_code) . ' (' . $cr->country_code . ')' ); ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+                <label style="color:var(--muted);font-size:13px;font-weight:500;">Date:</label>
+                <input type="date" name="sv_card_date" value="<?php echo esc_attr( $sv_card_date ); ?>"
+                       style="background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:13px;">
+                <button type="submit" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:13px;cursor:pointer;font-weight:600;">Apply</button>
+                <?php if ( $sv_card_date ) : ?>
+                <a href="<?php echo esc_url( remove_query_arg('sv_card_date') ); ?>" style="color:var(--muted);font-size:12px;text-decoration:none;">✕ Clear date</a>
+                <?php endif; ?>
+            </form>
+
             <div class="ds-cards">
                 <?php
                 $vc_cards = [
@@ -1102,6 +1149,18 @@ body {
                     <div class="ds-card-sub"><?php echo esc_html( $c[2] ); ?></div>
                 </div>
                 <?php endforeach; ?>
+
+                <?php if ( $sv_card_date ) : ?>
+                <div class="ds-card" style="border:2px solid var(--accent);position:relative;">
+                    <div class="ds-card-icon" style="background:var(--accent);opacity:0.15;position:absolute;inset:0;border-radius:inherit;pointer-events:none;"></div>
+                    <div class="ds-card-icon">
+                        <svg viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    </div>
+                    <div class="ds-card-label" style="color:var(--accent);"><?php echo esc_html( date('j M Y', strtotime($sv_card_date)) . ( $sv_card_country ? ' · ' . $sv_card_country : '' ) ); ?></div>
+                    <div class="ds-card-value"><?php echo number_format_i18n( $views_card_date ); ?></div>
+                    <div class="ds-card-sub"><?php echo number_format_i18n( $uniq_card_date ); ?> unique visitors</div>
+                </div>
+                <?php endif; ?>
             </div>
 
             <!-- 14-day chart -->
@@ -1380,13 +1439,20 @@ body {
                     </option>
                     <?php endforeach; ?>
                 </select>
+                <label>Date</label>
+                <input type="date" name="sv_date" value="<?php echo esc_attr( $sv_date ); ?>"
+                       style="background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:13px;"
+                       title="Filter by exact date (overrides Month/Year)">
+                <?php if ( $sv_date ) : ?>
+                <button type="button" onclick="this.previousElementSibling.value='';this.form.submit();" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 4px;" title="Clear date">✕</button>
+                <?php endif; ?>
                 <button type="submit" class="sv-filter-btn">Filter</button>
             </form>
 
             <div class="ds-table-wrap">
                 <div class="ds-table-head">
                     All Pages
-                    <?php if ($sv_month && $sv_year) echo '&mdash; ' . esc_html(($month_names[$sv_month]??'') . ' ' . $sv_year); elseif ($sv_year) echo '&mdash; ' . $sv_year; ?>
+                    <?php if ($sv_date) echo '&mdash; ' . esc_html( date('j M Y', strtotime($sv_date)) ); elseif ($sv_month && $sv_year) echo '&mdash; ' . esc_html(($month_names[$sv_month]??'') . ' ' . $sv_year); elseif ($sv_year) echo '&mdash; ' . $sv_year; ?>
                     <?php if ($sv_country) echo ' &mdash; ' . esc_html($sv_country); ?>
                     <span style="color:var(--muted);font-weight:400;font-size:12px;margin-left:8px;"><?php echo count($all_pages); ?> pages</span>
                 </div>
@@ -1473,6 +1539,7 @@ body {
                         'sv_year'  => $sv_year,
                         'sv_month' => $sv_month,
                         'sv_country' => $sv_country,
+                        'sv_date'  => $sv_date,
                     ], home_url( '/dashboard/' ) );
 
                     $range_start = ( $sv_page - 1 ) * $sv_per_page + 1;
@@ -1673,6 +1740,38 @@ body {
                 <div class="an-section-title">
                     Most Viewed Pages
                     <span><?php echo count( $an_pages ); ?> pages</span>
+                    <form method="get" style="display:inline-flex;align-items:center;gap:6px;margin-left:auto;font-size:12px;font-weight:400;">
+                        <?php
+                        // Preserve all current GET params except an_country
+                        foreach ( $_GET as $k => $v ) {
+                            if ( $k === 'an_country' ) continue;
+                            echo '<input type="hidden" name="' . esc_attr($k) . '" value="' . esc_attr($v) . '">';
+                        }
+                        $page_countries = [];
+                        if ( function_exists('shopys_vc_ensure_table') && shopys_vc_ensure_table() ) {
+                            global $wpdb;
+                            $page_countries = $wpdb->get_results(
+                                "SELECT DISTINCT country_code, country FROM " . shopys_vc_table() . "
+                                  WHERE country_code != '' ORDER BY country ASC"
+                            ) ?: [];
+                        }
+                        ?>
+                        <label for="an_country_select" style="color:var(--muted);">Country:</label>
+                        <select id="an_country_select" name="an_country" onchange="this.form.submit()" style="background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:2px 6px;font-size:12px;cursor:pointer;">
+                            <option value="" <?php selected($an_country,''); ?>>All</option>
+                            <option value="KH" <?php selected($an_country,'KH'); ?>>🇰🇭 Cambodia (KH)</option>
+                            <?php foreach ( $page_countries as $cr ) :
+                                if ( $cr->country_code === 'KH' ) continue; // already listed above
+                            ?>
+                            <option value="<?php echo esc_attr($cr->country_code); ?>" <?php selected($an_country,$cr->country_code); ?>>
+                                <?php echo esc_html( ($cr->country ?: $cr->country_code) . ' (' . $cr->country_code . ')' ); ?>
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <?php if ( $an_country ) : ?>
+                        <a href="<?php echo esc_url( add_query_arg( 'an_country', '', remove_query_arg('an_country') ) ); ?>" style="color:var(--muted);font-size:11px;text-decoration:none;" title="Clear country filter">✕</a>
+                        <?php endif; ?>
+                    </form>
                 </div>
                 <?php if ( $an_pages ) :
                     $an_max_p = max( array_column( (array) $an_pages, 'views' ) );
