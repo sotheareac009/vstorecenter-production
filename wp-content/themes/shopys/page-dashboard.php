@@ -26,6 +26,21 @@ $active_tab     = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'overvi
 if ( $active_tab === 'users' && ! $is_site_owner ) $active_tab = 'overview';
 if ( $active_tab === 'telegram-users' && ! $is_site_owner ) $active_tab = 'overview';
 
+// ── VIP toggle handler ────────────────────────────────────────────────────────
+if (
+    $is_site_owner &&
+    isset( $_POST['tg_vip_action'], $_POST['tg_telegram_id'], $_POST['_wpnonce'] ) &&
+    wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'tg_vip_toggle' )
+) {
+    global $wpdb;
+    $tg_vip_table = $wpdb->prefix . 'chatbot_telegram_users';
+    $tg_vip_id    = sanitize_text_field( wp_unslash( $_POST['tg_telegram_id'] ) );
+    $tg_vip_set   = ( $_POST['tg_vip_action'] === 'promote' ) ? 1 : 0;
+    $wpdb->update( $tg_vip_table, [ 'is_vip' => $tg_vip_set ], [ 'telegram_id' => $tg_vip_id ] );
+    wp_safe_redirect( add_query_arg( [ 'tab' => 'telegram-users', 'tg_pg' => max( 1, (int) ( $_POST['tg_pg'] ?? 1 ) ) ], home_url( '/dashboard/' ) ) );
+    exit;
+}
+
 // ── Collect Site-View data (safe even if view-counter isn't loaded) ───────────
 $has_vc = function_exists( 'shopys_vc_count_views' );
 
@@ -897,6 +912,190 @@ body {
     border-radius: 10px;
 }
 
+/* ── ANALYTICS: Section title with inline form (desktop) ── */
+.an-title-with-form {
+    flex-wrap: wrap;
+    column-gap: 8px;
+    row-gap: 6px;
+}
+.an-title-text { font-size: 14px; font-weight: 700; color: var(--text); }
+.an-title-sub  { color: var(--muted); font-weight: 400; font-size: 12px; }
+.an-title-form {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    font-size: 12px;
+    font-weight: 400;
+}
+.an-title-form label { color: var(--muted); }
+.an-title-form select {
+    background: var(--card);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 12px;
+    cursor: pointer;
+}
+.an-title-form select:focus { border-color: var(--green); outline: none; }
+.an-title-clear { color: var(--muted); font-size: 11px; text-decoration: none; }
+
+/* ── ANALYTICS: Peak Hours bar chart (desktop) ── */
+.an-peak-chart {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 12px;
+}
+.an-peak-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 200px;
+    padding-left: 34px;
+    position: relative;
+}
+.an-peak-yaxis {
+    position: absolute;
+    inset: 0 0 0 34px;
+    pointer-events: none;
+}
+.an-peak-grid {
+    position: absolute;
+    left: 0; right: 0;
+    border-top: 1px dashed rgba(255,255,255,.06);
+}
+.an-peak-yval {
+    position: absolute;
+    left: -32px;
+    font-size: 10px;
+    color: var(--muted);
+    width: 28px;
+    text-align: right;
+}
+.an-peak-bar-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+    cursor: default;
+}
+.an-peak-rank {
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.1;
+    text-align: center;
+    margin-bottom: 2px;
+    white-space: nowrap;
+}
+.an-peak-rank-views { font-size: 11px; font-weight: 800; }
+.an-peak-views {
+    font-size: 9px;
+    color: var(--muted);
+    margin-bottom: 2px;
+}
+.an-peak-bar {
+    width: 100%;
+    max-width: 24px;
+    border-radius: 4px 4px 0 0;
+    transition: height .25s;
+}
+.an-peak-labels {
+    display: flex;
+    gap: 4px;
+    padding-left: 34px;
+    margin-top: 10px;
+}
+.an-peak-label {
+    flex: 1;
+    text-align: center;
+    font-size: 9px;
+    color: var(--muted);
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: -0.3px;
+}
+.an-peak-label.major { color: var(--text); font-weight: 700; }
+
+/* ── ANALYTICS: Mobile / tablet (≤768px) ───────────────────────── */
+@media (max-width: 768px) {
+    /* Tighten chart wrapper padding */
+    .ds-chart-wrap { padding: 14px 12px; margin-bottom: 16px; }
+    .an-section { margin-bottom: 20px; }
+
+    /* Section title: stack form to a new full-width line */
+    .an-section-title { flex-wrap: wrap; row-gap: 8px; column-gap: 6px; }
+    .an-section-title form,
+    .an-title-form {
+        margin-left: 0 !important;
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+
+    /* Filter bar: keep period buttons compact and wrappable */
+    .an-filter-bar { gap: 6px; }
+    .an-period-btn { padding: 6px 10px; font-size: 11px; }
+    .an-date-inputs { margin-left: 0; flex-wrap: wrap; width: 100%; }
+
+    /* Most Viewed / Traffic hbar rows: stack label above the track */
+    .an-hbar-row { flex-wrap: wrap; row-gap: 4px; column-gap: 8px; }
+    .an-hbar-label {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        flex: 1 1 100%;
+    }
+    .an-hbar-track { flex: 1 1 auto; min-width: 0; height: 18px; }
+    .an-hbar-count { min-width: 30px; }
+    .an-hbar-uniq  { min-width: 50px; font-size: 10px; }
+
+    /* Peak Hours: shrink chart to fit small screens */
+    .an-peak-bars {
+        gap: 2px;
+        height: 170px;
+        padding-left: 28px;
+    }
+    .an-peak-yaxis  { inset: 0 0 0 28px; }
+    .an-peak-yval   { left: -28px; width: 24px; font-size: 9px; }
+    .an-peak-bar    { max-width: 16px; border-radius: 3px 3px 0 0; }
+    .an-peak-rank   { font-size: 8px; }
+    .an-peak-rank-views { font-size: 9px; }
+    .an-peak-views  { font-size: 8px; }
+    .an-peak-labels { padding-left: 28px; gap: 2px; }
+    .an-peak-label  { font-size: 8px; }
+    .an-peak-label.minor { display: none; } /* show only major hours */
+    /* Re-spread space when minor labels are hidden so majors align with their bars */
+    .an-peak-label.major { flex: 0 0 calc((100% - 16px) / 4); }
+
+    /* Period summary cards: 2-up grid on mobile */
+    .an-peak-periods {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+    }
+    .an-peak-leaderboard {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 6px !important;
+    }
+}
+
+/* ── ANALYTICS: Small phones (≤480px) ──────────────────────────── */
+@media (max-width: 480px) {
+    .ds-chart-wrap { padding: 12px 10px; }
+    .an-peak-bars { height: 150px; padding-left: 24px; gap: 1px; }
+    .an-peak-yaxis { inset: 0 0 0 24px; }
+    .an-peak-yval  { left: -24px; width: 22px; font-size: 8px; }
+    .an-peak-bar   { max-width: 14px; }
+    .an-peak-labels { padding-left: 24px; gap: 1px; }
+    .an-peak-label.major { font-size: 8px; }
+    /* Period cards: still 2-up but tighter */
+    .an-peak-periods { gap: 6px !important; }
+    .an-peak-leaderboard { grid-template-columns: 1fr 1fr !important; }
+}
+
 /* ── USERS TAB ───────────────────────────────────────────────────── */
 .user-avatar {
     width: 34px; height: 34px;
@@ -926,6 +1125,50 @@ body {
     background: var(--green);
     display: inline-block; margin-right: 5px;
     box-shadow: 0 0 4px var(--green);
+}
+/* ── Telegram VIP styles ───────────────────────────────────────── */
+.tg-vip-badge {
+    display: inline-block;
+    margin-left: 5px;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+    background: rgba(250,204,21,.18);
+    color: #facc15;
+    letter-spacing: .3px;
+    vertical-align: middle;
+}
+.tg-vip-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(250,204,21,.15);
+    color: #facc15;
+}
+.tg-row-vip td { background: rgba(250,204,21,.04); }
+.tg-row-vip:hover td { background: rgba(250,204,21,.08) !important; }
+.tg-vip-btn {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity .15s;
+}
+.tg-vip-btn:hover { opacity: .8; }
+.tg-vip-btn-add {
+    background: rgba(250,204,21,.18);
+    color: #facc15;
+}
+.tg-vip-btn-remove {
+    background: rgba(148,163,184,.13);
+    color: var(--muted);
 }
 </style>
 <!-- Apply saved theme BEFORE paint to avoid flash -->
@@ -1787,19 +2030,19 @@ body {
                 ) ?: [];
             }
             ?>
-            <div class="ds-chart-wrap an-section">
-                <div class="an-section-title">
-                    Peak Hours
-                    <span>When visitors are most active</span>
-                    <form method="get" style="display:inline-flex;align-items:center;gap:6px;margin-left:auto;font-size:12px;font-weight:400;">
+            <div class="ds-chart-wrap an-section an-peak">
+                <div class="an-section-title an-title-with-form">
+                    <span class="an-title-text">Peak Hours</span>
+                    <span class="an-title-sub">When visitors are most active</span>
+                    <form method="get" class="an-title-form">
                         <?php
                         foreach ( $_GET as $k => $v ) {
                             if ( $k === 'an_hourly_country' ) continue;
                             echo '<input type="hidden" name="' . esc_attr($k) . '" value="' . esc_attr($v) . '">';
                         }
                         ?>
-                        <label style="color:var(--muted);">Country:</label>
-                        <select name="an_hourly_country" onchange="this.form.submit()" style="background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:2px 6px;font-size:12px;cursor:pointer;">
+                        <label>Country:</label>
+                        <select name="an_hourly_country" onchange="this.form.submit()">
                             <option value="" <?php selected($an_hourly_country,''); ?>>All</option>
                             <option value="KH" <?php selected($an_hourly_country,'KH'); ?>>🇰🇭 Cambodia (KH)</option>
                             <?php foreach ( $hourly_countries as $cr ) :
@@ -1811,7 +2054,7 @@ body {
                             <?php endforeach; ?>
                         </select>
                         <?php if ( $an_hourly_country ) : ?>
-                        <a href="<?php echo esc_url( add_query_arg('an_hourly_country','',remove_query_arg('an_hourly_country')) ); ?>" style="color:var(--muted);font-size:11px;text-decoration:none;" title="Clear">✕</a>
+                        <a href="<?php echo esc_url( add_query_arg('an_hourly_country','',remove_query_arg('an_hourly_country')) ); ?>" class="an-title-clear" title="Clear">✕</a>
                         <?php endif; ?>
                     </form>
                 </div>
@@ -1819,7 +2062,7 @@ body {
                 <?php if ( $an_hourly_total > 0 ) : ?>
 
                 <!-- Time Period Summary Cards -->
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:24px;">
+                <div class="an-peak-periods" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:24px;">
                     <?php foreach ( $periods as $pname => $pd ) :
                         $pct = $an_hourly_total > 0 ? round( ($pd['views'] / $an_hourly_total) * 100 ) : 0;
                         $is_busiest = ( $pd['views'] === max( array_column($periods,'views') ) && $pd['views'] > 0 );
@@ -1845,16 +2088,16 @@ body {
                 </div>
 
                 <!-- Hourly bar chart -->
-                <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px 12px;">
-                    <div style="display:flex;align-items:flex-end;gap:4px;height:200px;padding-left:34px;position:relative;">
+                <div class="an-peak-chart">
+                    <div class="an-peak-bars">
 
                         <!-- Y-axis grid lines -->
-                        <div style="position:absolute;inset:0 0 0 34px;pointer-events:none;">
+                        <div class="an-peak-yaxis">
                             <?php for ( $i = 0; $i <= 4; $i++ ) :
                                 $val = round( $an_hourly_max * ( 4 - $i ) / 4 );
                             ?>
-                            <div style="position:absolute;left:0;right:0;top:<?php echo $i * 25; ?>%;border-top:1px dashed rgba(255,255,255,.06);"></div>
-                            <div style="position:absolute;left:-32px;top:calc(<?php echo $i * 25; ?>% - 6px);font-size:10px;color:var(--muted);width:28px;text-align:right;"><?php echo number_format($val); ?></div>
+                            <div class="an-peak-grid" style="top:<?php echo $i * 25; ?>%;"></div>
+                            <div class="an-peak-yval" style="top:calc(<?php echo $i * 25; ?>% - 6px);"><?php echo number_format($val); ?></div>
                             <?php endfor; ?>
                         </div>
 
@@ -1865,27 +2108,27 @@ body {
                             $color   = $is_top ? $rank_color[$h] : 'rgba(99,179,237,.45)';
                             $title   = $hour_labels[$h] . ': ' . number_format($hd['views']) . ' views, ' . number_format($hd['uniques']) . ' unique';
                         ?>
-                        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;cursor:default;" title="<?php echo esc_attr($title); ?>">
+                        <div class="an-peak-bar-col" title="<?php echo esc_attr($title); ?>">
                             <?php if ( $is_top && $hd['views'] > 0 ) : ?>
-                            <div style="font-size:10px;color:<?php echo $color; ?>;font-weight:700;line-height:1.1;text-align:center;margin-bottom:2px;white-space:nowrap;">
+                            <div class="an-peak-rank" style="color:<?php echo $color; ?>;">
                                 #<?php echo $rank_n + 1; ?>
-                                <div style="font-size:11px;color:<?php echo $color; ?>;font-weight:800;"><?php echo number_format($hd['views']); ?></div>
+                                <div class="an-peak-rank-views" style="color:<?php echo $color; ?>;"><?php echo number_format($hd['views']); ?></div>
                             </div>
                             <?php elseif ( $hd['views'] > 0 ) : ?>
-                            <div style="font-size:9px;color:var(--muted);margin-bottom:2px;"><?php echo number_format($hd['views']); ?></div>
+                            <div class="an-peak-views"><?php echo number_format($hd['views']); ?></div>
                             <?php endif; ?>
-                            <div style="width:100%;max-width:24px;height:<?php echo $bar_h; ?>px;background:<?php echo $color; ?>;border-radius:4px 4px 0 0;<?php echo $is_top ? 'box-shadow:0 0 8px ' . $color . '88;' : ''; ?>"></div>
+                            <div class="an-peak-bar" style="height:<?php echo $bar_h; ?>px;background:<?php echo $color; ?>;<?php echo $is_top ? 'box-shadow:0 0 8px ' . $color . '88;' : ''; ?>"></div>
                         </div>
                         <?php endforeach; ?>
                     </div>
 
                     <!-- Hour labels — every hour 12AM to 11PM -->
-                    <div style="display:flex;gap:4px;padding-left:34px;margin-top:10px;">
+                    <div class="an-peak-labels">
                         <?php foreach ( $hour_labels as $h => $lbl ) :
                             // Highlight the major hours (every 6h) so the eye can anchor
                             $is_major = in_array( $h, [0,6,12,18], true );
                         ?>
-                        <div style="flex:1;text-align:center;font-size:9px;color:<?php echo $is_major ? 'var(--text)' : 'var(--muted)'; ?>;font-weight:<?php echo $is_major ? '700' : '500'; ?>;line-height:1.2;letter-spacing:-0.3px;">
+                        <div class="an-peak-label <?php echo $is_major ? 'major' : 'minor'; ?>">
                             <?php echo esc_html( str_replace(' ','',$lbl) ); ?>
                         </div>
                         <?php endforeach; ?>
@@ -1893,7 +2136,7 @@ body {
                 </div>
 
                 <!-- Top 5 leaderboard -->
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:16px;">
+                <div class="an-peak-leaderboard" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:16px;">
                     <?php
                     $i = 0;
                     foreach ( $ranked as $h => $hd ) :
@@ -2145,6 +2388,7 @@ body {
 
             if ( $tg_has_table ) {
                 $tg_total       = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$tg_table_name}" );
+                $tg_vip_count   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$tg_table_name} WHERE is_vip = 1" );
                 $tg_total_pages = max( 1, (int) ceil( $tg_total / $tg_per_page ) );
                 $tg_current_pg  = min( $tg_current_pg, $tg_total_pages );
                 $tg_offset      = ( $tg_current_pg - 1 ) * $tg_per_page;
@@ -2158,13 +2402,12 @@ body {
                 );
             }
 
-            $tg_vip_count = 0;
+            $tg_vip_count = $tg_vip_count ?? 0;
             $tg_sessions  = 0;
             $tg_messages  = 0;
             $tg_cost      = 0.0;
 
             foreach ( $tg_users as $tg_user ) {
-                $tg_vip_count += ! empty( $tg_user['is_vip'] ) ? 1 : 0;
                 $tg_sessions  += (int) ( $tg_user['session_count'] ?? 0 );
                 $tg_messages  += (int) ( $tg_user['message_count'] ?? 0 );
                 $tg_cost      += (float) ( $tg_user['total_cost'] ?? 0 );
@@ -2202,7 +2445,7 @@ body {
                 </div>
                 <div class="ds-card-label">VIP Users</div>
                 <div class="ds-card-value"><?php echo number_format_i18n( $tg_vip_count ); ?></div>
-                <div class="ds-card-sub">On this page</div>
+                <div class="ds-card-sub">Total VIP users</div>
             </div>
             <div class="ds-card">
                 <div class="ds-card-icon">
@@ -2236,10 +2479,15 @@ body {
                     <th>Messages</th>
                     <th>VIP</th>
                     <th>API Cost</th>
+                    <th>Action</th>
                 </tr></thead>
                 <tbody>
-                <?php foreach ( $tg_users as $tg_user ) : ?>
-                <tr>
+                <?php foreach ( $tg_users as $tg_user ) :
+                    $tg_is_vip  = ! empty( $tg_user['is_vip'] );
+                    $tg_nonce   = wp_create_nonce( 'tg_vip_toggle' );
+                    $tg_next_action = $tg_is_vip ? 'demote' : 'promote';
+                ?>
+                <tr class="<?php echo $tg_is_vip ? 'tg-row-vip' : ''; ?>">
                     <td><code><?php echo esc_html( $tg_user['telegram_id'] ); ?></code></td>
                     <td>
                         <div style="display:flex;align-items:center;gap:10px;">
@@ -2249,7 +2497,10 @@ body {
                                 <div class="user-avatar"><?php echo esc_html( strtoupper( mb_substr( trim( $tg_user['first_name'] . ' ' . $tg_user['last_name'] ) ?: 'T', 0, 1 ) ) ); ?></div>
                             <?php endif; ?>
                             <div>
-                                <div style="font-weight:600;font-size:13px;"><?php echo esc_html( trim( $tg_user['first_name'] . ' ' . $tg_user['last_name'] ) ?: 'Unknown User' ); ?></div>
+                                <div style="font-weight:600;font-size:13px;">
+                                    <?php echo esc_html( trim( $tg_user['first_name'] . ' ' . $tg_user['last_name'] ) ?: 'Unknown User' ); ?>
+                                    <?php if ( $tg_is_vip ) : ?><span class="tg-vip-badge">★ VIP</span><?php endif; ?>
+                                </div>
                                 <div style="font-size:11px;color:var(--muted);"><?php echo ! empty( $tg_user['username'] ) ? '@' . esc_html( $tg_user['username'] ) : 'No username'; ?></div>
                             </div>
                         </div>
@@ -2265,8 +2516,25 @@ body {
                     <td><?php echo esc_html( $tg_user['last_active'] ?: '—' ); ?></td>
                     <td><?php echo number_format_i18n( (int) ( $tg_user['session_count'] ?? 0 ) ); ?></td>
                     <td><?php echo number_format_i18n( (int) ( $tg_user['message_count'] ?? 0 ) ); ?></td>
-                    <td><?php echo ! empty( $tg_user['is_vip'] ) ? 'Yes' : 'No'; ?></td>
+                    <td>
+                        <?php if ( $tg_is_vip ) : ?>
+                            <span class="tg-vip-pill">★ VIP</span>
+                        <?php else : ?>
+                            <span style="color:var(--muted);font-size:12px;">—</span>
+                        <?php endif; ?>
+                    </td>
                     <td><strong>$<?php echo esc_html( number_format( (float) ( $tg_user['total_cost'] ?? 0 ), 4 ) ); ?></strong></td>
+                    <td>
+                        <form method="post" style="margin:0;">
+                            <?php wp_nonce_field( 'tg_vip_toggle' ); ?>
+                            <input type="hidden" name="tg_telegram_id" value="<?php echo esc_attr( $tg_user['telegram_id'] ); ?>">
+                            <input type="hidden" name="tg_pg" value="<?php echo esc_attr( $tg_current_pg ); ?>">
+                            <input type="hidden" name="tg_vip_action" value="<?php echo esc_attr( $tg_next_action ); ?>">
+                            <button type="submit" class="tg-vip-btn <?php echo $tg_is_vip ? 'tg-vip-btn-remove' : 'tg-vip-btn-add'; ?>">
+                                <?php echo $tg_is_vip ? 'Remove VIP' : '★ Set VIP'; ?>
+                            </button>
+                        </form>
+                    </td>
                 </tr>
                 <?php endforeach; ?>
                 </tbody>
