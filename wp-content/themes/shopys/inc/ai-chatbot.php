@@ -43,6 +43,7 @@ function shopys_ai_create_tg_table() {
         daily_count INT UNSIGNED DEFAULT 0,
         daily_date DATE DEFAULT NULL,
         is_vip TINYINT(1) DEFAULT 0,
+        is_vvip TINYINT(1) DEFAULT 0,
         PRIMARY KEY (id),
         UNIQUE KEY tg_id (telegram_id),
         KEY last_active_idx (last_active)
@@ -61,7 +62,10 @@ function shopys_ai_create_tg_table() {
         $wpdb->query( "ALTER TABLE {$table} ADD COLUMN IF NOT EXISTS daily_date DATE DEFAULT NULL" );
         $wpdb->query( "ALTER TABLE {$table} ADD COLUMN IF NOT EXISTS is_vip TINYINT(1) DEFAULT 0" );
     }
-    update_option( 'shopys_ai_tg_table_version', '1.2' );
+    if ( version_compare( $current_version, '1.3', '<' ) ) {
+        $wpdb->query( "ALTER TABLE {$table} ADD COLUMN IF NOT EXISTS is_vvip TINYINT(1) DEFAULT 0" );
+    }
+    update_option( 'shopys_ai_tg_table_version', '1.3' );
 }
 
 /**
@@ -193,23 +197,23 @@ function shopys_ai_tg_increment_messages( $tg_id ) {
 
 /**
  * Get daily message limit for a Telegram user.
- * Admins = unlimited (-1), VIPs = 30, Regular = 10 (or setting).
+ * Admins/VVIP = unlimited (-1), VIPs = 30, Regular = 10 (or setting).
  */
 function shopys_ai_get_daily_limit( $tg_id ) {
     global $wpdb;
     $table = $wpdb->prefix . 'chatbot_telegram_users';
 
-    // Check if VIP in DB
-    $is_vip = (int) $wpdb->get_var( $wpdb->prepare(
-        "SELECT is_vip FROM {$table} WHERE telegram_id = %d", $tg_id
+    $row = $wpdb->get_row( $wpdb->prepare(
+        "SELECT is_vip, is_vvip FROM {$table} WHERE telegram_id = %d", $tg_id
     ) );
-    if ( $is_vip ) return 30;
+
+    if ( $row && (int) $row->is_vvip ) return -1; // VVIP: unlimited
+    if ( $row && (int) $row->is_vip  ) return 30;  // VIP: 30/day
 
     // Check if WP admin
     $wp_user = get_users( array( 'meta_key' => 'telegram_id', 'meta_value' => $tg_id, 'number' => 1 ) );
-    if ( ! empty( $wp_user ) && $wp_user[0]->has_cap( 'manage_options' ) ) return -1; // unlimited
+    if ( ! empty( $wp_user ) && $wp_user[0]->has_cap( 'manage_options' ) ) return -1;
 
-    // Regular user — use setting or default 10
     return (int) get_option( 'shopys_ai_daily_limit', 10 );
 }
 
@@ -254,19 +258,9 @@ function shopys_ai_check_and_increment_daily( $tg_id ) {
 }
 
 /**
- * Get model for user — Haiku for regular, Sonnet for VIP/Admin.
+ * Get model for user — all tiers use Haiku. Tiers differ only in daily limit.
  */
 function shopys_ai_get_user_model( $tg_id ) {
-    global $wpdb;
-    $table  = $wpdb->prefix . 'chatbot_telegram_users';
-    $is_vip = (int) $wpdb->get_var( $wpdb->prepare(
-        "SELECT is_vip FROM {$table} WHERE telegram_id = %d", $tg_id
-    ) );
-    if ( $is_vip ) return 'claude-sonnet-4-6';
-
-    $wp_user = get_users( array( 'meta_key' => 'telegram_id', 'meta_value' => $tg_id, 'number' => 1 ) );
-    if ( ! empty( $wp_user ) && $wp_user[0]->has_cap( 'manage_options' ) ) return 'claude-sonnet-4-6';
-
     return 'claude-haiku-4-5-20251001';
 }
 
@@ -554,7 +548,7 @@ function shopys_ai_settings_page() {
                         <?php $daily_limit = get_option( 'shopys_ai_daily_limit', 10 ); ?>
                         <input type="number" name="shopys_ai_daily_limit" id="shopys_ai_daily_limit"
                                value="<?php echo esc_attr( $daily_limit ); ?>" min="1" max="999" style="width:80px;" />
-                        <p class="description">Max messages per user per day. Regular users = Haiku model. VIP users (is_vip=1 in DB) = Sonnet + 30/day. Admins = unlimited + Sonnet.</p>
+                        <p class="description">Max messages per user per day. All tiers use Haiku model. Regular = this limit. VIP (is_vip=1) = 30/day. VVIP (is_vvip=1) = unlimited. Admins = unlimited.</p>
                     </td>
                 </tr>
                 <tr>

@@ -26,17 +26,23 @@ $active_tab     = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'overvi
 if ( $active_tab === 'users' && ! $is_site_owner ) $active_tab = 'overview';
 if ( $active_tab === 'telegram-users' && ! $is_site_owner ) $active_tab = 'overview';
 
-// ── VIP toggle handler ────────────────────────────────────────────────────────
+// ── VIP / VVIP toggle handler ─────────────────────────────────────────────────
 if (
     $is_site_owner &&
     isset( $_POST['tg_vip_action'], $_POST['tg_telegram_id'], $_POST['_wpnonce'] ) &&
     wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'tg_vip_toggle' )
 ) {
     global $wpdb;
-    $tg_vip_table = $wpdb->prefix . 'chatbot_telegram_users';
-    $tg_vip_id    = sanitize_text_field( wp_unslash( $_POST['tg_telegram_id'] ) );
-    $tg_vip_set   = ( $_POST['tg_vip_action'] === 'promote' ) ? 1 : 0;
-    $wpdb->update( $tg_vip_table, [ 'is_vip' => $tg_vip_set ], [ 'telegram_id' => $tg_vip_id ] );
+    $tg_vip_table  = $wpdb->prefix . 'chatbot_telegram_users';
+    $tg_vip_id     = sanitize_text_field( wp_unslash( $_POST['tg_telegram_id'] ) );
+    $tg_vip_action = sanitize_key( $_POST['tg_vip_action'] );
+
+    $tg_tier_update = match ( $tg_vip_action ) {
+        'promote'      => [ 'is_vip' => 1, 'is_vvip' => 0 ],
+        'promote_vvip' => [ 'is_vip' => 0, 'is_vvip' => 1 ],
+        default        => [ 'is_vip' => 0, 'is_vvip' => 0 ], // demote
+    };
+    $wpdb->update( $tg_vip_table, $tg_tier_update, [ 'telegram_id' => $tg_vip_id ] );
     wp_safe_redirect( add_query_arg( [ 'tab' => 'telegram-users', 'tg_pg' => max( 1, (int) ( $_POST['tg_pg'] ?? 1 ) ) ], home_url( '/dashboard/' ) ) );
     exit;
 }
@@ -1150,6 +1156,33 @@ body {
 }
 .tg-row-vip td { background: rgba(250,204,21,.04); }
 .tg-row-vip:hover td { background: rgba(250,204,21,.08) !important; }
+.tg-vvip-badge {
+    display: inline-block;
+    margin-left: 5px;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+    background: rgba(167,139,250,.2);
+    color: #c4b5fd;
+    letter-spacing: .3px;
+    vertical-align: middle;
+}
+.tg-vvip-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(167,139,250,.15);
+    color: #c4b5fd;
+}
+.tg-row-vvip td { background: rgba(167,139,250,.04); }
+.tg-row-vvip:hover td { background: rgba(167,139,250,.08) !important; }
+.tg-vvip-btn-add {
+    background: rgba(167,139,250,.18);
+    color: #c4b5fd;
+}
 .tg-vip-btn {
     display: inline-block;
     padding: 4px 10px;
@@ -2378,6 +2411,11 @@ body {
         <?php if ( $active_tab === 'telegram-users' ) :
             global $wpdb;
 
+            // Ensure schema (is_vvip column) exists when reaching this tab from frontend
+            if ( function_exists( 'shopys_ai_create_tg_table' ) ) {
+                shopys_ai_create_tg_table();
+            }
+
             $tg_table_name = $wpdb->prefix . 'chatbot_telegram_users';
             $tg_has_table  = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $tg_table_name ) ) === $tg_table_name;
             $tg_users      = [];
@@ -2385,10 +2423,15 @@ body {
             $tg_total_pages = 1;
             $tg_current_pg = isset( $_GET['tg_pg'] ) ? max( 1, (int) $_GET['tg_pg'] ) : 1;
             $tg_per_page   = 20;
+            $tg_has_vvip_col = false;
 
             if ( $tg_has_table ) {
+                $tg_has_vvip_col = (bool) $wpdb->get_var( $wpdb->prepare(
+                    "SHOW COLUMNS FROM {$tg_table_name} LIKE %s", 'is_vvip'
+                ) );
                 $tg_total       = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$tg_table_name}" );
                 $tg_vip_count   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$tg_table_name} WHERE is_vip = 1" );
+                $tg_vvip_count  = $tg_has_vvip_col ? (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$tg_table_name} WHERE is_vvip = 1" ) : 0;
                 $tg_total_pages = max( 1, (int) ceil( $tg_total / $tg_per_page ) );
                 $tg_current_pg  = min( $tg_current_pg, $tg_total_pages );
                 $tg_offset      = ( $tg_current_pg - 1 ) * $tg_per_page;
@@ -2402,7 +2445,8 @@ body {
                 );
             }
 
-            $tg_vip_count = $tg_vip_count ?? 0;
+            $tg_vip_count  = $tg_vip_count  ?? 0;
+            $tg_vvip_count = $tg_vvip_count ?? 0;
             $tg_sessions  = 0;
             $tg_messages  = 0;
             $tg_cost      = 0.0;
@@ -2445,7 +2489,15 @@ body {
                 </div>
                 <div class="ds-card-label">VIP Users</div>
                 <div class="ds-card-value"><?php echo number_format_i18n( $tg_vip_count ); ?></div>
-                <div class="ds-card-sub">Total VIP users</div>
+                <div class="ds-card-sub">30 chats/day</div>
+            </div>
+            <div class="ds-card">
+                <div class="ds-card-icon">
+                    <svg viewBox="0 0 24 24"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+                </div>
+                <div class="ds-card-label">VVIP Users</div>
+                <div class="ds-card-value"><?php echo number_format_i18n( $tg_vvip_count ); ?></div>
+                <div class="ds-card-sub">Unlimited chats/day</div>
             </div>
             <div class="ds-card">
                 <div class="ds-card-icon">
@@ -2483,11 +2535,11 @@ body {
                 </tr></thead>
                 <tbody>
                 <?php foreach ( $tg_users as $tg_user ) :
-                    $tg_is_vip  = ! empty( $tg_user['is_vip'] );
-                    $tg_nonce   = wp_create_nonce( 'tg_vip_toggle' );
-                    $tg_next_action = $tg_is_vip ? 'demote' : 'promote';
+                    $tg_is_vvip = ! empty( $tg_user['is_vvip'] );
+                    $tg_is_vip  = ! $tg_is_vvip && ! empty( $tg_user['is_vip'] );
+                    $tg_tier    = $tg_is_vvip ? 'vvip' : ( $tg_is_vip ? 'vip' : 'none' );
                 ?>
-                <tr class="<?php echo $tg_is_vip ? 'tg-row-vip' : ''; ?>">
+                <tr class="<?php echo $tg_is_vvip ? 'tg-row-vvip' : ( $tg_is_vip ? 'tg-row-vip' : '' ); ?>">
                     <td><code><?php echo esc_html( $tg_user['telegram_id'] ); ?></code></td>
                     <td>
                         <div style="display:flex;align-items:center;gap:10px;">
@@ -2499,7 +2551,8 @@ body {
                             <div>
                                 <div style="font-weight:600;font-size:13px;">
                                     <?php echo esc_html( trim( $tg_user['first_name'] . ' ' . $tg_user['last_name'] ) ?: 'Unknown User' ); ?>
-                                    <?php if ( $tg_is_vip ) : ?><span class="tg-vip-badge">★ VIP</span><?php endif; ?>
+                                    <?php if ( $tg_is_vvip ) : ?><span class="tg-vvip-badge">★★ VVIP</span>
+                                    <?php elseif ( $tg_is_vip ) : ?><span class="tg-vip-badge">★ VIP</span><?php endif; ?>
                                 </div>
                                 <div style="font-size:11px;color:var(--muted);"><?php echo ! empty( $tg_user['username'] ) ? '@' . esc_html( $tg_user['username'] ) : 'No username'; ?></div>
                             </div>
@@ -2517,7 +2570,9 @@ body {
                     <td><?php echo number_format_i18n( (int) ( $tg_user['session_count'] ?? 0 ) ); ?></td>
                     <td><?php echo number_format_i18n( (int) ( $tg_user['message_count'] ?? 0 ) ); ?></td>
                     <td>
-                        <?php if ( $tg_is_vip ) : ?>
+                        <?php if ( $tg_is_vvip ) : ?>
+                            <span class="tg-vvip-pill">★★ VVIP</span>
+                        <?php elseif ( $tg_is_vip ) : ?>
                             <span class="tg-vip-pill">★ VIP</span>
                         <?php else : ?>
                             <span style="color:var(--muted);font-size:12px;">—</span>
@@ -2525,15 +2580,51 @@ body {
                     </td>
                     <td><strong>$<?php echo esc_html( number_format( (float) ( $tg_user['total_cost'] ?? 0 ), 4 ) ); ?></strong></td>
                     <td>
-                        <form method="post" style="margin:0;">
-                            <?php wp_nonce_field( 'tg_vip_toggle' ); ?>
-                            <input type="hidden" name="tg_telegram_id" value="<?php echo esc_attr( $tg_user['telegram_id'] ); ?>">
-                            <input type="hidden" name="tg_pg" value="<?php echo esc_attr( $tg_current_pg ); ?>">
-                            <input type="hidden" name="tg_vip_action" value="<?php echo esc_attr( $tg_next_action ); ?>">
-                            <button type="submit" class="tg-vip-btn <?php echo $tg_is_vip ? 'tg-vip-btn-remove' : 'tg-vip-btn-add'; ?>">
-                                <?php echo $tg_is_vip ? 'Remove VIP' : '★ Set VIP'; ?>
-                            </button>
-                        </form>
+                        <div style="display:flex;flex-direction:column;gap:4px;">
+                        <?php if ( $tg_is_vvip ) : ?>
+                            <?php /* VVIP → downgrade to VIP or remove */ ?>
+                            <form method="post" style="margin:0;"><?php wp_nonce_field( 'tg_vip_toggle' ); ?>
+                                <input type="hidden" name="tg_telegram_id" value="<?php echo esc_attr( $tg_user['telegram_id'] ); ?>">
+                                <input type="hidden" name="tg_pg" value="<?php echo esc_attr( $tg_current_pg ); ?>">
+                                <input type="hidden" name="tg_vip_action" value="promote">
+                                <button type="submit" class="tg-vip-btn tg-vip-btn-add">↓ To VIP</button>
+                            </form>
+                            <form method="post" style="margin:0;"><?php wp_nonce_field( 'tg_vip_toggle' ); ?>
+                                <input type="hidden" name="tg_telegram_id" value="<?php echo esc_attr( $tg_user['telegram_id'] ); ?>">
+                                <input type="hidden" name="tg_pg" value="<?php echo esc_attr( $tg_current_pg ); ?>">
+                                <input type="hidden" name="tg_vip_action" value="demote">
+                                <button type="submit" class="tg-vip-btn tg-vip-btn-remove">Remove</button>
+                            </form>
+                        <?php elseif ( $tg_is_vip ) : ?>
+                            <?php /* VIP → upgrade to VVIP or remove */ ?>
+                            <form method="post" style="margin:0;"><?php wp_nonce_field( 'tg_vip_toggle' ); ?>
+                                <input type="hidden" name="tg_telegram_id" value="<?php echo esc_attr( $tg_user['telegram_id'] ); ?>">
+                                <input type="hidden" name="tg_pg" value="<?php echo esc_attr( $tg_current_pg ); ?>">
+                                <input type="hidden" name="tg_vip_action" value="promote_vvip">
+                                <button type="submit" class="tg-vip-btn tg-vvip-btn-add">↑ VVIP</button>
+                            </form>
+                            <form method="post" style="margin:0;"><?php wp_nonce_field( 'tg_vip_toggle' ); ?>
+                                <input type="hidden" name="tg_telegram_id" value="<?php echo esc_attr( $tg_user['telegram_id'] ); ?>">
+                                <input type="hidden" name="tg_pg" value="<?php echo esc_attr( $tg_current_pg ); ?>">
+                                <input type="hidden" name="tg_vip_action" value="demote">
+                                <button type="submit" class="tg-vip-btn tg-vip-btn-remove">Remove VIP</button>
+                            </form>
+                        <?php else : ?>
+                            <?php /* Regular → set VIP or VVIP */ ?>
+                            <form method="post" style="margin:0;"><?php wp_nonce_field( 'tg_vip_toggle' ); ?>
+                                <input type="hidden" name="tg_telegram_id" value="<?php echo esc_attr( $tg_user['telegram_id'] ); ?>">
+                                <input type="hidden" name="tg_pg" value="<?php echo esc_attr( $tg_current_pg ); ?>">
+                                <input type="hidden" name="tg_vip_action" value="promote">
+                                <button type="submit" class="tg-vip-btn tg-vip-btn-add">★ Set VIP</button>
+                            </form>
+                            <form method="post" style="margin:0;"><?php wp_nonce_field( 'tg_vip_toggle' ); ?>
+                                <input type="hidden" name="tg_telegram_id" value="<?php echo esc_attr( $tg_user['telegram_id'] ); ?>">
+                                <input type="hidden" name="tg_pg" value="<?php echo esc_attr( $tg_current_pg ); ?>">
+                                <input type="hidden" name="tg_vip_action" value="promote_vvip">
+                                <button type="submit" class="tg-vip-btn tg-vvip-btn-add">★★ Set VVIP</button>
+                            </form>
+                        <?php endif; ?>
+                        </div>
                     </td>
                 </tr>
                 <?php endforeach; ?>
