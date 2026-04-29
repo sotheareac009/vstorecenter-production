@@ -398,7 +398,7 @@ add_action( 'save_post_page',                          'shopys_ai_flush_caches' 
 add_action( 'save_post_post',                          'shopys_ai_flush_caches' );
 function shopys_ai_flush_caches() {
     delete_transient( 'shopys_ai_catalog_v4' );
-    delete_transient( 'shopys_ai_website_map_v4' );
+    delete_transient( 'shopys_ai_website_map_v5' );
     delete_transient( 'shopys_ai_site_counts_v1' );
 }
 
@@ -785,6 +785,79 @@ function shopys_ai_get_catalog() {
     return $catalog;
 }
 
+/**
+ * Filter the catalog to the products most relevant to the current user message.
+ * Keeps prompt size bounded so we stay under Anthropic's per-minute rate limit.
+ * Pads with newest products if relevance matches are scarce.
+ */
+function shopys_ai_filter_relevant_products( $catalog, $message, $limit = 100 ) {
+    if ( empty( $catalog ) ) return array();
+    if ( count( $catalog ) <= $limit ) return $catalog;
+
+    $msg = strtolower( trim( (string) $message ) );
+    if ( $msg === '' ) return array_slice( $catalog, 0, $limit );
+
+    preg_match_all( '/[a-z0-9]+/', $msg, $m );
+    $stopwords = array(
+        'the','and','for','with','have','has','what','which','where','when','how','why',
+        'this','that','they','can','you','your','our','from','will','are','been','about',
+        'more','most','some','any','all','one','two','tell','show','give','want','need','find',
+        'product','products','item','items','please','hello','hi','there','here','yes','no',
+        'do','does','did','was','were','should','would','could','may','might','will',
+    );
+    $tokens = array();
+    foreach ( $m[0] as $t ) {
+        if ( mb_strlen( $t ) >= 3 && ! in_array( $t, $stopwords, true ) ) $tokens[ $t ] = true;
+    }
+    $tokens = array_keys( $tokens );
+    if ( empty( $tokens ) ) return array_slice( $catalog, 0, $limit );
+
+    $scored = array();
+    foreach ( $catalog as $i => $p ) {
+        $name_lower = strtolower( $p['name'] );
+        $cats_str   = strtolower( implode( ' ', $p['categories'] ?? array() ) );
+        $tags_str   = strtolower( implode( ' ', $p['tags'] ?? array() ) );
+        $sku_str    = strtolower( $p['sku'] ?? '' );
+        $attr_str   = '';
+        if ( ! empty( $p['attributes'] ) ) {
+            foreach ( $p['attributes'] as $k => $v ) {
+                $attr_str .= strtolower( $k . ' ' . $v . ' ' );
+            }
+        }
+
+        $score = 0;
+        foreach ( $tokens as $t ) {
+            if ( strpos( $name_lower, $t ) !== false ) $score += 5;
+            if ( strpos( $cats_str, $t )   !== false ) $score += 3;
+            if ( strpos( $tags_str, $t )   !== false ) $score += 3;
+            if ( strpos( $sku_str, $t )    !== false ) $score += 4;
+            if ( strpos( $attr_str, $t )   !== false ) $score += 2;
+        }
+        if ( $score > 0 ) $scored[ $i ] = $score;
+    }
+
+    arsort( $scored );
+    $top_idx = array_keys( array_slice( $scored, 0, $limit, true ) );
+
+    // If matches don't fill the limit, pad with newest (catalog is already date DESC)
+    if ( count( $top_idx ) < $limit ) {
+        $top_set = array_flip( $top_idx );
+        foreach ( $catalog as $i => $p ) {
+            if ( count( $top_idx ) >= $limit ) break;
+            if ( ! isset( $top_set[ $i ] ) ) {
+                $top_idx[]      = $i;
+                $top_set[ $i ]  = true;
+            }
+        }
+    }
+
+    $result = array();
+    foreach ( $top_idx as $i ) {
+        if ( isset( $catalog[ $i ] ) ) $result[] = $catalog[ $i ];
+    }
+    return $result;
+}
+
 /* ═══════════════════════════════════════════════════════════════════
    2.4 SITE COUNTS — total numbers (independent of catalog cap)
    ═══════════════════════════════════════════════════════════════════ */
@@ -798,24 +871,19 @@ function shopys_ai_get_site_counts() {
     if ( false !== $cached ) return $cached;
 
     $counts = array(
-        'products_total'    => 0,
-        'products_in_stock' => 0,
+        'products_total'        => 0,
+        'products_in_stock'     => 0,
         'products_out_of_stock' => 0,
-        'products_on_sale'  => 0,
-        'products_featured' => 0,
-        'pages_total'       => 0,
-        'posts_total'       => 0,
-        'product_cats'      => 0,
-        'product_tags'      => 0,
-        'blog_cats'         => 0,
-        'blog_tags'         => 0,
+        'products_on_sale'      => 0,
+        'products_featured'     => 0,
+        'pages_total'           => 0,
+        'product_cats'          => 0,
+        'product_tags'          => 0,
     );
 
-    // Pages & posts
+    // Pages
     $page_counts = wp_count_posts( 'page' );
-    $post_counts = wp_count_posts( 'post' );
     $counts['pages_total'] = isset( $page_counts->publish ) ? (int) $page_counts->publish : 0;
-    $counts['posts_total'] = isset( $post_counts->publish ) ? (int) $post_counts->publish : 0;
 
     // WooCommerce-specific counts
     if ( class_exists( 'WooCommerce' ) ) {
@@ -845,9 +913,6 @@ function shopys_ai_get_site_counts() {
         $counts['product_tags'] = (int) wp_count_terms( array( 'taxonomy' => 'product_tag', 'hide_empty' => false ) );
     }
 
-    $counts['blog_cats'] = (int) wp_count_terms( array( 'taxonomy' => 'category', 'hide_empty' => false ) );
-    $counts['blog_tags'] = (int) wp_count_terms( array( 'taxonomy' => 'post_tag', 'hide_empty' => false ) );
-
     set_transient( 'shopys_ai_site_counts_v1', $counts, 10 * MINUTE_IN_SECONDS );
     return $counts;
 }
@@ -857,18 +922,15 @@ function shopys_ai_get_site_counts() {
    ═══════════════════════════════════════════════════════════════════ */
 
 function shopys_ai_get_website_map() {
-    $cached = get_transient( 'shopys_ai_website_map_v4' );
+    $cached = get_transient( 'shopys_ai_website_map_v5' );
     if ( false !== $cached ) return $cached;
 
     $map = array(
-        'pages'      => array(),
-        'posts'      => array(),
-        'categories' => array(),
-        'archives'   => array(),
-        'menus'      => array(),
+        'pages'              => array(),
+        'archives'           => array(),
+        'menus'              => array(),
         'product_categories' => array(),
         'product_tags'       => array(),
-        'post_tags'          => array(),
         'custom_post_types'  => array(),
     );
 
@@ -890,40 +952,6 @@ function shopys_ai_get_website_map() {
             'url'     => get_page_link( $page->ID ),
             'slug'    => $page->post_name,
             'excerpt' => $excerpt,
-        );
-    }
-
-    // Get all posts
-    $posts = get_posts( array(
-        'numberposts' => 200,
-        'post_type'   => 'post',
-        'orderby'     => 'date',
-        'order'       => 'DESC',
-    ) );
-    foreach ( $posts as $post ) {
-        $post_categories = get_the_category( $post->ID );
-        $cat_names = array_map( function( $cat ) { return $cat->name; }, $post_categories );
-        
-        $map['posts'][] = array(
-            'id'         => $post->ID,
-            'title'      => $post->post_title,
-            'url'        => get_permalink( $post->ID ),
-            'slug'       => $post->post_name,
-            'categories' => $cat_names,
-            'excerpt'    => wp_strip_all_tags( $post->post_excerpt ),
-        );
-    }
-
-    // Get all post categories
-    $categories = get_categories( array( 'hide_empty' => false, 'number' => 200 ) );
-    foreach ( $categories as $cat ) {
-        $map['categories'][] = array(
-            'id'        => $cat->term_id,
-            'name'      => $cat->name,
-            'url'       => get_category_link( $cat->term_id ),
-            'slug'      => $cat->slug,
-            'count'     => $cat->count,
-            'post_count' => $cat->count,
         );
     }
 
@@ -998,12 +1026,6 @@ function shopys_ai_get_website_map() {
         }
     }
 
-    // Add common archive pages
-    $map['archives'][] = array(
-        'title' => 'Blog Home',
-        'url'   => get_home_url() . '/blog/',
-    );
-
     if ( class_exists( 'WooCommerce' ) ) {
         $map['archives'][] = array(
             'title' => 'Shop',
@@ -1024,22 +1046,6 @@ function shopys_ai_get_website_map() {
                     'count' => $pt->count,
                 );
             }
-        }
-    }
-
-    // Post tags — useful for blog browsing.
-    $post_tags = get_terms( array(
-        'taxonomy'   => 'post_tag',
-        'hide_empty' => true,
-        'number'     => 50,
-    ) );
-    if ( ! is_wp_error( $post_tags ) ) {
-        foreach ( $post_tags as $pt ) {
-            $map['post_tags'][] = array(
-                'name'  => $pt->name,
-                'url'   => get_tag_link( $pt->term_id ),
-                'count' => $pt->count,
-            );
         }
     }
 
@@ -1069,7 +1075,7 @@ function shopys_ai_get_website_map() {
         );
     }
 
-    set_transient( 'shopys_ai_website_map_v4', $map, 10 * MINUTE_IN_SECONDS );
+    set_transient( 'shopys_ai_website_map_v5', $map, 10 * MINUTE_IN_SECONDS );
     return $map;
 }
 
@@ -2146,11 +2152,15 @@ function shopys_ai_chat_handler() {
     }
     // ── End Product-Only Pre-Filter ──────────────────────────────────
 
-    $catalog    = shopys_ai_get_catalog();
-    $store_name = get_bloginfo( 'name' );
-    $store_url  = home_url();
-    $bot_name   = get_option( 'shopys_ai_bot_name', 'Shopping Assistant' );
-    $currency   = function_exists( 'get_woocommerce_currency' ) ? get_woocommerce_currency() : 'USD';
+    $catalog_full  = shopys_ai_get_catalog();
+    $catalog_total = count( $catalog_full );
+    // Relevance-filter to keep prompt small enough to stay under the API rate limit.
+    $catalog       = shopys_ai_filter_relevant_products( $catalog_full, $message, 150 );
+    $catalog_shown = count( $catalog );
+    $store_name    = get_bloginfo( 'name' );
+    $store_url     = home_url();
+    $bot_name      = get_option( 'shopys_ai_bot_name', 'Shopping Assistant' );
+    $currency      = function_exists( 'get_woocommerce_currency' ) ? get_woocommerce_currency() : 'USD';
 
     $catalog_text = '';
     foreach ( $catalog as $p ) {
@@ -2170,7 +2180,10 @@ function shopys_ai_chat_handler() {
         $rating = ( ! empty( $p['rating'] ) && ! empty( $p['review_count'] ) )
                   ? ' | Rating: ' . $p['rating'] . '★ (' . $p['review_count'] . ' reviews)'
                   : '';
-        $desc   = ! empty( $p['description'] ) ? "\n   Description: " . wp_strip_all_tags( $p['description'] ) : '';
+        // Trim description so prompt stays under rate limit while keeping enough spec context.
+        $desc_text = ! empty( $p['description'] ) ? wp_strip_all_tags( $p['description'] ) : '';
+        $desc_text = mb_substr( $desc_text, 0, 350 );
+        $desc      = $desc_text !== '' ? "\n   Description: " . $desc_text : '';
         $catalog_text .= "ID:{$p['id']} | {$p['name']} | {$p['price']}" . $sale . $flags . $stock . $rating . $cats . $tags . $sku . $attrs . $desc . "\n";
     }
 
@@ -2190,44 +2203,37 @@ function shopys_ai_chat_handler() {
     $counts_block .= "- Product categories: {$site_counts['product_cats']}\n";
     $counts_block .= "- Product tags: {$site_counts['product_tags']}\n";
     $counts_block .= "- Pages: {$site_counts['pages_total']}\n";
-    $counts_block .= "- Blog posts: {$site_counts['posts_total']}\n";
-    $counts_block .= "- Blog categories: {$site_counts['blog_cats']}\n";
-    $counts_block .= "- Blog tags: {$site_counts['blog_tags']}\n";
 
     // Get website structure (pages, posts, categories, tags, CPTs)
     $website_map = shopys_ai_get_website_map();
+    // Knowledge-page detection: only pages whose title/slug looks like a policy/info page get
+    // their full excerpt included. Other pages are listed with title+URL only to save tokens.
+    $knowledge_keywords = array( 'about','contact','shipping','delivery','return','refund','policy','privacy','terms','faq','help','support','warranty','guarantee','payment','about-us','contact-us' );
+    $is_knowledge_page = function ( $page ) use ( $knowledge_keywords ) {
+        $hay = strtolower( $page['title'] . ' ' . ( $page['slug'] ?? '' ) );
+        foreach ( $knowledge_keywords as $kw ) if ( strpos( $hay, $kw ) !== false ) return true;
+        return false;
+    };
+
     $pages_list = '';
     if ( ! empty( $website_map['pages'] ) ) {
-        $pages_list = "\n\nWEBSITE PAGES (with content snippets — use these to answer questions about policies, shipping, contact, about us, etc.):\n";
-        foreach ( array_slice( $website_map['pages'], 0, 100 ) as $page ) {
+        $pages_list = "\n\nWEBSITE PAGES (knowledge pages include content; others are title+URL only):\n";
+        $rendered = 0;
+        foreach ( $website_map['pages'] as $page ) {
+            if ( $rendered >= 50 ) break;
             $pages_list .= "- {$page['title']}: " . $page['url'];
-            if ( ! empty( $page['excerpt'] ) ) {
-                $pages_list .= "\n   Content: " . $page['excerpt'];
+            if ( ! empty( $page['excerpt'] ) && $is_knowledge_page( $page ) ) {
+                $pages_list .= "\n   Content: " . mb_substr( $page['excerpt'], 0, 400 );
             }
             $pages_list .= "\n";
-        }
-    }
-
-    $posts_list = '';
-    if ( ! empty( $website_map['posts'] ) ) {
-        $posts_list = "\n\nBLOG POSTS:\n";
-        foreach ( array_slice( $website_map['posts'], 0, 80 ) as $post ) {
-            $posts_list .= "- {$post['title']} (" . implode( ', ', $post['categories'] ) . "): " . $post['url'] . "\n";
-        }
-    }
-
-    $categories_list = '';
-    if ( ! empty( $website_map['categories'] ) ) {
-        $categories_list = "\n\nBLOG CATEGORIES:\n";
-        foreach ( array_slice( $website_map['categories'], 0, 50 ) as $cat ) {
-            $categories_list .= "- {$cat['name']} ({$cat['post_count']} posts): " . $cat['url'] . "\n";
+            $rendered++;
         }
     }
 
     $product_categories_list = '';
     if ( ! empty( $website_map['product_categories'] ) ) {
         $product_categories_list = "\n\nPRODUCT CATEGORIES (count = direct, count_with_subs = including all subcategories):\n";
-        foreach ( array_slice( $website_map['product_categories'], 0, 100 ) as $pcat ) {
+        foreach ( array_slice( $website_map['product_categories'], 0, 120 ) as $pcat ) {
             $deep   = isset( $pcat['count_with_subs'] ) ? (int) $pcat['count_with_subs'] : (int) $pcat['count'];
             $direct = (int) $pcat['count'];
             $parent = ! empty( $pcat['parent_name'] ) ? " [parent: {$pcat['parent_name']}]" : "";
@@ -2243,15 +2249,7 @@ function shopys_ai_chat_handler() {
     if ( ! empty( $website_map['product_tags'] ) ) {
         $product_tags_list = "\n\nPRODUCT TAGS:\n";
         foreach ( array_slice( $website_map['product_tags'], 0, 50 ) as $pt ) {
-            $product_tags_list .= "- {$pt['name']} ({$pt['count']}): " . $pt['url'] . "\n";
-        }
-    }
-
-    $post_tags_list = '';
-    if ( ! empty( $website_map['post_tags'] ) ) {
-        $post_tags_list = "\n\nBLOG TAGS:\n";
-        foreach ( array_slice( $website_map['post_tags'], 0, 30 ) as $pt ) {
-            $post_tags_list .= "- {$pt['name']} ({$pt['count']}): " . $pt['url'] . "\n";
+            $product_tags_list .= "- {$pt['name']} ({$pt['count']})\n";
         }
     }
 
@@ -2260,7 +2258,7 @@ function shopys_ai_chat_handler() {
         $cpts_list = "\n\nOTHER CONTENT TYPES:\n";
         foreach ( $website_map['custom_post_types'] as $cpt ) {
             $cpts_list .= "{$cpt['label']} ({$cpt['type']}):\n";
-            foreach ( array_slice( $cpt['items'], 0, 20 ) as $item ) {
+            foreach ( array_slice( $cpt['items'], 0, 10 ) as $item ) {
                 $cpts_list .= "  - {$item['title']}: " . $item['url'] . "\n";
             }
         }
@@ -2304,9 +2302,11 @@ You are a knowledgeable, warm, and professional shopping advisor. You combine de
 </store_context>
 
 <product_catalog>
+NOTE: This catalog shows the {$catalog_shown} products most relevant to the current question (out of {$catalog_total} total in store). For total counts always use SITE COUNTS below — never count this list for store-wide totals. If you need a product not shown, ask the user for more details (name/SKU/category) and I'll re-filter.
+
 {$catalog_text}
 </product_catalog>
-{$counts_block}{$pages_list}{$posts_list}{$categories_list}{$product_categories_list}{$product_tags_list}{$post_tags_list}{$cpts_list}{$menus_list}{$knowledge_block}
+{$counts_block}{$pages_list}{$product_categories_list}{$product_tags_list}{$cpts_list}{$menus_list}{$knowledge_block}
 
 <response_formatting>
 FORMAT YOUR RESPONSES using proper markdown for a premium reading experience:
@@ -2384,8 +2384,8 @@ You have **full access to all public data on this website**, including:
 GRANTED ACCESS:
 - Every published product in the store (full catalog with name, price, sale, stock, rating, reviews, categories, tags, attributes, descriptions, on-sale/featured flags, product type)
 - Every published page (with content excerpts) — About, Contact, Shipping, Returns, FAQ, Policies, etc.
-- Every published blog post with categories
-- All blog categories, blog tags, product categories, product tags
+- All product categories (with parent/subcategory hierarchy and descendant-aware counts)
+- All product tags
 - All public custom post types (events, portfolios, FAQs, etc. if defined on this site)
 - Navigation menus and site structure
 - Store knowledge provided by the owner (return policy, shipping rules, FAQs)
