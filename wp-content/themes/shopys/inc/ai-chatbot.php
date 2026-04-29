@@ -397,8 +397,9 @@ add_action( 'save_post_product',                       'shopys_ai_flush_caches' 
 add_action( 'save_post_page',                          'shopys_ai_flush_caches' );
 add_action( 'save_post_post',                          'shopys_ai_flush_caches' );
 function shopys_ai_flush_caches() {
-    delete_transient( 'shopys_ai_catalog_v2' );
-    delete_transient( 'shopys_ai_website_map_v2' );
+    delete_transient( 'shopys_ai_catalog_v4' );
+    delete_transient( 'shopys_ai_website_map_v4' );
+    delete_transient( 'shopys_ai_site_counts_v1' );
 }
 
 /**
@@ -707,29 +708,39 @@ function shopys_ai_settings_page() {
    ═══════════════════════════════════════════════════════════════════ */
 
 function shopys_ai_get_catalog() {
-    $cached = get_transient( 'shopys_ai_catalog_v2' );
+    $cached = get_transient( 'shopys_ai_catalog_v4' );
     if ( false !== $cached ) return $cached;
 
     if ( ! class_exists( 'WooCommerce' ) ) return array();
 
     $currency = get_woocommerce_currency_symbol();
 
+    // Pull every published product (capped at 1000 to keep prompt token cost sane).
     $products = wc_get_products( array(
         'status'  => 'publish',
-        'limit'   => 200,
+        'limit'   => 1000,
         'orderby' => 'date',
         'order'   => 'DESC',
     ) );
 
+    // Adaptive description budget — shrinks as catalog grows so we don't blow context.
+    $count = count( $products );
+    if ( $count <= 100 )      $desc_max = 800;
+    elseif ( $count <= 300 )  $desc_max = 500;
+    elseif ( $count <= 700 )  $desc_max = 300;
+    else                      $desc_max = 200;
+
     $catalog = array();
     foreach ( $products as $product ) {
-        $categories = wp_get_post_terms( $product->get_id(), 'product_cat', array( 'fields' => 'names' ) );
+        $pid        = $product->get_id();
+        $categories = wp_get_post_terms( $pid, 'product_cat', array( 'fields' => 'names' ) );
+        $tags       = wp_get_post_terms( $pid, 'product_tag', array( 'fields' => 'names' ) );
 
         $attrs = array();
         foreach ( $product->get_attributes() as $attr ) {
             $label = wc_attribute_label( $attr->get_name() );
             if ( $attr->is_taxonomy() ) {
-                $terms = wp_get_post_terms( $product->get_id(), $attr->get_name(), array( 'fields' => 'names' ) );
+                $terms = wp_get_post_terms( $pid, $attr->get_name(), array( 'fields' => 'names' ) );
                 if ( ! is_wp_error( $terms ) && ! empty( $terms ) ) {
                     $attrs[ $label ] = implode( ', ', $terms );
                 }
@@ -738,28 +749,107 @@ function shopys_ai_get_catalog() {
             }
         }
 
-        $desc = wp_strip_all_tags( $product->get_short_description() );
-        if ( empty( $desc ) ) {
-            $desc = wp_strip_all_tags( $product->get_description() );
+        $short_desc = trim( wp_strip_all_tags( $product->get_short_description() ) );
+        $long_desc  = trim( wp_strip_all_tags( $product->get_description() ) );
+        $desc_combined = $short_desc;
+        if ( ! empty( $long_desc ) && $long_desc !== $short_desc ) {
+            $desc_combined = $short_desc !== '' ? $short_desc . ' | ' . $long_desc : $long_desc;
         }
-        $desc = mb_substr( $desc, 0, 250 );
+        $desc_combined = preg_replace( '/\s+/', ' ', $desc_combined );
+        $desc = mb_substr( $desc_combined, 0, $desc_max );
+
+        $rating       = (float) $product->get_average_rating();
+        $review_count = (int)   $product->get_review_count();
 
         $catalog[] = array(
-            'id'          => $product->get_id(),
-            'name'        => $product->get_name(),
-            'price'       => $currency . $product->get_price(),
-            'regular'     => $product->get_regular_price() ? $currency . $product->get_regular_price() : '',
-            'sale'        => $product->get_sale_price() ? $currency . $product->get_sale_price() : '',
-            'categories'  => ! is_wp_error( $categories ) ? $categories : array(),
-            'description' => $desc,
-            'sku'         => $product->get_sku(),
-            'stock'       => $product->get_stock_status(),
-            'attributes'  => $attrs,
+            'id'           => $pid,
+            'name'         => $product->get_name(),
+            'url'          => get_permalink( $pid ),
+            'price'        => $currency . $product->get_price(),
+            'sale'         => $product->get_sale_price() ? $currency . $product->get_sale_price() : '',
+            'on_sale'      => $product->is_on_sale(),
+            'featured'     => $product->is_featured(),
+            'categories'   => ! is_wp_error( $categories ) ? $categories : array(),
+            'tags'         => ! is_wp_error( $tags ) ? $tags : array(),
+            'description'  => $desc,
+            'sku'          => $product->get_sku(),
+            'stock'        => $product->get_stock_status(),
+            'attributes'   => $attrs,
+            'rating'       => $rating > 0 ? round( $rating, 1 ) : null,
+            'review_count' => $review_count,
+            'type'         => $product->get_type(),
         );
     }
 
-    set_transient( 'shopys_ai_catalog_v2', $catalog, 10 * MINUTE_IN_SECONDS );
+    set_transient( 'shopys_ai_catalog_v4', $catalog, 10 * MINUTE_IN_SECONDS );
     return $catalog;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   2.4 SITE COUNTS — total numbers (independent of catalog cap)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/**
+ * Real, authoritative counts straight from the DB. Uses wp_count_posts()
+ * and term counts so they reflect ALL items, not just what's in the catalog cache.
+ */
+function shopys_ai_get_site_counts() {
+    $cached = get_transient( 'shopys_ai_site_counts_v1' );
+    if ( false !== $cached ) return $cached;
+
+    $counts = array(
+        'products_total'    => 0,
+        'products_in_stock' => 0,
+        'products_out_of_stock' => 0,
+        'products_on_sale'  => 0,
+        'products_featured' => 0,
+        'pages_total'       => 0,
+        'posts_total'       => 0,
+        'product_cats'      => 0,
+        'product_tags'      => 0,
+        'blog_cats'         => 0,
+        'blog_tags'         => 0,
+    );
+
+    // Pages & posts
+    $page_counts = wp_count_posts( 'page' );
+    $post_counts = wp_count_posts( 'post' );
+    $counts['pages_total'] = isset( $page_counts->publish ) ? (int) $page_counts->publish : 0;
+    $counts['posts_total'] = isset( $post_counts->publish ) ? (int) $post_counts->publish : 0;
+
+    // WooCommerce-specific counts
+    if ( class_exists( 'WooCommerce' ) ) {
+        $product_counts = wp_count_posts( 'product' );
+        $counts['products_total'] = isset( $product_counts->publish ) ? (int) $product_counts->publish : 0;
+
+        global $wpdb;
+        // In-stock / out-of-stock via meta query
+        $counts['products_in_stock'] = (int) $wpdb->get_var( "
+            SELECT COUNT(p.ID) FROM {$wpdb->posts} p
+            INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+            WHERE p.post_type = 'product' AND p.post_status = 'publish'
+              AND pm.meta_key = '_stock_status' AND pm.meta_value = 'instock'
+        " );
+        $counts['products_out_of_stock'] = max( 0, $counts['products_total'] - $counts['products_in_stock'] );
+
+        // Featured products
+        $featured_ids = wc_get_featured_product_ids();
+        $counts['products_featured'] = is_array( $featured_ids ) ? count( $featured_ids ) : 0;
+
+        // On-sale products
+        $sale_ids = wc_get_product_ids_on_sale();
+        $counts['products_on_sale'] = is_array( $sale_ids ) ? count( $sale_ids ) : 0;
+
+        // Product categories / tags
+        $counts['product_cats'] = (int) wp_count_terms( array( 'taxonomy' => 'product_cat', 'hide_empty' => false ) );
+        $counts['product_tags'] = (int) wp_count_terms( array( 'taxonomy' => 'product_tag', 'hide_empty' => false ) );
+    }
+
+    $counts['blog_cats'] = (int) wp_count_terms( array( 'taxonomy' => 'category', 'hide_empty' => false ) );
+    $counts['blog_tags'] = (int) wp_count_terms( array( 'taxonomy' => 'post_tag', 'hide_empty' => false ) );
+
+    set_transient( 'shopys_ai_site_counts_v1', $counts, 10 * MINUTE_IN_SECONDS );
+    return $counts;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -767,7 +857,7 @@ function shopys_ai_get_catalog() {
    ═══════════════════════════════════════════════════════════════════ */
 
 function shopys_ai_get_website_map() {
-    $cached = get_transient( 'shopys_ai_website_map_v2' );
+    $cached = get_transient( 'shopys_ai_website_map_v4' );
     if ( false !== $cached ) return $cached;
 
     $map = array(
@@ -777,11 +867,14 @@ function shopys_ai_get_website_map() {
         'archives'   => array(),
         'menus'      => array(),
         'product_categories' => array(),
+        'product_tags'       => array(),
+        'post_tags'          => array(),
+        'custom_post_types'  => array(),
     );
 
     // Get all pages with a content excerpt so the bot can answer questions
     // about About Us, Contact, Shipping, Policy, FAQ, etc. without browsing.
-    $pages = get_pages( array( 'number' => 100 ) );
+    $pages = get_pages( array( 'number' => 200 ) );
     foreach ( $pages as $page ) {
         $raw_content = $page->post_content;
         // Strip shortcodes, blocks, HTML — leave only readable text.
@@ -802,7 +895,7 @@ function shopys_ai_get_website_map() {
 
     // Get all posts
     $posts = get_posts( array(
-        'numberposts' => 100,
+        'numberposts' => 200,
         'post_type'   => 'post',
         'orderby'     => 'date',
         'order'       => 'DESC',
@@ -822,7 +915,7 @@ function shopys_ai_get_website_map() {
     }
 
     // Get all post categories
-    $categories = get_categories( array( 'hide_empty' => false, 'number' => 100 ) );
+    $categories = get_categories( array( 'hide_empty' => false, 'number' => 200 ) );
     foreach ( $categories as $cat ) {
         $map['categories'][] = array(
             'id'        => $cat->term_id,
@@ -834,22 +927,47 @@ function shopys_ai_get_website_map() {
         );
     }
 
-    // Get all product categories (WooCommerce)
+    // Get all product categories (WooCommerce) with parent + descendant-aware counts
     if ( class_exists( 'WooCommerce' ) ) {
         $product_cats = get_terms( array(
             'taxonomy'   => 'product_cat',
             'hide_empty' => false,
-            'number'     => 100,
+            'number'     => 200,
         ) );
         if ( ! is_wp_error( $product_cats ) ) {
+            // Build id → term lookup for parent name resolution and descendant traversal
+            $by_id = array();
+            foreach ( $product_cats as $pc ) $by_id[ $pc->term_id ] = $pc;
+
+            // Compute descendant-inclusive count: own count + sum of all children counts (recursive)
+            $deep_count = function ( $term_id ) use ( &$deep_count, $by_id ) {
+                if ( ! isset( $by_id[ $term_id ] ) ) return 0;
+                $sum = (int) $by_id[ $term_id ]->count;
+                foreach ( $by_id as $t ) {
+                    if ( (int) $t->parent === (int) $term_id ) {
+                        $sum += $deep_count( $t->term_id );
+                    }
+                }
+                return $sum;
+            };
+
             foreach ( $product_cats as $pcat ) {
+                $parent_name = '';
+                if ( $pcat->parent && isset( $by_id[ $pcat->parent ] ) ) {
+                    $parent_name = $by_id[ $pcat->parent ]->name;
+                }
+                $total_with_subs = $deep_count( $pcat->term_id );
+
                 $map['product_categories'][] = array(
-                    'id'        => $pcat->term_id,
-                    'name'      => $pcat->name,
-                    'url'       => get_term_link( $pcat->term_id, 'product_cat' ),
-                    'slug'      => $pcat->slug,
-                    'count'     => $pcat->count,
-                    'description' => wp_strip_all_tags( $pcat->description ),
+                    'id'              => $pcat->term_id,
+                    'name'            => $pcat->name,
+                    'url'             => get_term_link( $pcat->term_id, 'product_cat' ),
+                    'slug'            => $pcat->slug,
+                    'count'           => (int) $pcat->count,
+                    'count_with_subs' => $total_with_subs,
+                    'parent_id'       => (int) $pcat->parent,
+                    'parent_name'     => $parent_name,
+                    'description'     => wp_strip_all_tags( $pcat->description ),
                 );
             }
         }
@@ -891,9 +1009,67 @@ function shopys_ai_get_website_map() {
             'title' => 'Shop',
             'url'   => wc_get_page_permalink( 'shop' ),
         );
+
+        // Product tags — useful for tag-based browsing.
+        $product_tags = get_terms( array(
+            'taxonomy'   => 'product_tag',
+            'hide_empty' => true,
+            'number'     => 100,
+        ) );
+        if ( ! is_wp_error( $product_tags ) ) {
+            foreach ( $product_tags as $pt ) {
+                $map['product_tags'][] = array(
+                    'name'  => $pt->name,
+                    'url'   => get_term_link( $pt->term_id, 'product_tag' ),
+                    'count' => $pt->count,
+                );
+            }
+        }
     }
 
-    set_transient( 'shopys_ai_website_map_v2', $map, 10 * MINUTE_IN_SECONDS );
+    // Post tags — useful for blog browsing.
+    $post_tags = get_terms( array(
+        'taxonomy'   => 'post_tag',
+        'hide_empty' => true,
+        'number'     => 50,
+    ) );
+    if ( ! is_wp_error( $post_tags ) ) {
+        foreach ( $post_tags as $pt ) {
+            $map['post_tags'][] = array(
+                'name'  => $pt->name,
+                'url'   => get_tag_link( $pt->term_id ),
+                'count' => $pt->count,
+            );
+        }
+    }
+
+    // Public custom post types (excluding built-ins, products, and attachments).
+    $exclude_cpts = array( 'post', 'page', 'attachment', 'product', 'product_variation', 'shop_order', 'shop_coupon', 'revision', 'nav_menu_item' );
+    $cpts = get_post_types( array( 'public' => true ), 'objects' );
+    foreach ( $cpts as $cpt_slug => $cpt ) {
+        if ( in_array( $cpt_slug, $exclude_cpts, true ) ) continue;
+        $cpt_posts = get_posts( array(
+            'post_type'   => $cpt_slug,
+            'numberposts' => 30,
+            'post_status' => 'publish',
+        ) );
+        if ( empty( $cpt_posts ) ) continue;
+        $items = array();
+        foreach ( $cpt_posts as $cp ) {
+            $items[] = array(
+                'id'    => $cp->ID,
+                'title' => $cp->post_title,
+                'url'   => get_permalink( $cp->ID ),
+            );
+        }
+        $map['custom_post_types'][] = array(
+            'type'  => $cpt_slug,
+            'label' => $cpt->labels->name ?? $cpt_slug,
+            'items' => $items,
+        );
+    }
+
+    set_transient( 'shopys_ai_website_map_v4', $map, 10 * MINUTE_IN_SECONDS );
     return $map;
 }
 
@@ -1040,6 +1216,112 @@ function shopys_ai_fetch_url( $url ) {
         'layout_structure' => $page_info['structure'],
         'headings'         => $page_info['headings'],
     );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   3.1 EXTERNAL TECH RESEARCH (auto fallback when catalog is thin)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/**
+ * Tech-scope guard: only allow external search for tech/website-related queries.
+ */
+function shopys_ai_is_tech_question( $msg ) {
+    $tech_terms = array(
+        'cpu','gpu','ram','memory','motherboard','mainboard','processor','chipset','socket',
+        'graphics card','vga','ssd','hdd','nvme','sata','pcie','laptop','desktop','workstation',
+        'pc','computer','monitor','display','keyboard','mouse','headset','headphone','printer',
+        'router','modem','wifi','wireless','phone','smartphone','tablet','console','camera','lens',
+        'amd','intel','nvidia','ryzen','core i','i3','i5','i7','i9','radeon','geforce','rtx','gtx',
+        'ddr3','ddr4','ddr5','spec','specification','compatible','support','feature','review',
+        'benchmark','performance','watt','tdp','ghz','mhz','usb','hdmi','displayport','thunderbolt',
+        'fan','cooler','psu','power supply','case','chassis','firmware','bios','driver',
+    );
+    $low = strtolower( $msg );
+    foreach ( $tech_terms as $t ) {
+        if ( strpos( $low, $t ) !== false ) return true;
+    }
+    return false;
+}
+
+/**
+ * Detect "asking for product details / specs / compatibility" pattern.
+ */
+function shopys_ai_is_detail_question( $msg ) {
+    $patterns = array(
+        'detail','spec','specification','feature','support','compatible','compatibility',
+        'review','tell me about','what is','how does','can it','will it work','does it support',
+        'full info','more info','datasheet','manual','dimension','requirement',
+    );
+    $low = strtolower( $msg );
+    foreach ( $patterns as $p ) {
+        if ( strpos( $low, $p ) !== false ) return true;
+    }
+    return false;
+}
+
+/**
+ * Search external tech sources via DuckDuckGo Lite. Returns formatted excerpt or ''.
+ */
+function shopys_ai_search_external_tech( $query ) {
+    $query = trim( preg_replace( '/\s+/', ' ', $query ) );
+    if ( $query === '' || mb_strlen( $query ) > 200 ) return '';
+
+    $cache_key = 'shopys_ai_ext_' . md5( $query );
+    $cached    = get_transient( $cache_key );
+    if ( false !== $cached ) return $cached;
+
+    $search_url = 'https://lite.duckduckgo.com/lite/?q=' . urlencode( $query . ' specifications' );
+    $response   = wp_remote_get( $search_url, array(
+        'timeout'    => 8,
+        'user-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'sslverify'  => false,
+    ) );
+    if ( is_wp_error( $response ) ) return '';
+    $body = wp_remote_retrieve_body( $response );
+    if ( empty( $body ) ) return '';
+
+    // DDG Lite wraps result links — pull all external https links.
+    if ( ! preg_match_all( '/<a[^>]+href="(https?:\/\/[^"]+)"[^>]*>/i', $body, $m ) ) {
+        set_transient( $cache_key, '', 30 * MINUTE_IN_SECONDS );
+        return '';
+    }
+    $candidates = array_values( array_unique( $m[1] ) );
+
+    // Skip DDG internal links and ad/redirect URLs.
+    $candidates = array_filter( $candidates, function ( $u ) {
+        if ( strpos( $u, 'duckduckgo.com' ) !== false ) return false;
+        if ( strpos( $u, 'lite.duckduckgo' ) !== false ) return false;
+        if ( strpos( $u, '/y.js' ) !== false ) return false;
+        return true;
+    } );
+    $candidates = array_values( $candidates );
+
+    // Prefer trusted tech / vendor / encyclopedia domains.
+    $tech_domains = array(
+        'wikipedia.org','tomshardware.com','anandtech.com','techpowerup.com','notebookcheck.',
+        'gsmarena.com','newegg.com','bestbuy.com','amazon.com','amd.com','intel.com','nvidia.com',
+        'asus.com','msi.com','gigabyte.com','asrock.com','corsair.com','logitech.com',
+        'kingston.com','samsung.com','seagate.com','westerndigital.com','apple.com',
+        'microsoft.com','dell.com','hp.com','lenovo.com','acer.com','razer.com',
+    );
+    $best = '';
+    foreach ( $candidates as $url ) {
+        foreach ( $tech_domains as $td ) {
+            if ( strpos( $url, $td ) !== false ) { $best = $url; break 2; }
+        }
+    }
+    if ( $best === '' && ! empty( $candidates ) ) $best = $candidates[0];
+    if ( $best === '' ) return '';
+
+    $page = shopys_ai_fetch_url( $best );
+    if ( is_wp_error( $page ) || empty( $page['content'] ) ) {
+        set_transient( $cache_key, '', 30 * MINUTE_IN_SECONDS );
+        return '';
+    }
+
+    $output = "[EXTERNAL TECH SOURCE: {$best}]\n" . mb_substr( $page['content'], 0, 1500 ) . "\n";
+    set_transient( $cache_key, $output, HOUR_IN_SECONDS );
+    return $output;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -1877,20 +2159,47 @@ function shopys_ai_chat_handler() {
             array_keys( $p['attributes'] ),
             $p['attributes']
         ) ) : '';
-        $cats  = ! empty( $p['categories'] ) ? ' | Categories: ' . implode( ', ', $p['categories'] ) : '';
-        $sku   = ! empty( $p['sku'] )        ? ' | SKU: '        . $p['sku']                       : '';
-        $stock = ! empty( $p['stock'] )      ? ' | Stock: '      . $p['stock']                     : '';
-        $sale  = ! empty( $p['sale'] )       ? ' | Sale: '       . $p['sale']                      : '';
-        $desc  = ! empty( $p['description'] ) ? "\n   Description: " . wp_strip_all_tags( $p['description'] ) : '';
-        $catalog_text .= "ID:{$p['id']} | {$p['name']} | {$p['price']}" . $sale . $stock . $cats . $sku . $attrs . $desc . "\n";
+        $cats   = ! empty( $p['categories'] ) ? ' | Categories: ' . implode( ', ', $p['categories'] ) : '';
+        $tags   = ! empty( $p['tags'] )       ? ' | Tags: '       . implode( ', ', $p['tags'] )       : '';
+        $sku    = ! empty( $p['sku'] )        ? ' | SKU: '        . $p['sku']                         : '';
+        $stock  = ! empty( $p['stock'] )      ? ' | Stock: '      . $p['stock']                       : '';
+        $sale   = ! empty( $p['sale'] )       ? ' | Sale: '       . $p['sale']                        : '';
+        $flags  = '';
+        if ( ! empty( $p['on_sale'] ) )  $flags .= ' | ON SALE';
+        if ( ! empty( $p['featured'] ) ) $flags .= ' | FEATURED';
+        $rating = ( ! empty( $p['rating'] ) && ! empty( $p['review_count'] ) )
+                  ? ' | Rating: ' . $p['rating'] . '★ (' . $p['review_count'] . ' reviews)'
+                  : '';
+        $desc   = ! empty( $p['description'] ) ? "\n   Description: " . wp_strip_all_tags( $p['description'] ) : '';
+        $catalog_text .= "ID:{$p['id']} | {$p['name']} | {$p['price']}" . $sale . $flags . $stock . $rating . $cats . $tags . $sku . $attrs . $desc . "\n";
     }
 
-    // Get website structure (pages, posts, categories)
+    // Build authoritative site counts (independent of catalog cap, so the AI
+    // can answer "how many products do you have?" correctly even past 1000).
+    $site_counts   = shopys_ai_get_site_counts();
+    $shown_in_prompt = count( $catalog );
+    $counts_block  = "\n\nSITE COUNTS (authoritative — quote these when the user asks 'how many'):\n";
+    $counts_block .= "- Total products in store: {$site_counts['products_total']}\n";
+    if ( $shown_in_prompt < $site_counts['products_total'] ) {
+        $counts_block .= "  (Catalog above shows the {$shown_in_prompt} most recent. Use site counts for totals.)\n";
+    }
+    $counts_block .= "- Products in stock: {$site_counts['products_in_stock']}\n";
+    $counts_block .= "- Products out of stock: {$site_counts['products_out_of_stock']}\n";
+    $counts_block .= "- Products on sale: {$site_counts['products_on_sale']}\n";
+    $counts_block .= "- Featured products: {$site_counts['products_featured']}\n";
+    $counts_block .= "- Product categories: {$site_counts['product_cats']}\n";
+    $counts_block .= "- Product tags: {$site_counts['product_tags']}\n";
+    $counts_block .= "- Pages: {$site_counts['pages_total']}\n";
+    $counts_block .= "- Blog posts: {$site_counts['posts_total']}\n";
+    $counts_block .= "- Blog categories: {$site_counts['blog_cats']}\n";
+    $counts_block .= "- Blog tags: {$site_counts['blog_tags']}\n";
+
+    // Get website structure (pages, posts, categories, tags, CPTs)
     $website_map = shopys_ai_get_website_map();
     $pages_list = '';
     if ( ! empty( $website_map['pages'] ) ) {
         $pages_list = "\n\nWEBSITE PAGES (with content snippets — use these to answer questions about policies, shipping, contact, about us, etc.):\n";
-        foreach ( array_slice( $website_map['pages'], 0, 20 ) as $page ) {
+        foreach ( array_slice( $website_map['pages'], 0, 100 ) as $page ) {
             $pages_list .= "- {$page['title']}: " . $page['url'];
             if ( ! empty( $page['excerpt'] ) ) {
                 $pages_list .= "\n   Content: " . $page['excerpt'];
@@ -1901,8 +2210,8 @@ function shopys_ai_chat_handler() {
 
     $posts_list = '';
     if ( ! empty( $website_map['posts'] ) ) {
-        $posts_list = "\n\nRECENT BLOG POSTS:\n";
-        foreach ( array_slice( $website_map['posts'], 0, 15 ) as $post ) {
+        $posts_list = "\n\nBLOG POSTS:\n";
+        foreach ( array_slice( $website_map['posts'], 0, 80 ) as $post ) {
             $posts_list .= "- {$post['title']} (" . implode( ', ', $post['categories'] ) . "): " . $post['url'] . "\n";
         }
     }
@@ -1910,16 +2219,50 @@ function shopys_ai_chat_handler() {
     $categories_list = '';
     if ( ! empty( $website_map['categories'] ) ) {
         $categories_list = "\n\nBLOG CATEGORIES:\n";
-        foreach ( array_slice( $website_map['categories'], 0, 10 ) as $cat ) {
+        foreach ( array_slice( $website_map['categories'], 0, 50 ) as $cat ) {
             $categories_list .= "- {$cat['name']} ({$cat['post_count']} posts): " . $cat['url'] . "\n";
         }
     }
 
     $product_categories_list = '';
     if ( ! empty( $website_map['product_categories'] ) ) {
-        $product_categories_list = "\n\nPRODUCT CATEGORIES:\n";
-        foreach ( array_slice( $website_map['product_categories'], 0, 15 ) as $pcat ) {
-            $product_categories_list .= "- {$pcat['name']} ({$pcat['count']} products): " . $pcat['url'] . "\n";
+        $product_categories_list = "\n\nPRODUCT CATEGORIES (count = direct, count_with_subs = including all subcategories):\n";
+        foreach ( array_slice( $website_map['product_categories'], 0, 100 ) as $pcat ) {
+            $deep   = isset( $pcat['count_with_subs'] ) ? (int) $pcat['count_with_subs'] : (int) $pcat['count'];
+            $direct = (int) $pcat['count'];
+            $parent = ! empty( $pcat['parent_name'] ) ? " [parent: {$pcat['parent_name']}]" : "";
+            // Show "direct + subs total" only when they differ (i.e. category has subcategories)
+            $count_str = $deep > $direct
+                ? "{$direct} direct, {$deep} total inc. subcategories"
+                : "{$direct} products";
+            $product_categories_list .= "- {$pcat['name']} ({$count_str}){$parent}: " . $pcat['url'] . "\n";
+        }
+    }
+
+    $product_tags_list = '';
+    if ( ! empty( $website_map['product_tags'] ) ) {
+        $product_tags_list = "\n\nPRODUCT TAGS:\n";
+        foreach ( array_slice( $website_map['product_tags'], 0, 50 ) as $pt ) {
+            $product_tags_list .= "- {$pt['name']} ({$pt['count']}): " . $pt['url'] . "\n";
+        }
+    }
+
+    $post_tags_list = '';
+    if ( ! empty( $website_map['post_tags'] ) ) {
+        $post_tags_list = "\n\nBLOG TAGS:\n";
+        foreach ( array_slice( $website_map['post_tags'], 0, 30 ) as $pt ) {
+            $post_tags_list .= "- {$pt['name']} ({$pt['count']}): " . $pt['url'] . "\n";
+        }
+    }
+
+    $cpts_list = '';
+    if ( ! empty( $website_map['custom_post_types'] ) ) {
+        $cpts_list = "\n\nOTHER CONTENT TYPES:\n";
+        foreach ( $website_map['custom_post_types'] as $cpt ) {
+            $cpts_list .= "{$cpt['label']} ({$cpt['type']}):\n";
+            foreach ( array_slice( $cpt['items'], 0, 20 ) as $item ) {
+                $cpts_list .= "  - {$item['title']}: " . $item['url'] . "\n";
+            }
         }
     }
 
@@ -1928,7 +2271,7 @@ function shopys_ai_chat_handler() {
         $menus_list = "\n\nWEBSITE NAVIGATION MENUS:\n";
         foreach ( array_slice( $website_map['menus'], 0, 5 ) as $menu ) {
             $menus_list .= "Menu: {$menu['name']}\n";
-            foreach ( array_slice( $menu['items'], 0, 15 ) as $item ) {
+            foreach ( array_slice( $menu['items'], 0, 20 ) as $item ) {
                 $menus_list .= "  - {$item['title']}: " . $item['url'] . "\n";
             }
         }
@@ -1963,7 +2306,7 @@ You are a knowledgeable, warm, and professional shopping advisor. You combine de
 <product_catalog>
 {$catalog_text}
 </product_catalog>
-{$pages_list}{$posts_list}{$categories_list}{$product_categories_list}{$menus_list}{$knowledge_block}
+{$counts_block}{$pages_list}{$posts_list}{$categories_list}{$product_categories_list}{$product_tags_list}{$post_tags_list}{$cpts_list}{$menus_list}{$knowledge_block}
 
 <response_formatting>
 FORMAT YOUR RESPONSES using proper markdown for a premium reading experience:
@@ -1993,6 +2336,71 @@ FORMAT YOUR RESPONSES using proper markdown for a premium reading experience:
 - End with a helpful follow-up question or actionable next step when appropriate
 - Use > blockquotes for pro tips, important notes, or customer testimonials
 </response_formatting>
+
+<spec_matching>
+When the user asks a compatibility, spec, or \"is there a product that supports X\" question (especially for tech components like motherboards, CPUs, GPUs, RAM, PSUs, laptops, etc.), follow this method:
+
+1. **Identify the product category.** Filter the catalog to ONLY the relevant category (e.g. \"motherboard\" → only motherboard products). Ignore unrelated items.
+2. **Read every matching product's attributes AND description carefully.** Specs may live in either field. Look for socket type, chipset, supported CPUs, RAM type/speed, form factor, brand, generation, etc.
+3. **Match against the user's requirements.** Do real spec reasoning — don't just keyword-match.
+4. **Detect impossible / contradictory requirements before searching.** Examples:
+   - \"Motherboard that supports AMD AND Intel i7\" → impossible. AMD CPUs use AM4/AM5/TR4 sockets; Intel i7 uses LGA 1151/1200/1700. No single motherboard supports both. Politely explain this and ask which platform they want.
+   - \"DDR4 RAM in a DDR5-only motherboard\" → not compatible.
+   - \"NVIDIA GPU with AMD-only chipset feature\" → clarify.
+5. **Be transparent when specs are incomplete.** If the catalog description for a product is too short to confirm a spec, say something like: \"The listing for **[product]** doesn't show the full chipset details — I'd recommend opening the product page to confirm, or tell me your CPU model and I can narrow it down.\"
+6. **List the top 2–4 best matches** with WHY each one matches the user's stated requirement (cite the relevant spec from attributes/description). Add the [[PRODUCTS:id1,id2,...]] tag.
+7. **If no products match**, say so clearly and suggest the closest alternatives or ask a clarifying question.
+
+Never invent specs that aren't in the catalog data. If the user asks about a spec that isn't documented, ask them to verify on the product page or with the seller.
+
+When the user message is preceded by `[EXTERNAL TECH RESEARCH ...]` content, that external source has been pulled for you to supplement thin catalog data. Rules:
+- Treat external info as **reference only** — the store catalog is the source of truth for what's available, in stock, and at what price.
+- Use external content to answer spec/compatibility questions when the catalog lacks detail.
+- Always cite when a fact came from external research (e.g., \"According to the manufacturer specs, ...\").
+- If external info contradicts the catalog, prefer the catalog for store-specific facts (price, stock) and external for general specs.
+- Never recommend products that are NOT in the store catalog. External info is for explanation, not for redirecting users away.
+</spec_matching>
+
+<counting_questions>
+When a user asks **\"how many\"** or any quantity question (e.g. \"how many products do you have?\", \"how many laptops?\", \"how many on sale?\", \"how many in stock?\"):
+
+1. **For total store-wide counts** (total products, total in stock, total on sale, total featured, total categories/tags, total pages/posts) → use the numbers in the SITE COUNTS block above. Quote them exactly. Do NOT count the catalog list yourself — it may be capped.
+
+2. **For category-specific counts** (\"how many laptops?\", \"how many components?\", \"how many peripherals?\") → use the count shown next to each category in PRODUCT CATEGORIES.
+   - If the line says \"X products\" → that's the total for that category. Quote it.
+   - If it says \"X direct, Y total inc. subcategories\" → the category has subcategories. **Use Y (the total)** when the user is asking about everything in that category. Optionally break it down: \"We have Y total Components — including X1 Motherboards, X2 CPUs, X3 GPUs...\"
+   - If no exact category matches but the user's word is broad (e.g. \"components\", \"peripherals\", \"accessories\"): first look for that exact name, then look for a parent category with subs. If neither exists, name the closest categories and sum their counts, being transparent (e.g. \"We don't have a 'Components' parent category, but combining Motherboards (45), CPUs (32), GPUs (28), and RAM (67) gives 172 component-type products.\").
+
+3. **For tag-specific counts** (\"how many products tagged 'budget'?\") → use the count in PRODUCT TAGS.
+
+4. **For attribute-based counts** (\"how many Intel motherboards?\") → these aren't pre-counted. Filter the catalog above by attribute and count, but acknowledge the catalog may not be exhaustive if products_total exceeds what's shown. Say something like: \"From the products I can see, there are X Intel motherboards. Let me know if you'd like me to narrow further.\"
+
+5. **Never guess or estimate.** If a count isn't in the data above, say so and offer to filter by something specific.
+</counting_questions>
+
+<data_access>
+You have **full access to all public data on this website**, including:
+
+GRANTED ACCESS:
+- Every published product in the store (full catalog with name, price, sale, stock, rating, reviews, categories, tags, attributes, descriptions, on-sale/featured flags, product type)
+- Every published page (with content excerpts) — About, Contact, Shipping, Returns, FAQ, Policies, etc.
+- Every published blog post with categories
+- All blog categories, blog tags, product categories, product tags
+- All public custom post types (events, portfolios, FAQs, etc. if defined on this site)
+- Navigation menus and site structure
+- Store knowledge provided by the owner (return policy, shipping rules, FAQs)
+- External tech research (manufacturer specs, reviews) — auto-fetched only when needed
+- Any URL the user pastes (you can analyze that page)
+
+DENIED ACCESS (privacy/security boundary — never claim to know these):
+- Customer personal info (names, emails, phone numbers, addresses) — even if stored on the site
+- Order details, order history, payment info, billing/shipping addresses
+- Any user's account password, session token, or auth data
+- Admin/private/draft/pending content
+- Internal business metrics not provided in store_knowledge
+
+Use your access **proactively**: when a user asks anything, scan the catalog/pages/posts/CPTs above to find the most relevant info before answering. You can cross-reference (e.g. \"this product is in our 'Gaming' category and we have a blog post about gaming PCs at [url]\"). Always link to the relevant page when it adds value.
+</data_access>
 
 <communication_style>
 - **Be concise first, detailed on request.** Lead with the answer. Elaborate only when it adds value.
@@ -2452,9 +2860,9 @@ Outside link comparison is currently DISABLED. If a user pastes product URLs fro
         }
 
         if ( ! empty( $all_content ) ) {
-            $content_instruction = $is_comparison_request 
+            $content_instruction = $is_comparison_request
                 ? "Based on the above product information from multiple sources, provide a detailed comparison including prices, features, availability, ratings, and specifications. Highlight similarities and differences."
-                : ( $is_layout_request 
+                : ( $is_layout_request
                     ? "Based on the above website layout and structure information, describe how the website is organized, its visual structure, and component placement."
                     : ( $is_image_request
                         ? "Based on the above image information, describe what images are on the website and what they represent."
@@ -2464,7 +2872,7 @@ Outside link comparison is currently DISABLED. If a user pastes product URLs fro
                         )
                     )
                 );
-            
+
             $messages[] = array(
                 'role'    => 'user',
                 'content' => "[WEBSITE CONTENT ANALYSIS]\n\n" . $all_content . "[END CONTENT]\n\n" . $content_instruction . " " . $message
@@ -2473,7 +2881,28 @@ Outside link comparison is currently DISABLED. If a user pastes product URLs fro
             $messages[] = array( 'role' => 'user', 'content' => $message );
         }
     } else {
-        $messages[] = array( 'role' => 'user', 'content' => $message );
+        // ── External tech research fallback ──────────────────────────────
+        // When user asks for product details/specs and the question is tech-scoped,
+        // pull supplementary info from a trusted external source.
+        $external_research = '';
+        if (
+            shopys_ai_is_tech_question( $message ) &&
+            shopys_ai_is_detail_question( $message )
+        ) {
+            $external_research = shopys_ai_search_external_tech( $message );
+        }
+
+        if ( ! empty( $external_research ) ) {
+            $messages[] = array(
+                'role'    => 'user',
+                'content' => "[EXTERNAL TECH RESEARCH — supplementary only; the store catalog above is the source of truth for what's available to buy here]\n\n"
+                    . $external_research
+                    . "\n[END EXTERNAL]\n\n"
+                    . "User's question: " . $message
+            );
+        } else {
+            $messages[] = array( 'role' => 'user', 'content' => $message );
+        }
     }
 
     // Block attachments if feature is disabled
