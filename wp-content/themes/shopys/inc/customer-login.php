@@ -48,6 +48,11 @@ function shopys_customer_register_focus() {
         max-width: 480px;
         margin: 0 auto 16px;
     }
+    /* Hide the product search bar on auth pages — it's only for shopping */
+    body.shopys-auth-mode .aps-wrapper,
+    body.shopys-auth-mode #aps-wrapper {
+        display: none !important;
+    }
 
     /* ── Single-card tabbed layout ────────────────────────── */
     body.shopys-auth-mode #customer_login,
@@ -56,7 +61,6 @@ function shopys_customer_register_focus() {
         display: block !important;
         max-width: 480px !important;
         margin: 0 auto !important;
-        padding: 0 !important;
     }
     body.shopys-auth-mode #customer_login::before,
     body.shopys-auth-mode #customer_login::after {
@@ -103,17 +107,11 @@ function shopys_customer_register_focus() {
         display: none !important;
     }
 
-    /* ── Auth card wrapper (injected by JS) ───────────────── */
-    .shopys-auth-card {
-        max-width: 480px;
-        margin: 0 auto 18px;
-        background: #ffffff;
-        border-radius: 18px;
-        padding: 32px 32px 8px;
-        box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08), 0 4px 12px rgba(15, 23, 42, 0.04);
-        border: 1px solid rgba(0, 0, 0, 0.04);
+    /* ── Header injected at top of card (icon, title, sub, tabs) ── */
+    body.shopys-auth-mode .shopys-auth-head {
+        margin-bottom: 4px;
     }
-    .shopys-auth-card-icon {
+    body.shopys-auth-mode .shopys-auth-card-icon {
         width: 56px;
         height: 56px;
         margin: 0 auto 14px;
@@ -124,8 +122,9 @@ function shopys_customer_register_focus() {
         align-items: center;
         justify-content: center;
         color: #fff;
+        transition: transform 0.25s ease;
     }
-    .shopys-auth-card-title {
+    body.shopys-auth-mode .shopys-auth-card-title {
         text-align: center;
         font-size: 26px;
         font-weight: 800;
@@ -133,7 +132,7 @@ function shopys_customer_register_focus() {
         margin: 0 0 6px;
         letter-spacing: -0.02em;
     }
-    .shopys-auth-card-sub {
+    body.shopys-auth-mode .shopys-auth-card-sub {
         text-align: center;
         font-size: 14px;
         color: #6b7280;
@@ -141,15 +140,16 @@ function shopys_customer_register_focus() {
     }
 
     /* ── Tabs ─────────────────────────────────────────────── */
-    .shopys-auth-tabs {
+    body.shopys-auth-mode .shopys-auth-tabs {
         display: flex;
         background: #f3f4f6;
         border-radius: 12px;
         padding: 4px;
         margin: 0 0 24px;
         position: relative;
+        gap: 4px;
     }
-    .shopys-auth-tab {
+    body.shopys-auth-mode .shopys-auth-tab {
         flex: 1;
         padding: 10px 12px;
         text-align: center;
@@ -160,54 +160,29 @@ function shopys_customer_register_focus() {
         border: none;
         border-radius: 9px;
         cursor: pointer;
-        transition: color 0.2s;
+        transition: color 0.2s, background 0.2s, box-shadow 0.2s;
         position: relative;
         z-index: 1;
+        font-family: inherit;
     }
-    .shopys-auth-tab:hover {
+    body.shopys-auth-mode .shopys-auth-tab:hover {
         color: #111827;
     }
-    .shopys-auth-tab.is-active {
+    body.shopys-auth-mode .shopys-auth-tab.is-active {
         color: #16a34a;
         background: #ffffff;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     }
 
-    /* ── Premium card styling ─────────────────────────────── */
-    body.shopys-auth-mode #customer_login h2,
-    body.shopys-auth-mode .u-column1 > h2,
-    body.shopys-auth-mode .u-column2 > h2 {
-        font-size: 28px !important;
-        font-weight: 800 !important;
-        color: #111827 !important;
-        margin: 0 0 8px !important;
-        text-align: center !important;
-        letter-spacing: -0.02em;
-    }
-    body.shopys-auth-mode .u-column1::before,
-    body.shopys-auth-mode .u-column2::before {
-        content: '';
-        display: block;
-        width: 56px;
-        height: 56px;
-        margin: 0 auto 14px;
-        background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-        border-radius: 16px;
-        box-shadow: 0 10px 24px rgba(34, 197, 94, 0.32);
-        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'/><circle cx='12' cy='7' r='4'/></svg>"), linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-        background-repeat: no-repeat;
-        background-position: center;
-    }
-    /* Different icon for the register column (user-plus) */
-    body.shopys-auth-mode .u-column2::before,
-    body.shopys-auth-mode .col-2::before {
-        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2'/><circle cx='8.5' cy='7' r='4'/><line x1='20' y1='8' x2='20' y2='14'/><line x1='23' y1='11' x2='17' y2='11'/></svg>"), linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-    }
-    body.shopys-auth-mode .shopys-auth-subtitle {
-        text-align: center;
-        color: #6b7280;
-        font-size: 14px;
-        margin: 0 0 24px;
+    /* ── Wrap #customer_login as the premium card ─────────── */
+    body.shopys-auth-mode #customer_login,
+    body.shopys-auth-mode .u-columns#customer_login,
+    body.shopys-auth-mode .u-columns.col2-set#customer_login {
+        background: #ffffff !important;
+        border-radius: 18px !important;
+        padding: 36px 32px 28px !important;
+        box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08), 0 4px 12px rgba(15, 23, 42, 0.04) !important;
+        border: 1px solid rgba(0, 0, 0, 0.04) !important;
     }
 
     body.shopys-auth-mode .woocommerce-form-login,
@@ -390,132 +365,107 @@ function shopys_customer_register_focus() {
         text-decoration: underline;
     }
 
-    /* ── Switch link below the form ───────────────────────── */
-    .shopys-auth-switch {
-        margin: 22px auto 0 !important;
-        max-width: 460px;
-        text-align: center;
-        font-size: 14px;
-        color: #6b7280;
-    }
-    .shopys-auth-switch a {
-        color: #16a34a;
-        font-weight: 700;
-        text-decoration: none;
-        margin-left: 4px;
-    }
-    .shopys-auth-switch a:hover {
-        text-decoration: underline;
-    }
-
-    /* ── Pulse animation on arrival ───────────────────────── */
-    .shopys-cust-pulse {
-        animation: shopys-cust-pulse 1.8s ease-out 1;
-    }
-    @keyframes shopys-cust-pulse {
-        0%   { box-shadow: 0 20px 60px rgba(15,23,42,0.08), 0 4px 12px rgba(15,23,42,0.04), 0 0 0 0 rgba(34, 197, 94, 0.55); }
-        70%  { box-shadow: 0 20px 60px rgba(15,23,42,0.08), 0 4px 12px rgba(15,23,42,0.04), 0 0 0 16px rgba(34, 197, 94, 0); }
-        100% { box-shadow: 0 20px 60px rgba(15,23,42,0.08), 0 4px 12px rgba(15,23,42,0.04), 0 0 0 0 rgba(34, 197, 94, 0); }
-    }
-
     /* Mobile */
     @media (max-width: 640px) {
         body.shopys-auth-mode .woocommerce,
         body.shopys-auth-mode .woocommerce-account .woocommerce {
             padding: 30px 14px 60px;
         }
-        body.shopys-auth-mode .woocommerce-form-login,
-        body.shopys-auth-mode .woocommerce-form-register,
-        body.shopys-auth-mode form.login,
-        body.shopys-auth-mode form.register {
-            padding: 24px 20px 20px !important;
+        body.shopys-auth-mode #customer_login {
+            padding: 28px 20px 22px !important;
         }
-        body.shopys-auth-mode #customer_login h2 {
-            font-size: 24px !important;
+        body.shopys-auth-mode .shopys-auth-card-title {
+            font-size: 22px;
         }
     }
     </style>
     <script>
     (function(){
-        var action = <?php echo wp_json_encode( $action ); ?>;
-        var bodyClass;
-        if (action === 'register')      bodyClass = 'shopys-auth-mode shopys-auth-register';
-        else if (action === 'login')    bodyClass = 'shopys-auth-mode shopys-auth-login';
-        else                            bodyClass = 'shopys-auth-mode shopys-auth-both';
+        var initialTab = <?php echo wp_json_encode( $action ); ?>; // 'login' or 'register'
 
-        function tag(){
+        // Tag <body> immediately so CSS can hide the inactive form before paint
+        function tagBody(tab){
             if (!document.body) return;
-            bodyClass.split(' ').forEach(function(c){ document.body.classList.add(c); });
+            document.body.classList.add('shopys-auth-mode');
+            document.body.classList.remove('shopys-auth-login', 'shopys-auth-register');
+            document.body.classList.add(tab === 'register' ? 'shopys-auth-register' : 'shopys-auth-login');
         }
-        if (document.body) { tag(); } else { document.addEventListener('DOMContentLoaded', tag); }
+        if (document.body) { tagBody(initialTab); }
+        else { document.addEventListener('DOMContentLoaded', function(){ tagBody(initialTab); }); }
 
         var TXT = {
-            login_h:  '<?php echo esc_js( __( 'Welcome Back', 'shopys' ) ); ?>',
-            login_s:  '<?php echo esc_js( __( 'Log in to continue shopping', 'shopys' ) ); ?>',
-            reg_h:    '<?php echo esc_js( __( 'Create Account', 'shopys' ) ); ?>',
-            reg_s:    '<?php echo esc_js( __( 'Join us — start shopping today', 'shopys' ) ); ?>',
-            switch_to_login_t: '<?php echo esc_js( __( 'Already have an account?', 'shopys' ) ); ?>',
-            switch_to_login_l: '<?php echo esc_js( __( 'Login here', 'shopys' ) ); ?>',
-            switch_to_reg_t:   '<?php echo esc_js( __( "Don't have an account?", 'shopys' ) ); ?>',
-            switch_to_reg_l:   '<?php echo esc_js( __( 'Create one', 'shopys' ) ); ?>',
-            login_url: '<?php echo esc_url( add_query_arg( 'action', 'login', wc_get_page_permalink( 'myaccount' ) ) ); ?>',
-            reg_url:   '<?php echo esc_url( add_query_arg( 'action', 'register', wc_get_page_permalink( 'myaccount' ) ) ); ?>'
+            login_h: '<?php echo esc_js( __( 'Welcome Back', 'shopys' ) ); ?>',
+            login_s: '<?php echo esc_js( __( 'Log in to continue shopping', 'shopys' ) ); ?>',
+            reg_h:   '<?php echo esc_js( __( 'Create Account', 'shopys' ) ); ?>',
+            reg_s:   '<?php echo esc_js( __( 'Join us — start shopping today', 'shopys' ) ); ?>',
+            tab_login: '<?php echo esc_js( __( 'Login', 'shopys' ) ); ?>',
+            tab_reg:   '<?php echo esc_js( __( 'Register', 'shopys' ) ); ?>'
         };
 
-        function decorate(columnEl, target, kind) {
-            if (!target) return;
-            var heading = (columnEl || target.parentNode).querySelector('h2');
-            if (heading) {
-                heading.textContent = (kind === 'register') ? TXT.reg_h : TXT.login_h;
-                if (!heading.parentNode.querySelector('.shopys-auth-subtitle')) {
-                    var s = document.createElement('p');
-                    s.className = 'shopys-auth-subtitle';
-                    s.textContent = (kind === 'register') ? TXT.reg_s : TXT.login_s;
-                    heading.parentNode.insertBefore(s, heading.nextSibling);
-                }
-            }
-            // Switch link only when one form is shown
-            if (action === 'login' || action === 'register') {
-                var anchor = columnEl || target.parentNode;
-                if (!anchor.querySelector('.shopys-auth-switch')) {
-                    var url, t, l;
-                    if (kind === 'register') { url = TXT.login_url; t = TXT.switch_to_login_t; l = TXT.switch_to_login_l; }
-                    else                     { url = TXT.reg_url;   t = TXT.switch_to_reg_t;   l = TXT.switch_to_reg_l; }
-                    var p = document.createElement('p');
-                    p.className = 'shopys-auth-switch';
-                    p.innerHTML = t + '<a href="' + url + '">' + l + '</a>';
-                    anchor.appendChild(p);
-                }
-            }
-        }
+        var ICON_USER = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+        var ICON_USER_PLUS = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>';
 
         document.addEventListener('DOMContentLoaded', function(){
-            var loginCol = document.querySelector('#customer_login .u-column1, #customer_login .col-1');
-            var regCol   = document.querySelector('#customer_login .u-column2, #customer_login .col-2');
-            var loginForm = document.querySelector('.woocommerce-form-login, form.login');
-            var regForm   = document.querySelector('.woocommerce-form-register, form.register');
+            var card = document.getElementById('customer_login');
+            if (!card) return;
 
-            if (action === 'register') {
-                decorate(regCol, regForm, 'register');
-            } else if (action === 'login') {
-                decorate(loginCol, loginForm, 'login');
-            } else {
-                // both
-                decorate(loginCol, loginForm, 'login');
-                decorate(regCol, regForm, 'register');
+            // Build the header (icon + title + subtitle + tabs) and prepend it
+            if (!card.querySelector('.shopys-auth-card-icon')) {
+                var head = document.createElement('div');
+                head.className = 'shopys-auth-head';
+                head.innerHTML =
+                    '<div class="shopys-auth-card-icon" data-icon-user-plus="0">' + ICON_USER + '</div>' +
+                    '<h1 class="shopys-auth-card-title"></h1>' +
+                    '<p class="shopys-auth-card-sub"></p>' +
+                    '<div class="shopys-auth-tabs" role="tablist">' +
+                        '<button type="button" class="shopys-auth-tab" data-tab="login" role="tab">' + TXT.tab_login + '</button>' +
+                        '<button type="button" class="shopys-auth-tab" data-tab="register" role="tab">' + TXT.tab_reg + '</button>' +
+                    '</div>';
+                card.insertBefore(head, card.firstChild);
             }
 
-            // Scroll/focus only for single-form modes
-            if (action === 'login' || action === 'register') {
-                var target = (action === 'register') ? regForm : loginForm;
-                if (!target) return;
-                setTimeout(function(){
-                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    target.classList.add('shopys-cust-pulse');
-                    var firstInput = target.querySelector('input[type="text"], input[type="email"]');
-                    if (firstInput) setTimeout(function(){ firstInput.focus(); }, 500);
-                }, 200);
+            var titleEl = card.querySelector('.shopys-auth-card-title');
+            var subEl   = card.querySelector('.shopys-auth-card-sub');
+            var iconEl  = card.querySelector('.shopys-auth-card-icon');
+            var tabs    = card.querySelectorAll('.shopys-auth-tab');
+
+            function setTab(tab) {
+                tab = (tab === 'register') ? 'register' : 'login';
+                tagBody(tab);
+                // Update title/subtitle/icon
+                titleEl.textContent = (tab === 'register') ? TXT.reg_h : TXT.login_h;
+                subEl.textContent   = (tab === 'register') ? TXT.reg_s : TXT.login_s;
+                iconEl.innerHTML    = (tab === 'register') ? ICON_USER_PLUS : ICON_USER;
+                // Active tab styling
+                tabs.forEach(function(t){
+                    t.classList.toggle('is-active', t.getAttribute('data-tab') === tab);
+                    t.setAttribute('aria-selected', t.getAttribute('data-tab') === tab ? 'true' : 'false');
+                });
+                // Update URL without reload (so refresh keeps the tab, sharable links work)
+                if (window.history && window.history.replaceState) {
+                    var url = new URL(window.location.href);
+                    url.searchParams.set('action', tab);
+                    window.history.replaceState({}, '', url.toString());
+                }
+                // Focus first input in the active form
+                var activeForm = (tab === 'register')
+                    ? card.querySelector('.woocommerce-form-register, form.register')
+                    : card.querySelector('.woocommerce-form-login, form.login');
+                if (activeForm) {
+                    var firstInput = activeForm.querySelector('input[type="text"], input[type="email"]');
+                    if (firstInput) setTimeout(function(){ firstInput.focus(); }, 80);
+                }
             }
+
+            // Wire tab clicks
+            tabs.forEach(function(t){
+                t.addEventListener('click', function(){
+                    setTab(t.getAttribute('data-tab'));
+                });
+            });
+
+            // Initial state
+            setTab(initialTab);
         });
     })();
     </script>
