@@ -56,7 +56,7 @@
     bottom: 100px;
     right: 24px;
     z-index: 2147483646;
-    width: 400px;
+    width: 450px;
     min-width: 300px;
     max-width: calc(100vw - 32px);
     height: 560px;
@@ -166,7 +166,8 @@
 
 .sai-close,
 .sai-fullscreen,
-.sai-new-chat {
+.sai-new-chat,
+.sai-history-btn {
     background: rgba(255, 255, 255, 0.15);
     border: none;
     border-radius: 50%;
@@ -182,8 +183,133 @@
 
 .sai-close:hover,
 .sai-fullscreen:hover,
-.sai-new-chat:hover {
+.sai-new-chat:hover,
+.sai-history-btn:hover {
     background: rgba(255, 255, 255, 0.3);
+}
+
+/* ── Chat History Panel ──────────────────────────────────────────── */
+.sai-history-panel {
+    position: absolute;
+    top: 60px;
+    right: 12px;
+    width: 280px;
+    max-height: 360px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: sai-history-pop 0.15s ease-out;
+}
+
+@keyframes sai-history-pop {
+    from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+.sai-history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid #f1f5f9;
+    background: #fafbfc;
+}
+
+.sai-history-title {
+    font-weight: 600;
+    font-size: 13px;
+    color: #1f2937;
+}
+
+.sai-history-close {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #64748b;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+}
+.sai-history-close:hover { background: #f1f5f9; color: #1f2937; }
+
+.sai-history-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px;
+}
+
+.sai-history-empty {
+    padding: 24px 16px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 13px;
+}
+
+.sai-history-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+    margin-bottom: 2px;
+}
+.sai-history-item:hover { background: #f8fafc; }
+.sai-history-current {
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+}
+.sai-history-current:hover { background: #e0e7ff; }
+
+.sai-history-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.sai-history-item-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: #1f2937;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+
+.sai-history-item-meta {
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.sai-history-item-delete {
+    flex-shrink: 0;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #cbd5e1;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    font-size: 16px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+}
+.sai-history-item-delete:hover {
+    background: #fef2f2;
+    color: #ef4444;
 }
 
 .sai-fullscreen .sai-icon-collapse { display: none; }

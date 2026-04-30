@@ -3200,6 +3200,12 @@ function shopys_ai_chatbot_widget() {
                     </div>
                 </div>
                 <div id="sai-header-actions" style="display:flex;align-items:center;gap:6px;">
+                    <button class="sai-history-btn" id="sai-history-btn" aria-label="Chat history" title="Chat history">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                    </button>
                     <button class="sai-new-chat" id="sai-new-chat" aria-label="New chat" title="New chat">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M12 5v14M5 12h14"/>
@@ -3239,6 +3245,19 @@ function shopys_ai_chatbot_widget() {
 
             <!-- Messages Area -->
             <div class="sai-messages" id="sai-messages"></div>
+
+            <!-- Chat History Panel (last 5 chats) -->
+            <div class="sai-history-panel" id="sai-history-panel" style="display:none;">
+                <div class="sai-history-header">
+                    <span class="sai-history-title">Chat History</span>
+                    <button class="sai-history-close" id="sai-history-close" aria-label="Close history">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="sai-history-list" id="sai-history-list"></div>
+            </div>
 
             <!-- Model Toolbar -->
             <div class="sai-toolbar">

@@ -5,7 +5,7 @@
 (function () {
     'use strict';
 
-    var cfg, toggle, chatWindow, messagesEl, inputEl, sendBtn, headerName, closeBtn, fullscreenBtn, newChatBtn, attachBtn, fileInput, attachPreview;
+    var cfg, toggle, chatWindow, messagesEl, inputEl, sendBtn, headerName, closeBtn, fullscreenBtn, newChatBtn, historyBtn, attachBtn, fileInput, attachPreview;
     var tgLoginGate, tgLoginWidget;
     var history = [];
     var attachments = []; // { name, type, data (base64), previewUrl }
@@ -13,6 +13,215 @@
     var isSending = false;
     var isFullscreen = false;
     var tgSession = null; // { telegram_id, auth_date, session, first_name, photo_url }
+
+    /* ── Chat History Persistence (localStorage, multi-session) ───────── */
+    var HISTORY_KEY_PREFIX        = 'sai_chat_history_';
+    var HISTORY_MAX_SESSIONS      = 5;   // keep last 5 chats per user
+    var HISTORY_MAX_MSGS_PER_SESS = 50;  // cap messages within a session
+
+    var currentSessionId = null; // set lazily on first save / on switch
+
+    function getHistoryKey() {
+        var uid = (tgSession && tgSession.telegram_id) ? tgSession.telegram_id : 'anon';
+        return HISTORY_KEY_PREFIX + uid;
+    }
+
+    function readStore() {
+        try {
+            var raw = localStorage.getItem(getHistoryKey());
+            if (!raw) return null;
+            var data = JSON.parse(raw);
+            if (!data || !Array.isArray(data.sessions)) return null;
+            return data;
+        } catch (e) { return null; }
+    }
+
+    function writeStore(data) {
+        try { localStorage.setItem(getHistoryKey(), JSON.stringify(data)); }
+        catch (e) { /* quota — fail silently */ }
+    }
+
+    function newSessionId() {
+        return String(Date.now()) + '-' + Math.random().toString(36).slice(2, 8);
+    }
+
+    function saveHistory() {
+        if (history.length === 0) return; // never store empty sessions
+        var store = readStore() || { current_id: null, sessions: [] };
+
+        // Find or create current session
+        var session = null;
+        if (currentSessionId) {
+            for (var i = 0; i < store.sessions.length; i++) {
+                if (store.sessions[i].id === currentSessionId) { session = store.sessions[i]; break; }
+            }
+        }
+        if (!session) {
+            session = { id: newSessionId(), title: '', timestamp: Date.now(), messages: [] };
+            currentSessionId = session.id;
+            store.sessions.unshift(session);
+        }
+
+        // Update messages + bump timestamp so this session bubbles to the top
+        session.messages  = history.slice(-HISTORY_MAX_MSGS_PER_SESS);
+        session.timestamp = Date.now();
+
+        // Auto-title from the first user message
+        if (!session.title) {
+            for (var j = 0; j < session.messages.length; j++) {
+                if (session.messages[j].role === 'user' && session.messages[j].text) {
+                    session.title = session.messages[j].text.slice(0, 60);
+                    break;
+                }
+            }
+        }
+
+        store.current_id = currentSessionId;
+        // Sort newest first; keep only the last N sessions.
+        store.sessions.sort(function (a, b) { return (b.timestamp || 0) - (a.timestamp || 0); });
+        if (store.sessions.length > HISTORY_MAX_SESSIONS) {
+            store.sessions = store.sessions.slice(0, HISTORY_MAX_SESSIONS);
+        }
+        writeStore(store);
+    }
+
+    function renderSessionMessages(session) {
+        history = (session && session.messages) ? session.messages.slice() : [];
+        messagesEl.innerHTML = '';
+        for (var i = 0; i < history.length; i++) {
+            var m = history[i];
+            if (m.role === 'user') {
+                appendUser(m.text || '', m.files || []);
+            } else if (m.role === 'assistant') {
+                appendBot(m.html || formatMessage(m.text || ''), m.products || []);
+            }
+        }
+    }
+
+    function loadHistory() {
+        var store = readStore();
+        if (!store || !store.sessions.length) return false;
+
+        var session = null;
+        if (store.current_id) {
+            for (var i = 0; i < store.sessions.length; i++) {
+                if (store.sessions[i].id === store.current_id) { session = store.sessions[i]; break; }
+            }
+        }
+        if (!session) session = store.sessions[0];
+        if (!session || !session.messages || !session.messages.length) return false;
+
+        currentSessionId = session.id;
+        renderSessionMessages(session);
+        return true;
+    }
+
+    function listSessions() {
+        var store = readStore();
+        return store ? (store.sessions || []) : [];
+    }
+
+    function switchToSession(sessionId) {
+        var store = readStore();
+        if (!store) return;
+        var found = null;
+        for (var i = 0; i < store.sessions.length; i++) {
+            if (store.sessions[i].id === sessionId) { found = store.sessions[i]; break; }
+        }
+        if (!found) return;
+        currentSessionId   = sessionId;
+        store.current_id   = sessionId;
+        writeStore(store);
+        renderSessionMessages(found);
+        if (history.length === 0) showWelcome();
+    }
+
+    function deleteSession(sessionId) {
+        var store = readStore();
+        if (!store) return;
+        store.sessions = store.sessions.filter(function (s) { return s.id !== sessionId; });
+        var wasActive = (store.current_id === sessionId);
+        if (wasActive) {
+            store.current_id = store.sessions.length ? store.sessions[0].id : null;
+        }
+        writeStore(store);
+        if (wasActive) {
+            if (store.sessions.length) {
+                switchToSession(store.sessions[0].id);
+            } else {
+                currentSessionId = null;
+                history = [];
+                messagesEl.innerHTML = '';
+                showWelcome();
+            }
+        }
+    }
+
+    function formatRelativeTime(ts) {
+        if (!ts) return '';
+        var diff  = Date.now() - ts;
+        var mins  = Math.floor(diff / 60000);
+        var hours = Math.floor(diff / 3600000);
+        var days  = Math.floor(diff / 86400000);
+        if (mins  < 1)  return 'Just now';
+        if (mins  < 60) return mins  + 'm ago';
+        if (hours < 24) return hours + 'h ago';
+        if (days  < 7)  return days  + 'd ago';
+        return new Date(ts).toLocaleDateString();
+    }
+
+    function renderHistoryPanel() {
+        var listEl = document.getElementById('sai-history-list');
+        if (!listEl) return;
+        var sessions = listSessions();
+        if (!sessions.length) {
+            listEl.innerHTML = '<div class="sai-history-empty">No previous chats yet.</div>';
+            return;
+        }
+        var html = '';
+        for (var i = 0; i < sessions.length; i++) {
+            var s        = sessions[i];
+            var isActive = s.id === currentSessionId;
+            var title    = s.title || 'New chat';
+            var msgCount = (s.messages || []).length;
+            html += '<div class="sai-history-item' + (isActive ? ' sai-history-current' : '') + '" data-id="' + escAttr(s.id) + '">';
+            html +=   '<div class="sai-history-item-info">';
+            html +=     '<div class="sai-history-item-title">' + escHtml(title) + '</div>';
+            html +=     '<div class="sai-history-item-meta">' + msgCount + ' msg · ' + formatRelativeTime(s.timestamp) + '</div>';
+            html +=   '</div>';
+            html +=   '<button class="sai-history-item-delete" data-id="' + escAttr(s.id) + '" aria-label="Delete chat" title="Delete">&times;</button>';
+            html += '</div>';
+        }
+        listEl.innerHTML = html;
+
+        // Click to switch
+        var items = listEl.querySelectorAll('.sai-history-item');
+        for (var k = 0; k < items.length; k++) {
+            items[k].addEventListener('click', function (e) {
+                if (e.target.classList && e.target.classList.contains('sai-history-item-delete')) return;
+                switchToSession(this.getAttribute('data-id'));
+                toggleHistoryPanel(false);
+            });
+        }
+        // Click to delete
+        var dels = listEl.querySelectorAll('.sai-history-item-delete');
+        for (var d = 0; d < dels.length; d++) {
+            dels[d].addEventListener('click', function (e) {
+                e.stopPropagation();
+                if (!confirm('Delete this chat?')) return;
+                deleteSession(this.getAttribute('data-id'));
+                renderHistoryPanel();
+            });
+        }
+    }
+
+    function toggleHistoryPanel(forceState) {
+        var panel = document.getElementById('sai-history-panel');
+        if (!panel) return;
+        var shouldShow = (typeof forceState === 'boolean') ? forceState : (panel.style.display === 'none' || !panel.style.display);
+        panel.style.display = shouldShow ? '' : 'none';
+        if (shouldShow) renderHistoryPanel();
+    }
 
     document.addEventListener('DOMContentLoaded', init);
 
@@ -29,6 +238,7 @@
         closeBtn      = document.getElementById('sai-close');
         fullscreenBtn = document.getElementById('sai-fullscreen');
         newChatBtn    = document.getElementById('sai-new-chat');
+        historyBtn    = document.getElementById('sai-history-btn');
         attachBtn     = document.getElementById('sai-attach-btn');
         fileInput     = document.getElementById('sai-file-input');
         attachPreview = document.getElementById('sai-attach-preview');
@@ -54,6 +264,9 @@
         closeBtn.addEventListener('click', toggleChat);
         fullscreenBtn.addEventListener('click', toggleFullscreen);
         newChatBtn.addEventListener('click', newChat);
+        if (historyBtn) historyBtn.addEventListener('click', function () { toggleHistoryPanel(); });
+        var historyCloseBtn = document.getElementById('sai-history-close');
+        if (historyCloseBtn) historyCloseBtn.addEventListener('click', function () { toggleHistoryPanel(false); });
         sendBtn.addEventListener('click', sendMessage);
         attachBtn.addEventListener('click', function () { fileInput.click(); });
         fileInput.addEventListener('change', handleFileSelect);
@@ -164,9 +377,14 @@
     }
 
     function newChat() {
+        // Start a fresh session — old chats stay accessible via the History panel.
         history = [];
         messagesEl.innerHTML = '';
         clearAttachments();
+        currentSessionId = null;
+        var store = readStore();
+        if (store) { store.current_id = null; writeStore(store); }
+        toggleHistoryPanel(false);
         showWelcome();
         inputEl.focus();
     }
@@ -224,6 +442,9 @@
 
         // Show user badge in header
         renderTgBadge();
+
+        // Restore previous chat from localStorage so users resume where they left off.
+        loadHistory();
 
         // Fetch and show daily limit status
         fetchUserStatus();
@@ -475,7 +696,9 @@
             if (cfg.require_tg_login === '1' && !tgSession) {
                 // Gate will be shown by initTelegramGate
             } else {
-                showWelcome();
+                // Try to restore previous chat first; only show welcome if there's nothing to restore.
+                var restored = loadHistory();
+                if (!restored) showWelcome();
             }
         }
 
@@ -506,8 +729,12 @@
         inputEl.value = '';
         inputEl.style.height = 'auto';
 
-        // Add to history
-        history.push({ role: 'user', text: text || '(attached file)' });
+        // Add to history (store file metadata only — base64 data is too large for localStorage).
+        var fileMeta = attachments.map(function (f) {
+            return { name: f.name, type: f.type };
+        });
+        history.push({ role: 'user', text: text || '(attached file)', files: fileMeta });
+        saveHistory();
 
         // Grab current attachments and clear
         var filesToSend = attachments.slice();
@@ -561,10 +788,13 @@
                         var msg = resp.data.message || 'Sorry, no response.';
                         var products = resp.data.products || [];
 
-                        // Add AI response to history (text only)
-                        history.push({ role: 'assistant', text: msg });
+                        // Add AI response to history (with pre-rendered HTML + product cards
+                        // so we can re-render exactly on next page load).
+                        var formattedHtml = formatMessage(msg);
+                        history.push({ role: 'assistant', text: msg, html: formattedHtml, products: products });
+                        saveHistory();
 
-                        appendBot(formatMessage(msg), products);
+                        appendBot(formattedHtml, products);
 
                         // Show remaining messages count
                         if (resp.data && typeof resp.data.remaining !== 'undefined' && resp.data.remaining >= 0) {
@@ -748,7 +978,9 @@
         if (files && files.length) {
             inner += '<div class="sai-user-attachments">';
             for (var i = 0; i < files.length; i++) {
-                if (/^image\//.test(files[i].type)) {
+                // Only render <img> when we still have an in-memory previewUrl (fresh upload).
+                // Restored history won't have the blob — fall back to a file chip.
+                if (/^image\//.test(files[i].type) && files[i].previewUrl) {
                     inner += '<img class="sai-user-attach-img" src="' + files[i].previewUrl + '" alt="' + escAttr(files[i].name) + '" />';
                 } else {
                     inner += '<div class="sai-user-attach-file">&#128196; ' + escHtml(files[i].name) + '</div>';
