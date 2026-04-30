@@ -691,6 +691,9 @@ add_action( 'customize_register', function( $wp_customize ) {
 // Telegram Login — defines bot constants needed by AI Chatbot
 require_once get_stylesheet_directory() . '/inc/telegram-login.php';
 
+// Customer Shop Login / Register — floating button for WooCommerce customers
+require_once get_stylesheet_directory() . '/inc/customer-login.php';
+
 // AI Chatbot — always loads so the Settings page is always available
 require_once get_stylesheet_directory() . '/inc/ai-chatbot.php';
 

@@ -377,7 +377,7 @@ function shopys_render_tg_login_button() {
                 <svg class="shopys-tg-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
             </button>
             <div class="shopys-tg-login-dropdown" id="shopys-tg-login-dropdown">
-                <div class="shopys-tg-login-dd-header">Sign in with Telegram</div>
+                <div class="shopys-tg-login-dd-header">Sign in with Telegram to chat with chatbot</div>
                 <div class="shopys-tg-widget-wrap">
                     <script async src="https://telegram.org/js/telegram-widget.js?22"
                         data-telegram-login="<?php echo esc_attr( $bot_username ); ?>"

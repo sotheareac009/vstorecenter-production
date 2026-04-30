@@ -1,0 +1,265 @@
+/* ============================================================
+   Customer Shop Login — Header Floating Button & Dropdown
+   ============================================================ */
+
+.shopys-cust-wrap {
+    position: fixed;
+    top: 12px;
+    right: 130px; /* sits LEFT of the Telegram login pill (right:12px) */
+    z-index: 999998;
+    display: inline-flex;
+    align-items: center;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* ── Base button ───────────────────────────────────────────── */
+.shopys-cust-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    text-decoration: none;
+    border: none;
+    border-radius: 50px;
+    padding: 7px 14px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    line-height: 1;
+}
+
+.shopys-cust-btn .shopys-cust-chev {
+    opacity: 0.8;
+    transition: transform 0.25s ease;
+}
+
+.shopys-cust-btn[aria-expanded="true"] .shopys-cust-chev {
+    transform: rotate(180deg);
+}
+
+/* ── Logged-out: Login / Register ──────────────────────────── */
+.shopys-cust-btn-login {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    box-shadow: 0 2px 10px rgba(34, 197, 94, 0.45);
+}
+
+.shopys-cust-btn-login:hover {
+    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+    box-shadow: 0 4px 16px rgba(34, 197, 94, 0.55);
+    transform: translateY(-1px);
+}
+
+.shopys-cust-btn-login:active {
+    transform: translateY(0);
+}
+
+/* ── Logged-in: User pill ──────────────────────────────────── */
+.shopys-cust-btn-user {
+    background: #ffffff;
+    color: #1f2937;
+    padding: 4px 12px 4px 4px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.10);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.shopys-cust-btn-user:hover {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
+    transform: translateY(-1px);
+}
+
+.shopys-cust-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #f3f4f6;
+}
+
+.shopys-cust-name {
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── Dropdown ──────────────────────────────────────────────── */
+.shopys-cust-dd {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 240px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.08);
+    padding: 8px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px);
+    transition: opacity 0.18s ease, transform 0.18s ease, visibility 0s linear 0.18s;
+    overflow: hidden;
+}
+
+.shopys-cust-dd--open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    transition: opacity 0.18s ease, transform 0.18s ease, visibility 0s;
+}
+
+.shopys-cust-dd-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 8px 10px 6px;
+}
+
+.shopys-cust-dd-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    margin-bottom: 6px;
+}
+
+.shopys-cust-dd-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #f3f4f6;
+}
+
+.shopys-cust-dd-meta {
+    flex: 1;
+    min-width: 0;
+}
+
+.shopys-cust-dd-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #111827;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.shopys-cust-dd-email {
+    font-size: 12px;
+    color: #6b7280;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Dropdown item */
+.shopys-cust-dd-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    color: #1f2937;
+    font-size: 14px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.shopys-cust-dd-item:hover {
+    background: #f9fafb;
+    color: #16a34a;
+}
+
+.shopys-cust-dd-item svg {
+    flex: none;
+    color: #6b7280;
+    transition: color 0.15s;
+}
+
+.shopys-cust-dd-item:hover svg {
+    color: #16a34a;
+}
+
+.shopys-cust-dd-item .shopys-cust-dd-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+}
+
+.shopys-cust-dd-item .shopys-cust-dd-text strong {
+    font-weight: 600;
+    color: #111827;
+}
+
+.shopys-cust-dd-item:hover .shopys-cust-dd-text strong {
+    color: #16a34a;
+}
+
+.shopys-cust-dd-item .shopys-cust-dd-text small {
+    font-size: 11px;
+    color: #6b7280;
+}
+
+.shopys-cust-dd-register {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.08), rgba(34, 197, 94, 0.04));
+    margin-top: 4px;
+}
+
+.shopys-cust-dd-register:hover {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.16), rgba(34, 197, 94, 0.08));
+}
+
+.shopys-cust-dd-sep {
+    height: 1px;
+    background: #f1f5f9;
+    margin: 6px 4px;
+}
+
+.shopys-cust-dd-logout {
+    color: #b91c1c;
+}
+
+.shopys-cust-dd-logout:hover {
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+.shopys-cust-dd-logout svg,
+.shopys-cust-dd-logout:hover svg {
+    color: #b91c1c;
+}
+
+/* ── Mobile tweaks ─────────────────────────────────────────── */
+@media (max-width: 640px) {
+    .shopys-cust-wrap {
+        right: 12px;
+        top: 56px; /* drop BELOW telegram pill on mobile to avoid crowding */
+    }
+
+    .shopys-cust-btn-login .shopys-cust-btn-text {
+        display: none; /* icon-only on small screens */
+    }
+
+    .shopys-cust-btn-login {
+        padding: 7px 10px;
+    }
+
+    .shopys-cust-name {
+        max-width: 80px;
+    }
+
+    .shopys-cust-dd {
+        min-width: 220px;
+    }
+}
+
+@media (max-width: 380px) {
+    .shopys-cust-name {
+        display: none;
+    }
+}
