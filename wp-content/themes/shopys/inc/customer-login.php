@@ -22,6 +22,30 @@ function shopys_customer_login_assets() {
     );
 }
 
+// ── 1b. Capture WooCommerce notices BEFORE the login form prints them, so we
+//        can render them as a toast in the footer instead of an inline list.
+//        Runs at priority 5 — before woocommerce_output_all_notices (priority 10).
+add_action( 'woocommerce_before_customer_login_form', 'shopys_capture_auth_notices', 5 );
+function shopys_capture_auth_notices() {
+    if ( is_user_logged_in() || ! function_exists( 'wc_get_notices' ) ) return;
+    $errors  = wc_get_notices( 'error' );
+    $success = wc_get_notices( 'success' );
+    $info    = wc_get_notices( 'notice' );
+    if ( empty( $errors ) && empty( $success ) && empty( $info ) ) return;
+    $GLOBALS['shopys_auth_notices'] = compact( 'errors', 'success', 'info' );
+    wc_clear_notices();
+}
+
+// ── 1c. On successful registration, append ?registered=1 so the success
+//        dialog can fire on the dashboard after WooCommerce redirects.
+add_filter( 'woocommerce_registration_redirect', 'shopys_register_success_redirect' );
+function shopys_register_success_redirect( $url ) {
+    if ( ! $url ) {
+        $url = wc_get_page_permalink( 'myaccount' );
+    }
+    return add_query_arg( 'registered', '1', $url );
+}
+
 // ── 2a. On my-account page, apply premium styling with tabbed Login/Register UI
 //        Default tab = login. ?action=register opens register tab on first paint.
 add_action( 'wp_footer', 'shopys_customer_register_focus', 70 );
@@ -31,6 +55,18 @@ function shopys_customer_register_focus() {
 
     $raw = isset( $_GET['action'] ) ? sanitize_key( $_GET['action'] ) : '';
     $action = ( $raw === 'register' ) ? 'register' : 'login';
+
+    // Pull captured notices (set by shopys_capture_auth_notices) for toast rendering.
+    $captured = isset( $GLOBALS['shopys_auth_notices'] ) ? $GLOBALS['shopys_auth_notices'] : array();
+    $toast_payload = array();
+    foreach ( array( 'errors' => 'error', 'info' => 'info', 'success' => 'success' ) as $key => $type ) {
+        if ( empty( $captured[ $key ] ) ) continue;
+        foreach ( $captured[ $key ] as $note ) {
+            $msg = is_array( $note ) && isset( $note['notice'] ) ? $note['notice'] : (string) $note;
+            $msg = wp_strip_all_tags( $msg );
+            if ( $msg !== '' ) $toast_payload[] = array( 'type' => $type, 'msg' => $msg );
+        }
+    }
     ?>
     <style>
     /* ── Premium auth-page background ─────────────────────── */
@@ -378,6 +414,89 @@ function shopys_customer_register_focus() {
             font-size: 22px;
         }
     }
+
+    /* ── Toast (error / info / success on auth pages) ─────── */
+    .shopys-toast-stack {
+        position: fixed;
+        top: 24px;
+        right: 24px;
+        z-index: 100000;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-width: calc(100vw - 48px);
+        pointer-events: none;
+    }
+    .shopys-toast {
+        pointer-events: auto;
+        min-width: 280px;
+        max-width: 380px;
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 14px 36px rgba(15, 23, 42, 0.14), 0 4px 10px rgba(15, 23, 42, 0.06);
+        border: 1px solid rgba(15, 23, 42, 0.06);
+        padding: 14px 14px 14px 14px;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        font-size: 14px;
+        line-height: 1.45;
+        color: #111827;
+        transform: translateX(120%);
+        opacity: 0;
+        transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease;
+    }
+    .shopys-toast.is-visible {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    .shopys-toast.is-leaving {
+        transform: translateX(120%);
+        opacity: 0;
+    }
+    .shopys-toast-icon {
+        flex-shrink: 0;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+    }
+    .shopys-toast--error .shopys-toast-icon { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+    .shopys-toast--success .shopys-toast-icon { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); }
+    .shopys-toast--info .shopys-toast-icon { background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); }
+    .shopys-toast--error { border-left: 4px solid #dc2626; }
+    .shopys-toast--success { border-left: 4px solid #16a34a; }
+    .shopys-toast--info { border-left: 4px solid #4b5563; }
+    .shopys-toast-body { flex: 1; padding-top: 4px; }
+    .shopys-toast-title {
+        font-weight: 700;
+        font-size: 14px;
+        margin: 0 0 2px;
+        color: #111827;
+    }
+    .shopys-toast-msg {
+        margin: 0;
+        font-size: 13px;
+        color: #374151;
+        word-wrap: break-word;
+    }
+    .shopys-toast-close {
+        flex-shrink: 0;
+        background: transparent;
+        border: 0;
+        cursor: pointer;
+        color: #9ca3af;
+        padding: 4px;
+        margin: -4px -4px 0 0;
+        border-radius: 6px;
+        line-height: 0;
+        transition: color 0.15s, background 0.15s;
+    }
+    .shopys-toast-close:hover { color: #111827; background: #f3f4f6; }
+
     </style>
     <script>
     (function(){
@@ -467,6 +586,199 @@ function shopys_customer_register_focus() {
             // Initial state
             setTab(initialTab);
         });
+
+        // ── Toast: render any captured WC notices (errors from failed register/login) ──
+        var TOASTS = <?php echo wp_json_encode( $toast_payload ); ?>;
+        var ICON_ERR  = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+        var ICON_OK   = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+        var ICON_INFO = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+        var ICON_X    = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+        var TITLES = {
+            error:   '<?php echo esc_js( __( 'Could not create account', 'shopys' ) ); ?>',
+            success: '<?php echo esc_js( __( 'Success', 'shopys' ) ); ?>',
+            info:    '<?php echo esc_js( __( 'Notice', 'shopys' ) ); ?>'
+        };
+
+        function showToast(type, msg) {
+            var stack = document.getElementById('shopys-toast-stack');
+            if (!stack) {
+                stack = document.createElement('div');
+                stack.id = 'shopys-toast-stack';
+                stack.className = 'shopys-toast-stack';
+                document.body.appendChild(stack);
+            }
+            var icon = type === 'error' ? ICON_ERR : (type === 'success' ? ICON_OK : ICON_INFO);
+            var title = TITLES[type] || TITLES.info;
+            var t = document.createElement('div');
+            t.className = 'shopys-toast shopys-toast--' + type;
+            t.setAttribute('role', type === 'error' ? 'alert' : 'status');
+            t.innerHTML =
+                '<div class="shopys-toast-icon">' + icon + '</div>' +
+                '<div class="shopys-toast-body">' +
+                    '<p class="shopys-toast-title"></p>' +
+                    '<p class="shopys-toast-msg"></p>' +
+                '</div>' +
+                '<button type="button" class="shopys-toast-close" aria-label="Close">' + ICON_X + '</button>';
+            t.querySelector('.shopys-toast-title').textContent = title;
+            t.querySelector('.shopys-toast-msg').textContent = msg;
+            stack.appendChild(t);
+            requestAnimationFrame(function(){ t.classList.add('is-visible'); });
+            var dismiss = function(){
+                if (t.classList.contains('is-leaving')) return;
+                t.classList.add('is-leaving');
+                t.classList.remove('is-visible');
+                setTimeout(function(){ if (t.parentNode) t.parentNode.removeChild(t); }, 350);
+            };
+            t.querySelector('.shopys-toast-close').addEventListener('click', dismiss);
+            setTimeout(dismiss, type === 'error' ? 7000 : 5000);
+        }
+
+        if (TOASTS && TOASTS.length) {
+            // Auto-switch to register tab if the error came from the register form
+            var hasRegError = TOASTS.some(function(n){
+                return n.type === 'error' && /email|user|register|password|account/i.test(n.msg);
+            });
+            document.addEventListener('DOMContentLoaded', function(){
+                if (hasRegError && initialTab !== 'register') {
+                    var regTab = document.querySelector('.shopys-auth-tab[data-tab="register"]');
+                    if (regTab) regTab.click();
+                }
+                TOASTS.forEach(function(n){ showToast(n.type, n.msg); });
+            });
+        }
+    })();
+    </script>
+    <?php
+}
+
+// ── 2b. Success dialog: shown on the my-account dashboard right after a
+//        registration succeeds. Triggered by ?registered=1 on the URL.
+add_action( 'wp_footer', 'shopys_register_success_dialog', 70 );
+function shopys_register_success_dialog() {
+    if ( ! function_exists( 'is_account_page' ) || ! is_account_page() ) return;
+    if ( ! is_user_logged_in() ) return;
+    if ( ! isset( $_GET['registered'] ) || $_GET['registered'] !== '1' ) return;
+
+    $user  = wp_get_current_user();
+    $first = $user && $user->display_name ? explode( ' ', trim( $user->display_name ) )[0] : '';
+    ?>
+    <style>
+    .shopys-success-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.55);
+        backdrop-filter: blur(4px);
+        z-index: 100001;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        opacity: 0;
+        transition: opacity 0.25s ease;
+    }
+    .shopys-success-overlay.is-visible { opacity: 1; }
+    .shopys-success-dialog {
+        background: #ffffff;
+        border-radius: 20px;
+        max-width: 440px;
+        width: 100%;
+        padding: 36px 32px 28px;
+        box-shadow: 0 30px 80px rgba(15, 23, 42, 0.25);
+        text-align: center;
+        transform: scale(0.92);
+        transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+        font-family: inherit;
+    }
+    .shopys-success-overlay.is-visible .shopys-success-dialog { transform: scale(1); }
+    .shopys-success-icon {
+        width: 72px;
+        height: 72px;
+        margin: 0 auto 18px;
+        border-radius: 22px;
+        background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+        box-shadow: 0 14px 30px rgba(34, 197, 94, 0.36);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        animation: shopys-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes shopys-pop {
+        0% { transform: scale(0.4); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    .shopys-success-title {
+        font-size: 22px;
+        font-weight: 800;
+        color: #111827;
+        margin: 0 0 8px;
+        letter-spacing: -0.02em;
+    }
+    .shopys-success-sub {
+        font-size: 14px;
+        color: #6b7280;
+        margin: 0 0 24px;
+        line-height: 1.55;
+    }
+    .shopys-success-btn {
+        width: 100%;
+        background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+        color: #fff;
+        border: 0;
+        height: 48px;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 15px;
+        cursor: pointer;
+        transition: transform 0.15s, box-shadow 0.2s;
+        box-shadow: 0 8px 20px rgba(34, 197, 94, 0.32);
+        font-family: inherit;
+    }
+    .shopys-success-btn:hover { transform: translateY(-1px); box-shadow: 0 12px 26px rgba(34, 197, 94, 0.42); }
+    .shopys-success-btn:active { transform: translateY(0); }
+    </style>
+    <div class="shopys-success-overlay" id="shopys-success-overlay" role="dialog" aria-modal="true" aria-labelledby="shopys-success-title">
+        <div class="shopys-success-dialog">
+            <div class="shopys-success-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <h2 class="shopys-success-title" id="shopys-success-title">
+                <?php
+                if ( $first ) {
+                    /* translators: %s: customer first name */
+                    printf( esc_html__( 'Welcome, %s!', 'shopys' ), esc_html( $first ) );
+                } else {
+                    esc_html_e( 'Account Created!', 'shopys' );
+                }
+                ?>
+            </h2>
+            <p class="shopys-success-sub">
+                <?php esc_html_e( 'Your account is ready. Start exploring products and place your first order whenever you are ready.', 'shopys' ); ?>
+            </p>
+            <button type="button" class="shopys-success-btn" id="shopys-success-btn">
+                <?php esc_html_e( 'Continue Shopping', 'shopys' ); ?>
+            </button>
+        </div>
+    </div>
+    <script>
+    (function(){
+        var overlay = document.getElementById('shopys-success-overlay');
+        var btn     = document.getElementById('shopys-success-btn');
+        if (!overlay) return;
+        // Strip ?registered=1 from URL so reload doesn't reshow.
+        if (window.history && window.history.replaceState) {
+            var url = new URL(window.location.href);
+            url.searchParams.delete('registered');
+            window.history.replaceState({}, '', url.toString());
+        }
+        requestAnimationFrame(function(){ overlay.classList.add('is-visible'); });
+        function close() {
+            overlay.classList.remove('is-visible');
+            setTimeout(function(){ if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 280);
+        }
+        if (btn) btn.addEventListener('click', close);
+        overlay.addEventListener('click', function(e){ if (e.target === overlay) close(); });
+        document.addEventListener('keydown', function(e){ if (e.key === 'Escape') close(); });
     })();
     </script>
     <?php
