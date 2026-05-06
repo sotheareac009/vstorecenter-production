@@ -696,6 +696,7 @@ require_once get_stylesheet_directory() . '/inc/customer-login.php';
 
 // My Account premium enhancements (sidebar icons, dashboard stat cards)
 require_once get_stylesheet_directory() . '/inc/myaccount-enhance.php';
+require_once get_stylesheet_directory() . '/inc/profile-picture.php';
 
 // AI Chatbot — always loads so the Settings page is always available
 require_once get_stylesheet_directory() . '/inc/ai-chatbot.php';

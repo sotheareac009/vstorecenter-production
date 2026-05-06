@@ -808,8 +808,6 @@ function shopys_render_customer_login_button() {
         $name        = $user->display_name ?: $user->user_login;
         $first       = explode( ' ', trim( $name ) )[0];
         $avatar_url  = get_avatar_url( $user->ID, array( 'size' => 64 ) );
-        $tg_photo    = get_user_meta( $user->ID, 'telegram_photo', true );
-        if ( $tg_photo ) $avatar_url = $tg_photo;
 
         $orders_url   = wc_get_account_endpoint_url( 'orders' );
         $address_url  = wc_get_account_endpoint_url( 'edit-address' );

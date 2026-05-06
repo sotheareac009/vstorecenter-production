@@ -54,9 +54,6 @@ function shopys_myaccount_dashboard_premium() {
     $user      = wp_get_current_user();
     $name      = $user->display_name ?: $user->user_login;
     $first     = explode( ' ', trim( $name ) )[0];
-    $avatar    = get_avatar_url( $user_id, array( 'size' => 96 ) );
-    $tg_photo  = get_user_meta( $user_id, 'telegram_photo', true );
-    if ( $tg_photo ) $avatar = $tg_photo;
 
     // Stats
     $orders_count   = wc_get_customer_order_count( $user_id );
@@ -95,7 +92,14 @@ function shopys_myaccount_dashboard_premium() {
 
     <div class="sai-dash">
         <div class="sai-dash-welcome">
-            <img class="sai-dash-avatar" src="<?php echo esc_url( $avatar ); ?>" alt="<?php echo esc_attr( $name ); ?>" />
+            <?php
+            if ( function_exists( 'shopys_render_avatar_uploader' ) ) {
+                shopys_render_avatar_uploader( $user_id, $name, 96 );
+            } else {
+                $fallback = get_avatar_url( $user_id, array( 'size' => 96 ) );
+                printf( '<img class="sai-dash-avatar" src="%s" alt="%s" />', esc_url( $fallback ), esc_attr( $name ) );
+            }
+            ?>
             <div class="sai-dash-welcome-text">
                 <h2 class="sai-dash-hello"><?php echo esc_html( sprintf( __( 'Hello, %s 👋', 'shopys' ), $first ) ); ?></h2>
                 <p class="sai-dash-sub"><?php esc_html_e( 'Here\'s a snapshot of your account activity.', 'shopys' ); ?></p>
