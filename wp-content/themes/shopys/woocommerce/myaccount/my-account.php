@@ -9,6 +9,23 @@ defined( 'ABSPATH' ) || exit;
 
 $current_user = wp_get_current_user();
 $greeting     = $current_user && $current_user->exists() ? $current_user->display_name : __( 'Guest', 'shopys' );
+
+// Resolve the user's primary role into a translated display name.
+$role_display = '';
+if ( $current_user && $current_user->exists() ) {
+    $role_keys = (array) $current_user->roles;
+    if ( ! empty( $role_keys ) ) {
+        $primary    = $role_keys[0];
+        $role_names = function_exists( 'wp_roles' ) ? wp_roles()->role_names : array();
+        $role_label = isset( $role_names[ $primary ] )
+            ? translate_user_role( $role_names[ $primary ] )
+            : ucwords( str_replace( '_', ' ', $primary ) );
+        $role_display = $role_label;
+    }
+}
+if ( ! $role_display ) {
+    $role_display = __( 'Member', 'shopys' );
+}
 ?>
 
 <section class="shopys-account-shell">
@@ -29,7 +46,7 @@ $greeting     = $current_user && $current_user->exists() ? $current_user->displa
             </div>
             <div class="shopys-account-hero__badge">
                 <span class="shopys-account-hero__badge-label"><?php esc_html_e( 'Access', 'shopys' ); ?></span>
-                <!-- <strong><?php esc_html_e( 'Premium Portal', 'shopys' ); ?></strong> -->
+                <strong><?php echo esc_html( $role_display ); ?></strong>
             </div>
         </div>
     </div>
