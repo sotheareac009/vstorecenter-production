@@ -1,0 +1,236 @@
+/**
+ * Shopys — Footer (premium, restrained)
+ *
+ * Design principle: less is more. Quiet dark background, clean typographic
+ * hierarchy, single brand-color accent reserved for hover states only.
+ * No glows, no patterns, no "fancy" decoration — those read as cluttered.
+ */
+
+/* ── Foundation ──────────────────────────────────────────────────────── */
+body footer,
+body .elementor-location-footer,
+body .hfe-footer-wrap {
+    position: relative !important;
+    background: #00c44f !important;
+    color: rgba(255, 255, 255, 0.92) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+    isolation: isolate;
+}
+
+/* Single thin top accent — much more refined than a glow bar */
+body footer::before,
+body .elementor-location-footer::before,
+body .hfe-footer-wrap::before {
+    content: "" !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 50% !important;
+    transform: translateX(-50%);
+    width: 80px !important;
+    height: 2px !important;
+    background: rgba(255, 255, 255, 0.7) !important;
+    border-radius: 0 0 2px 2px !important;
+    pointer-events: none !important;
+    z-index: 2 !important;
+}
+
+body footer > *,
+body .elementor-location-footer > *,
+body .hfe-footer-wrap > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* ── Spacing ─────────────────────────────────────────────────────────── */
+body .elementor-location-footer .elementor-section,
+body .elementor-location-footer > .elementor,
+body .hfe-footer-wrap .elementor-section {
+    padding-top: 44px !important;
+    padding-bottom: 20px !important;
+}
+
+/* ── Headings: small uppercase eyebrow style ─────────────────────────── */
+body footer h1, body footer h2, body footer h3,
+body footer h4, body footer h5, body footer h6,
+body .elementor-location-footer h1, body .elementor-location-footer h2,
+body .elementor-location-footer h3, body .elementor-location-footer h4,
+body .elementor-location-footer h5, body .elementor-location-footer h6,
+body .hfe-footer-wrap h1, body .hfe-footer-wrap h2,
+body .hfe-footer-wrap h3, body .hfe-footer-wrap h4,
+body .hfe-footer-wrap h5, body .hfe-footer-wrap h6 {
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+    letter-spacing: 0.14em !important;
+    text-transform: uppercase !important;
+    margin: 0 0 18px !important;
+    padding: 0 !important;
+}
+/* Remove decorative underline from previous version */
+body footer h1::after, body footer h2::after, body footer h3::after,
+body footer h4::after, body footer h5::after, body footer h6::after,
+body .elementor-location-footer h1::after, body .elementor-location-footer h2::after,
+body .elementor-location-footer h3::after, body .elementor-location-footer h4::after,
+body .elementor-location-footer h5::after, body .elementor-location-footer h6::after,
+body .hfe-footer-wrap h1::after, body .hfe-footer-wrap h2::after,
+body .hfe-footer-wrap h3::after, body .hfe-footer-wrap h4::after,
+body .hfe-footer-wrap h5::after, body .hfe-footer-wrap h6::after {
+    display: none !important;
+}
+
+/* ── Body text ───────────────────────────────────────────────────────── */
+body footer p, body footer .elementor-text-editor,
+body .elementor-location-footer p, body .elementor-location-footer .elementor-text-editor,
+body .hfe-footer-wrap p, body .hfe-footer-wrap .elementor-text-editor {
+    color: rgba(255, 255, 255, 0.88) !important;
+    font-size: 14px !important;
+    line-height: 1.7 !important;
+    letter-spacing: 0 !important;
+    margin: 0 0 6px !important;
+}
+body footer strong, body .elementor-location-footer strong, body .hfe-footer-wrap strong {
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+
+/* ── Links ───────────────────────────────────────────────────────────── */
+body footer a, body footer ul li a,
+body .elementor-location-footer a,
+body .elementor-location-footer .menu li a,
+body .elementor-location-footer .elementor-icon-list-text,
+body .hfe-footer-wrap a,
+body .hfe-footer-wrap .menu li a {
+    color: rgba(255, 255, 255, 0.88) !important;
+    font-size: 14px !important;
+    font-weight: 400 !important;
+    text-decoration: none !important;
+    letter-spacing: 0 !important;
+    transition: color 0.18s ease !important;
+    display: inline-block;
+    padding: 3px 0 !important;
+    background: none !important;
+}
+body .elementor-location-footer .elementor-icon-list-item,
+body .elementor-location-footer .menu li,
+body .hfe-footer-wrap .menu li,
+body footer ul li {
+    margin: 0 !important;
+    line-height: 1.4 !important;
+    list-style: none !important;
+}
+
+body footer a:hover,
+body .elementor-location-footer a:hover,
+body .elementor-location-footer .menu li a:hover,
+body .elementor-location-footer .elementor-icon-list-item:hover .elementor-icon-list-text,
+body .hfe-footer-wrap a:hover,
+body .hfe-footer-wrap .menu li a:hover {
+    color: #ffffff !important;
+}
+
+/* No arrows, no transforms — keep it quiet */
+body .elementor-location-footer .menu li a::before,
+body .elementor-location-footer .elementor-icon-list-item .elementor-icon-list-text::before,
+body .hfe-footer-wrap .menu li a::before {
+    display: none !important;
+    content: none !important;
+}
+
+/* ── Address paragraphs (the "Another Branch" block) ─────────────────── */
+body .elementor-location-footer .elementor-widget-text-editor p {
+    margin: 0 0 6px !important;
+    line-height: 1.7 !important;
+}
+body .elementor-location-footer .elementor-widget-text-editor p:empty {
+    display: none !important;
+}
+body .elementor-location-footer .elementor-widget-text-editor br {
+    line-height: 1.8 !important;
+}
+
+/* ── Logo / brand image ──────────────────────────────────────────────── */
+body footer img,
+body .elementor-location-footer .elementor-widget-image img,
+body .hfe-footer-wrap .elementor-widget-image img {
+    transition: opacity 0.2s ease;
+}
+body .elementor-location-footer .elementor-widget-image:hover img,
+body .hfe-footer-wrap .elementor-widget-image:hover img {
+    opacity: 0.85;
+}
+
+/* ── Subtle column dividers (only between Elementor columns in a section) */
+@media (min-width: 1025px) {
+    body .elementor-location-footer .elementor-section .elementor-column:not(:last-child)::after,
+    body .hfe-footer-wrap .elementor-section .elementor-column:not(:last-child)::after {
+        content: "" !important;
+        position: absolute !important;
+        top: 14% !important;
+        bottom: 14% !important;
+        right: 0 !important;
+        width: 1px !important;
+        background: linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.18) 30%, rgba(255, 255, 255, 0.18) 70%, transparent 100%) !important;
+        pointer-events: none !important;
+    }
+    body .elementor-location-footer .elementor-section .elementor-column,
+    body .hfe-footer-wrap .elementor-section .elementor-column {
+        position: relative;
+    }
+}
+
+/* ── Dark-mode toggle ────────────────────────────────────────────────── */
+body .wp-dark-mode-switcher {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border-radius: 999px !important;
+    padding: 4px 6px !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.07) !important;
+    box-shadow: none !important;
+}
+
+/* ── Copyright row, if present ───────────────────────────────────────── */
+body .elementor-location-footer [class*="copyright"],
+body .hfe-footer-wrap [class*="copyright"] {
+    border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+    padding-top: 18px !important;
+    margin-top: 24px !important;
+    color: rgba(255, 255, 255, 0.4) !important;
+    font-size: 12.5px !important;
+    letter-spacing: 0.04em;
+}
+
+/* ── Specific widget overrides ───────────────────────────────────────── */
+body .elementor-element.elementor-element-9a0747a {
+    margin-bottom: 0 !important;
+}
+
+/* Zero out margin-bottom on every widget inside the e85a274 column */
+body .elementor-element.elementor-element-e85a274 .elementor-widget,
+body .elementor-element.elementor-element-e85a274 .elementor-element {
+    margin-bottom: 0 !important;
+}
+
+/* ── Mobile ──────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    body .elementor-location-footer .elementor-section,
+    body .hfe-footer-wrap .elementor-section {
+        padding-top: 32px !important;
+        padding-bottom: 16px !important;
+    }
+    body footer h1, body footer h2, body footer h3,
+    body footer h4, body footer h5, body footer h6,
+    body .elementor-location-footer h1, body .elementor-location-footer h2,
+    body .elementor-location-footer h3, body .elementor-location-footer h4,
+    body .elementor-location-footer h5, body .elementor-location-footer h6,
+    body .hfe-footer-wrap h1, body .hfe-footer-wrap h2,
+    body .hfe-footer-wrap h3, body .hfe-footer-wrap h4,
+    body .hfe-footer-wrap h5, body .hfe-footer-wrap h6 {
+        font-size: 11px !important;
+        margin-bottom: 14px !important;
+    }
+    body footer p, body .elementor-location-footer p, body .hfe-footer-wrap p {
+        font-size: 13.5px !important;
+    }
+}

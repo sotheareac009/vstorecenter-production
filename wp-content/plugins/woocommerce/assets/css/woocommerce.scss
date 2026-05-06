@@ -982,7 +982,8 @@ p.demo_store,
 		tfoot th,
 		tbody th {
 			font-weight: 700;
-			border-top: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+			background-color: #1e85be !important;
+			color: #fff !important;
 		}
 	}
 

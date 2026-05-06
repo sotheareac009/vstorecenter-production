@@ -698,6 +698,47 @@ require_once get_stylesheet_directory() . '/inc/customer-login.php';
 require_once get_stylesheet_directory() . '/inc/myaccount-enhance.php';
 require_once get_stylesheet_directory() . '/inc/profile-picture.php';
 
+// Premium footer polish — layered CSS over the Elementor footer.
+add_action( 'wp_enqueue_scripts', function() {
+    $css = get_stylesheet_directory() . '/css/footer-premium.css';
+    if ( ! file_exists( $css ) ) return;
+    wp_enqueue_style(
+        'shopys-footer-premium',
+        get_stylesheet_directory_uri() . '/css/footer-premium.css',
+        array(),
+        filemtime( $css )
+    );
+}, 60 );
+
+// Premium checkout styling — only loads on the WC checkout / order-received pages.
+add_action( 'wp_enqueue_scripts', function() {
+    if ( ! function_exists( 'is_checkout' ) ) return;
+    if ( ! is_checkout() && ! is_wc_endpoint_url( 'order-received' ) ) return;
+
+    $css = get_stylesheet_directory() . '/css/checkout-premium.css';
+    if ( ! file_exists( $css ) ) return;
+    wp_enqueue_style(
+        'shopys-checkout-premium',
+        get_stylesheet_directory_uri() . '/css/checkout-premium.css',
+        array( 'woocommerce-general' ),
+        filemtime( $css )
+    );
+}, 70 );
+
+// Premium cart styling — only loads on the WC cart page.
+add_action( 'wp_enqueue_scripts', function() {
+    if ( ! function_exists( 'is_cart' ) || ! is_cart() ) return;
+
+    $css = get_stylesheet_directory() . '/css/cart-premium.css';
+    if ( ! file_exists( $css ) ) return;
+    wp_enqueue_style(
+        'shopys-cart-premium',
+        get_stylesheet_directory_uri() . '/css/cart-premium.css',
+        array( 'woocommerce-general' ),
+        filemtime( $css )
+    );
+}, 70 );
+
 // AI Chatbot — always loads so the Settings page is always available
 require_once get_stylesheet_directory() . '/inc/ai-chatbot.php';
 
