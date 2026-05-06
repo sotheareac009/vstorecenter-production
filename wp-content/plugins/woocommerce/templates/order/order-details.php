@@ -118,11 +118,15 @@ if ( $show_downloads ) {
 			<?php
 			foreach ( $order->get_order_item_totals() as $key => $total ) {
 				?>
-					<tr>
-						<th scope="row"><?php echo esc_html( $total['label'] ); ?></th>
-						<td><?php echo wp_kses_post( $total['value'] ); ?></td>
-					</tr>
-					<?php
+				<tr>
+					<th scope="row" style="border-top:0 !important; color:#333; font-weight:600; padding:10px; text-align:left;">
+						<?php echo esc_html( $total['label'] ); ?>
+					</th>
+					<td style="border-top:0 !important; color:#000; padding:10px; text-align:right;">
+						<?php echo wp_kses_post( $total['value'] ); ?>
+					</td>
+				</tr>
+				<?php
 			}
 			?>
 			<?php if ( $order->get_customer_note() ) : ?>

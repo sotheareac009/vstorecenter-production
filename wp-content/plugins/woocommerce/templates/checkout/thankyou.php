@@ -44,7 +44,6 @@ defined( 'ABSPATH' ) || exit;
 			<?php wc_get_template( 'checkout/order-received.php', array( 'order' => $order ) ); ?>
 
 			<ul class="woocommerce-order-overview woocommerce-thankyou-order-details order_details">
-
 				<li class="woocommerce-order-overview__order order">
 					<?php esc_html_e( 'Order number:', 'woocommerce' ); ?>
 					<strong><?php echo $order->get_order_number(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></strong>

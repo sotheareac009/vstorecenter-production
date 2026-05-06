@@ -100,12 +100,6 @@ const getSkeleton = () => {
 				<h1>
 					{ __( 'Order received', 'woo-gutenberg-products-block' ) }
 				</h1>
-				<p className="woocommerce-notice woocommerce-notice--success woocommerce-thankyou-order-confirmation">
-					{ __(
-						'Thank you. Your order has been received.',
-						'woo-gutenberg-products-block'
-					) }
-				</p>
 				<ul className="woocommerce-order-overview woocommerce-thankyou-order-details order_details">
 					<li className="woocommerce-order-overview__order order">
 						{ __( 'Order number', 'woo-gutenberg-products-block' ) }
