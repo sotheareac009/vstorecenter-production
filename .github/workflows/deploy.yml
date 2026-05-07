@@ -41,8 +41,237 @@ jobs:
             **/.git*/**
             **/.DS_Store
 
-      # ✅ Deploy WooCommerce Plugin
-      - name: Deploy WooCommerce Plugin via FTP
+      # ✅ Deploy WooCommerce Plugin (chunked for resume-on-timeout)
+      # Each chunk has its own state file. If a chunk completes, it's
+      # remembered on the next push; only unfinished chunks re-run.
+
+      - name: Deploy WC - assets/client
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./wp-content/plugins/woocommerce/assets/client/
+          server-dir: ${{ steps.vars.outputs.plugin_dir }}assets/client/
+          state-name: .ftp-state-wc-assets-client.json
+          timeout: 60000
+          log-level: standard
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.DS_Store
+
+      - name: Deploy WC - assets/css
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./wp-content/plugins/woocommerce/assets/css/
+          server-dir: ${{ steps.vars.outputs.plugin_dir }}assets/css/
+          state-name: .ftp-state-wc-assets-css.json
+          timeout: 60000
+          log-level: standard
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.DS_Store
+
+      - name: Deploy WC - assets/images
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./wp-content/plugins/woocommerce/assets/images/
+          server-dir: ${{ steps.vars.outputs.plugin_dir }}assets/images/
+          state-name: .ftp-state-wc-assets-images.json
+          timeout: 60000
+          log-level: standard
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.DS_Store
+
+      - name: Deploy WC - assets/js
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./wp-content/plugins/woocommerce/assets/js/
+          server-dir: ${{ steps.vars.outputs.plugin_dir }}assets/js/
+          state-name: .ftp-state-wc-assets-js.json
+          timeout: 60000
+          log-level: standard
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.DS_Store
+
+      - name: Deploy WC - assets/fonts
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./wp-content/plugins/woocommerce/assets/fonts/
+          server-dir: ${{ steps.vars.outputs.plugin_dir }}assets/fonts/
+          state-name: .ftp-state-wc-assets-fonts.json
+          timeout: 60000
+          log-level: standard
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.DS_Store
+
+      - name: Deploy WC - includes
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./wp-content/plugins/woocommerce/includes/
+          server-dir: ${{ steps.vars.outputs.plugin_dir }}includes/
+          state-name: .ftp-state-wc-includes.json
+          timeout: 60000
+          log-level: standard
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.DS_Store
+
+      - name: Deploy WC - src
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./wp-content/plugins/woocommerce/src/
+          server-dir: ${{ steps.vars.outputs.plugin_dir }}src/
+          state-name: .ftp-state-wc-src.json
+          timeout: 60000
+          log-level: standard
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.DS_Store
+
+      - name: Deploy WC - vendor
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./wp-content/plugins/woocommerce/vendor/
+          server-dir: ${{ steps.vars.outputs.plugin_dir }}vendor/
+          state-name: .ftp-state-wc-vendor.json
+          timeout: 60000
+          log-level: standard
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.DS_Store
+
+      - name: Deploy WC - packages
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./wp-content/plugins/woocommerce/packages/
+          server-dir: ${{ steps.vars.outputs.plugin_dir }}packages/
+          state-name: .ftp-state-wc-packages.json
+          timeout: 60000
+          log-level: standard
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.DS_Store
+
+      - name: Deploy WC - i18n
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./wp-content/plugins/woocommerce/i18n/
+          server-dir: ${{ steps.vars.outputs.plugin_dir }}i18n/
+          state-name: .ftp-state-wc-i18n.json
+          timeout: 60000
+          log-level: standard
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.DS_Store
+
+      - name: Deploy WC - templates
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./wp-content/plugins/woocommerce/templates/
+          server-dir: ${{ steps.vars.outputs.plugin_dir }}templates/
+          state-name: .ftp-state-wc-templates.json
+          timeout: 60000
+          log-level: standard
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.DS_Store
+
+      - name: Deploy WC - lib
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./wp-content/plugins/woocommerce/lib/
+          server-dir: ${{ steps.vars.outputs.plugin_dir }}lib/
+          state-name: .ftp-state-wc-lib.json
+          timeout: 60000
+          log-level: standard
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.DS_Store
+
+      - name: Deploy WC - patterns
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./wp-content/plugins/woocommerce/patterns/
+          server-dir: ${{ steps.vars.outputs.plugin_dir }}patterns/
+          state-name: .ftp-state-wc-patterns.json
+          timeout: 60000
+          log-level: standard
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.DS_Store
+
+      - name: Deploy WC - sample-data
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./wp-content/plugins/woocommerce/sample-data/
+          server-dir: ${{ steps.vars.outputs.plugin_dir }}sample-data/
+          state-name: .ftp-state-wc-sample-data.json
+          timeout: 60000
+          log-level: standard
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.DS_Store
+
+      # Root files (woocommerce.php, license.txt, readme.txt, uninstall.php).
+      # Excludes all subdirs we already covered above.
+      - name: Deploy WC - root files
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -50,9 +279,20 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./wp-content/plugins/woocommerce/
           server-dir: ${{ steps.vars.outputs.plugin_dir }}
+          state-name: .ftp-state-wc-root.json
           timeout: 60000
           log-level: standard
           exclude: |
             **/.git*
             **/.git*/**
             **/.DS_Store
+            assets/**
+            i18n/**
+            includes/**
+            lib/**
+            packages/**
+            patterns/**
+            sample-data/**
+            src/**
+            templates/**
+            vendor/**
