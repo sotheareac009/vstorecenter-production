@@ -3238,8 +3238,15 @@ function shopys_ai_chatbot_widget() {
                         </svg>
                     </div>
                     <h3 class="sai-tg-login-title">Login to Chat</h3>
-                    <p class="sai-tg-login-desc">Please log in using the “Login” button in the top-right corner with your Telegram account or Join Channel Telegram to start chatting with our assistant.</p>
+                    <p class="sai-tg-login-desc">Log in with your Telegram account below to start chatting with our assistant.</p>
                     <div class="sai-tg-login-widget" id="sai-tg-login-widget"></div>
+                    <div class="sai-tg-login-divider"><span>or</span></div>
+                    <a class="sai-tg-join-channel" href="https://t.me/VTechVStorePC" target="_blank" rel="noopener">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.954l11.57-4.461c.537-.194 1.006.131.833.942z"/>
+                        </svg>
+                        Join our Telegram Channel
+                    </a>
                 </div>
             </div>
 

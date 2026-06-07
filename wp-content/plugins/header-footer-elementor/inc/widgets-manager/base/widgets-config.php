@@ -7,9 +7,6 @@
 
 namespace HFE\WidgetsManager\Base;
 
-
-use HFE\WidgetsManager\Base\Widgets_Config;
-
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
 }
