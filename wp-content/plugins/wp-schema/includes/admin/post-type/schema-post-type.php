@@ -1,9 +1,9 @@
 <?php
 /**
- * WordPress Schema Custom Post Type 
+ * Schema Custom Post Type 
  *
- * @package     WordPress Schema
- * @subpackage  WordPress Schema Custom Post Type
+ * @package     Schema
+ * @subpackage  Schema Custom Post Type
  * @copyright   Copyright (c) 2016, Hesham Zebida
  * @license     http://opensource.org/licenses/gpl-2.0.php GNU Public License
  * @since       1.3
@@ -13,34 +13,34 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
  
-add_action( 'init', 'WordPress Schema_wp_cpt_init' );
+add_action( 'init', 'schema_wp_cpt_init' );
 /**
- * Register WordPress Schema post type.
+ * Register Schema post type.
  *
  * @link http://codex.wordpress.org/Function_Reference/register_post_type
  * @since 1.3
  */
-function WordPress Schema_wp_cpt_init() {
+function schema_wp_cpt_init() {
 	$labels = array(
-		'name'               => _x( 'WordPress Schema', 'post type general name', 'WordPress Schema-wp' ),
-		'singular_name'      => _x( 'WordPress Schema', 'post type singular name', 'WordPress Schema-wp' ),
-		'menu_name'          => _x( 'WordPress Schema', 'admin menu', 'WordPress Schema-wp' ),
-		'name_admin_bar'     => _x( 'WordPress Schema', 'add new on admin bar', 'WordPress Schema-wp' ),
-		'add_new'            => _x( 'Add New', 'WordPress Schema', 'WordPress Schema-wp' ),
-		'add_new_item'       => __( 'Add New WordPress Schema', 'WordPress Schema-wp' ),
-		'new_item'           => __( 'New WordPress Schema', 'WordPress Schema-wp' ),
-		'edit_item'          => __( 'Edit WordPress Schema', 'WordPress Schema-wp' ),
-		'view_item'          => __( 'View WordPress Schema', 'WordPress Schema-wp' ),
-		'all_items'          => __( 'All WordPress Schemas', 'WordPress Schema-wp' ),
-		'search_items'       => __( 'Search WordPress Schemas', 'WordPress Schema-wp' ),
-		'parent_item_colon'  => __( 'Parent WordPress Schemas:', 'WordPress Schema-wp' ),
-		'not_found'          => __( 'No WordPress Schema found.', 'WordPress Schema-wp' ),
-		'not_found_in_trash' => __( 'No WordPress Schema found in Trash.', 'WordPress Schema-wp' )
+		'name'               => _x( 'Schema', 'post type general name', 'schema-wp' ),
+		'singular_name'      => _x( 'Schema', 'post type singular name', 'schema-wp' ),
+		'menu_name'          => _x( 'Schema', 'admin menu', 'schema-wp' ),
+		'name_admin_bar'     => _x( 'Schema', 'add new on admin bar', 'schema-wp' ),
+		'add_new'            => _x( 'Add New', 'schema', 'schema-wp' ),
+		'add_new_item'       => __( 'Add New Schema', 'schema-wp' ),
+		'new_item'           => __( 'New Schema', 'schema-wp' ),
+		'edit_item'          => __( 'Edit Schema', 'schema-wp' ),
+		'view_item'          => __( 'View Schema', 'schema-wp' ),
+		'all_items'          => __( 'All Schemas', 'schema-wp' ),
+		'search_items'       => __( 'Search Schemas', 'schema-wp' ),
+		'parent_item_colon'  => __( 'Parent Schemas:', 'schema-wp' ),
+		'not_found'          => __( 'No schema found.', 'schema-wp' ),
+		'not_found_in_trash' => __( 'No schema found in Trash.', 'schema-wp' )
 	);
 
 	$args = array(
 		'labels'             	=> $labels,
-        'description'        	=> __( 'Description.', 'WordPress Schema-wp' ),
+        'description'        	=> __( 'Description.', 'schema-wp' ),
 		'public'             	=> false,
 		'publicly_queryable' 	=> false,
 		'show_ui'            	=> true,
@@ -48,10 +48,10 @@ function WordPress Schema_wp_cpt_init() {
 		'show_in_nav_menus'  	=> false,
 		'show_in_admin_bar'  	=> false,
 		'query_var'         	=> true,
-		//'rewrite'				=> array( 'slug' => 'WordPress Schema' ),
+		//'rewrite'				=> array( 'slug' => 'schema' ),
 		'rewrite'            	=> false,
 		'capability_type'    	=> 'post',
-		'map_meta_cap'       	=> true, // Set to false, if users are not allowed to edit/delete existing WordPress Schema
+		'map_meta_cap'       	=> true, // Set to false, if users are not allowed to edit/delete existing schema
 		'has_archive'        	=> false,
 		'can_export'		 	=> true,
 		'hierarchical'       	=> false,
@@ -61,11 +61,11 @@ function WordPress Schema_wp_cpt_init() {
 		'supports' 				=> array( 'title' )
 	);
 
-	register_post_type( 'WordPress Schema', $args );
+	register_post_type( 'schema', $args );
 }
 
 
-add_filter( 'post_updated_messages', 'WordPress Schema_wp_cpt_updated_messages' );
+add_filter( 'post_updated_messages', 'schema_wp_cpt_updated_messages' );
 /**
  * Book update messages.
  *
@@ -76,46 +76,46 @@ add_filter( 'post_updated_messages', 'WordPress Schema_wp_cpt_updated_messages' 
  * @return array Amended post update messages with new CPT update messages.
  * @since 1.3
  */
-function WordPress Schema_wp_cpt_updated_messages( $messages ) {
+function schema_wp_cpt_updated_messages( $messages ) {
 	
 	global $current_screen;
 	
-	if ( $current_screen->post_type != 'WordPress Schema' ) return $messages;
+	if ( $current_screen->post_type != 'schema' ) return $messages;
 	
 	$post             = get_post();
 	$post_type        = get_post_type( $post );
 	$post_type_object = get_post_type_object( $post_type );
 
-	$messages['WordPress Schema'] = array(
+	$messages['schema'] = array(
 		0  => '', // Unused. Messages start at index 1.
-		1  => __( 'WordPress Schema updated.', 'WordPress Schema-wp' ),
-		2  => __( 'Custom field updated.', 'WordPress Schema-wp' ),
-		3  => __( 'Custom field deleted.', 'WordPress Schema-wp' ),
-		4  => __( 'WordPress Schema saved.', 'WordPress Schema-wp' ),
+		1  => __( 'Schema updated.', 'schema-wp' ),
+		2  => __( 'Custom field updated.', 'schema-wp' ),
+		3  => __( 'Custom field deleted.', 'schema-wp' ),
+		4  => __( 'Schema saved.', 'schema-wp' ),
 		/* translators: %s: date and time of the revision */
-		5  => isset( $_GET['revision'] ) ? sprintf( __( 'WordPress Schema restored to revision from %s', 'WordPress Schema-wp' ), wp_post_revision_title( (int) $_GET['revision'], false ) ) : false,
-		6  => __( 'WordPress Schema created.', 'WordPress Schema-wp' ),
-		7  => __( 'WordPress Schema saved.', 'WordPress Schema-wp' ),
-		8  => __( 'WordPress Schema added.', 'WordPress Schema-wp' ),
+		5  => isset( $_GET['revision'] ) ? sprintf( __( 'Schema restored to revision from %s', 'schema-wp' ), wp_post_revision_title( (int) $_GET['revision'], false ) ) : false,
+		6  => __( 'Schema created.', 'schema-wp' ),
+		7  => __( 'Schema saved.', 'schema-wp' ),
+		8  => __( 'Schema added.', 'schema-wp' ),
 		9  => sprintf(
-			__( 'WordPress Schema scheduled for: <strong>%1$s</strong>.', 'WordPress Schema-wp' ),
+			__( 'Schema scheduled for: <strong>%1$s</strong>.', 'schema-wp' ),
 			// translators: Publish box date format, see http://php.net/date
-			date_i18n( __( 'M j, Y @ G:i', 'WordPress Schema-wp' ), strtotime( $post->post_date ) )
+			date_i18n( __( 'M j, Y @ G:i', 'schema-wp' ), strtotime( $post->post_date ) )
 		),
-		10 => __( 'WordPress Schema draft updated.', 'WordPress Schema-wp' )
+		10 => __( 'Schema draft updated.', 'schema-wp' )
 	);
 
 	if ( $post_type_object->publicly_queryable ) {
 		$permalink = get_permalink( $post->ID );
 
-		$view_link = sprintf( ' <a href="%s">%s</a>', esc_url( $permalink ), __( 'View WordPress Schema', 'WordPress Schema-wp' ) );
+		$view_link = sprintf( ' <a href="%s">%s</a>', esc_url( $permalink ), __( 'View schema', 'schema-wp' ) );
 		$view_link = '';
 		$messages[ $post_type ][1] .= $view_link;
 		$messages[ $post_type ][6] .= $view_link;
 		$messages[ $post_type ][9] .= $view_link;
 
 		$preview_permalink = add_query_arg( 'preview', 'true', $permalink );
-		$preview_link = sprintf( ' <a target="_blank" href="%s">%s</a>', esc_url( $preview_permalink ), __( 'Preview WordPress Schema', 'WordPress Schema-wp' ) );
+		$preview_link = sprintf( ' <a target="_blank" href="%s">%s</a>', esc_url( $preview_permalink ), __( 'Preview schema', 'schema-wp' ) );
 		$preview_link = '';
 		$messages[ $post_type ][8]  .= $preview_link;
 		$messages[ $post_type ][10] .= $preview_link;
@@ -125,9 +125,9 @@ function WordPress Schema_wp_cpt_updated_messages( $messages ) {
 }
 
 
-//add_filter( 'post_row_actions', 'WordPress Schema_wp_cpt_remove_row_actions', 10, 2 );
+//add_filter( 'post_row_actions', 'schema_wp_cpt_remove_row_actions', 10, 2 );
 /**
- * Remove quick edit and preview links for custom post type WordPress Schema
+ * Remove quick edit and preview links for custom post type schema
  *
  * @param array $actions and $post
  *
@@ -135,13 +135,13 @@ function WordPress Schema_wp_cpt_updated_messages( $messages ) {
  * @link https://wordpress.org/support/topic/remove-quick-edit-from-custom-post-type?replies=11#post-2253706
  * @since 1.3
  */
-function WordPress Schema_wp_cpt_remove_row_actions( $actions, $post ) {
+function schema_wp_cpt_remove_row_actions( $actions, $post ) {
 	
 	global $current_screen;
 	
-	//if ( $current_screen->post_type != 'WordPress Schema' ) return $actions;
+	//if ( $current_screen->post_type != 'schema' ) return $actions;
 	
-	if( get_post_type() === 'WordPress Schema' ) {
+	if( get_post_type() === 'schema' ) {
 	
 		//unset( $actions['edit'] );
 		unset( $actions['view'] );
@@ -153,10 +153,10 @@ function WordPress Schema_wp_cpt_remove_row_actions( $actions, $post ) {
 }
 
 
-// Not used, found a better function: WordPress Schema_wp_replace_submit_meta_box()
-//add_filter( 'gettext', 'WordPress Schema_wp_change_publish_button', 10, 2 );
+// Not used, found a better function: schema_wp_replace_submit_meta_box()
+//add_filter( 'gettext', 'schema_wp_change_publish_button', 10, 2 );
 /**
- * Modify Publish button on WordPress Schema post type
+ * Modify Publish button on Schema post type
  *
  * @param array $translation and $text
  *
@@ -164,38 +164,38 @@ function WordPress Schema_wp_cpt_remove_row_actions( $actions, $post ) {
  * @link http://wordpress.stackexchange.com/questions/3578/change-the-text-on-the-publish-button
  * @since 1.4.7
  */
-function WordPress Schema_wp_change_publish_button( $translation, $text ) {
+function schema_wp_change_publish_button( $translation, $text ) {
 	
-	if ( ! isset($_GET['post_type']) ||  $_GET['post_type'] != 'WordPress Schema' ) return $translation;
+	if ( ! isset($_GET['post_type']) ||  $_GET['post_type'] != 'schema' ) return $translation;
 
 	if ( $text == 'Publish' )
-    	return __('Create WordPress Schema', 'WordPress Schema-wp');
+    	return __('Create Schema', 'schema-wp');
 
 	return $translation;
 }
 
 // Not used, found a better option below...
-add_action( 'transition_post_status', 'WordPress Schema_wp_set_post_status_to_publish', 10, 3 );
+add_action( 'transition_post_status', 'schema_wp_set_post_status_to_publish', 10, 3 );
 /**
- * Make sure that WordPress Schema post status is set to publish
+ * Make sure that Schema post status is set to publish
  *
  * @since 1.4.8
  */
-function WordPress Schema_wp_set_post_status_to_publish( $new_status, $old_status, $post ) { 
-    if ( $post->post_type == 'WordPress Schema' && $new_status == 'draft' && $old_status  != $new_status ) {
+function schema_wp_set_post_status_to_publish( $new_status, $old_status, $post ) { 
+    if ( $post->post_type == 'schema' && $new_status == 'draft' && $old_status  != $new_status ) {
         $post->post_status = 'publish';
         wp_update_post( $post );
     }
 }
 
-//add_filter( 'wp_insert_post_data', 'WordPress Schema_wp_force_type_publish' );
+//add_filter( 'wp_insert_post_data', 'schema_wp_force_type_publish' );
 /**
- * Make sure that WordPress Schema post status is set to publish
+ * Make sure that Schema post status is set to publish
  *
  * @since 1.4.8
  */
-function WordPress Schema_wp_force_type_publish($post) {
-    if ($post['post_type'] == 'WordPress Schema')
+function schema_wp_force_type_publish($post) {
+    if ($post['post_type'] == 'schema')
     $post['post_status'] = 'publish';
     return $post;
 }

@@ -1,9 +1,9 @@
 <?php
 /**
- * WordPress Schema Tax Meta
+ * Schema Tax Meta
  *
- * @package     WordPress Schema
- * @subpackage  WordPress Schema Tax Meta
+ * @package     Schema
+ * @subpackage  Schema Tax Meta
  * @copyright   Copyright (c) 2016, Hesham Zebida
  * @license     http://opensource.org/licenses/gpl-2.0.php GNU Public License
  * @since       1.5.9.8
@@ -16,13 +16,13 @@ if (is_admin()){
   /* 
    * prefix of meta keys, optional
    */
-  $prefix = 'WordPress Schema_wp_';
+  $prefix = 'schema_wp_';
   /* 
    * configure your meta box
    */
   $config = array(
-    'id' => 'WordPress Schema_wp_meta_box',				// meta box id, unique per meta box
-    'title' => __('WordPress Schema', 'WordPress Schema-wp'),		// meta box title
+    'id' => 'schema_wp_meta_box',				// meta box id, unique per meta box
+    'title' => __('Schema', 'schema-wp'),		// meta box title
     'pages' => array('category', 'post_tag'),	// taxonomy name, accept categories, post_tag and custom taxonomies
     'context' => 'normal',						// where the meta box appear: normal (default), advanced, side; optional
     'fields' => array(),						// list of meta fields (can be added by field arrays)
@@ -34,14 +34,14 @@ if (is_admin()){
   /*
    * Initiate your meta box
    */
-  $my_meta =  new WordPress Schema_Custom_Add_Meta_Tax($config);
+  $my_meta =  new Schema_Custom_Add_Meta_Tax($config);
   
   /*
    * Add fields to your meta box
    */
   
   //text field
-  $my_meta->addText( $prefix.'sameAs', array('name' => __('sameAs ','WordPress Schema-wp'),'desc' => __("URL of a reference Web page that unambiguously indicates the item's identity. E.g. the URL of the item's Wikipedia page, Freebase page, or official website.", 'WordPress Schema-wp') ));
+  $my_meta->addText( $prefix.'sameAs', array('name' => __('sameAs ','schema-wp'),'desc' => __("URL of a reference Web page that unambiguously indicates the item's identity. E.g. the URL of the item's Wikipedia page, Freebase page, or official website.", 'schema-wp') ));
    
   /*
    * Don't Forget to Close up the meta box decleration

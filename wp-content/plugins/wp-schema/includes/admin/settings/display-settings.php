@@ -20,27 +20,27 @@ if ( ! defined( 'ABSPATH' ) ) exit;
  * @since 1.0
  * @return void
  */
-function WordPress Schema_wp_options_page() {
+function schema_wp_options_page() {
 
-	$settings_tabs = WordPress Schema_wp_get_settings_tabs();
+	$settings_tabs = schema_wp_get_settings_tabs();
 	$settings_tabs = empty($settings_tabs) ? array() : $settings_tabs;
 	$active_tab    = isset( $_GET['tab'] ) && array_key_exists( $_GET['tab'], $settings_tabs ) ? $_GET['tab'] : 'general';
-	$sections      = WordPress Schema_wp_get_settings_tab_sections( $active_tab );
+	$sections      = schema_wp_get_settings_tab_sections( $active_tab );
 	$key           = 'main';
 
 	if ( is_array( $sections ) ) {
 		$key = key( $sections );
 	}
 
-	$registered_sections = WordPress Schema_wp_get_settings_tab_sections( $active_tab );
+	$registered_sections = schema_wp_get_settings_tab_sections( $active_tab );
 	$section             = isset( $_GET['section'] ) && ! empty( $registered_sections ) && array_key_exists( $_GET['section'], $registered_sections ) ? $_GET['section'] : $key;
 
 	// Unset 'main' if it's empty and default to the first non-empty if it's the chosen section
-	$all_settings = WordPress Schema_wp_get_registered_settings();
+	$all_settings = schema_wp_get_registered_settings();
 
 	// Let's verify we have a 'main' section to show
 	ob_start();
-	do_settings_sections( 'WordPress Schema_wp_settings_' . $active_tab . '_main' );
+	do_settings_sections( 'schema_wp_settings_' . $active_tab . '_main' );
 	$has_main_settings = strlen( ob_get_contents() ) > 0;
 	ob_end_clean();
 
@@ -62,10 +62,10 @@ function WordPress Schema_wp_options_page() {
 	ob_start();
 	?>
 	<div class="wrap <?php echo 'wrap-' . $active_tab; ?>">
-        <h1 class="wp-heading-inline"><?php _e('WordPress Schema', 'WordPress Schema-wp'); echo ' <span style="font-size:12px;">Ver '.WordPress SchemaWP_VERSION.'</span>'; ?></h1>
+        <h1 class="wp-heading-inline"><?php _e('Schema', 'schema-wp'); echo ' <span style="font-size:12px;">Ver '.SCHEMAWP_VERSION.'</span>'; ?></h1>
 		<h1 class="nav-tab-wrapper">
 			<?php
-			foreach( WordPress Schema_wp_get_settings_tabs() as $tab_id => $tab_name ) {
+			foreach( schema_wp_get_settings_tabs() as $tab_id => $tab_name ) {
 
 				$tab_url = add_query_arg( array(
 					'settings-updated' => false,
@@ -83,7 +83,7 @@ function WordPress Schema_wp_options_page() {
 			}
 			?>
             
-            <a class="button-primary WordPress Schema_wiz_btn" href="<?php echo esc_url( admin_url( 'admin.php?page=WordPress Schema-setup' ) ); ?>"><?php _e( 'Quick Configuration Wizard', 'WordPress Schema-wp' ); ?></a>
+            <a class="button-primary schema_wiz_btn" href="<?php echo esc_url( admin_url( 'admin.php?page=schema-setup' ) ); ?>"><?php _e( 'Quick Configuration Wizard', 'schema-wp' ); ?></a>
 
 		</h1>
 		<?php
@@ -120,26 +120,26 @@ function WordPress Schema_wp_options_page() {
 				<table class="form-table">
 				<?php
 
-				settings_fields( 'WordPress Schema_wp_settings' );
+				settings_fields( 'schema_wp_settings' );
 
 				if ( 'main' === $section ) {
-					do_action( 'WordPress Schema_wp_settings_tab_top', $active_tab );
+					do_action( 'schema_wp_settings_tab_top', $active_tab );
 				}
 
-				do_action( 'WordPress Schema_wp_settings_tab_top_' . $active_tab . '_' . $section );
+				do_action( 'schema_wp_settings_tab_top_' . $active_tab . '_' . $section );
 
-				do_settings_sections( 'WordPress Schema_wp_settings_' . $active_tab . '_' . $section );
+				do_settings_sections( 'schema_wp_settings_' . $active_tab . '_' . $section );
 
-				do_action( 'WordPress Schema_wp_settings_tab_bottom_' . $active_tab . '_' . $section  );
+				do_action( 'schema_wp_settings_tab_bottom_' . $active_tab . '_' . $section  );
 
 				// For backwards compatibility
 				if ( 'main' === $section ) {
-					do_action( 'WordPress Schema_wp_settings_tab_bottom', $active_tab );
+					do_action( 'schema_wp_settings_tab_bottom', $active_tab );
 				}
 
 				// If the main section was empty and we overrode the view with the next subsection, prepare the section for saving
 				if ( true === $override ) {
-					?><input type="hidden" name="WordPress Schema_wp_section_override" value="<?php echo $section; ?>" /><?php
+					?><input type="hidden" name="schema_wp_section_override" value="<?php echo $section; ?>" /><?php
 				}
 				?>
 				</table>
@@ -147,7 +147,7 @@ function WordPress Schema_wp_options_page() {
                 
                 <div style="padding:20px;" class="update-message notice inline notice-success notice-alt">
                 	<span class="dashicons dashicons-admin-generic"></span>
-                    Unlock <a target="_blank" href="https://WordPress Schema.press/downloads/WordPress Schema-premium/">WordPress Schema Premium</a> features.
+                    Unlock <a target="_blank" href="https://schema.press/downloads/schema-premium/">Schema Premium</a> features.
                 </div>
 			
             </form>

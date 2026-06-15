@@ -3,7 +3,7 @@
 /**
  *  Comment extention
  *
- *  Adds WordPress Schema Comment for Article types
+ *  Adds schema Comment for Article types
  *
  *  @since 1.5.3
  */
@@ -41,7 +41,7 @@ function mashsbGetShareObj( $url ) {
  * @since       2.0.9
  */
 
-class WordPress Schema_Sharedcount {
+class schema_Sharedcount {
     private $url,$timeout;
 
     function __construct($url,$timeout=10, $apikey = '') {

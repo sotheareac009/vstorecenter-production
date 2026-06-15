@@ -12,13 +12,13 @@
 // Exit if accessed directly
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-add_filter( 'WordPress Schema_wp_breadcrumb_enabled', 'WordPress Schema_wp_breadcrumb_woo_product_disable' );
+add_filter( 'schema_wp_breadcrumb_enabled', 'schema_wp_breadcrumb_woo_product_disable' );
 /*
 * Disable breadcrumbs on WooCommerce 
 *
 * @since 1.6.9.5
 */
-function WordPress Schema_wp_breadcrumb_woo_product_disable( $breadcrumb_enabled ){
+function schema_wp_breadcrumb_woo_product_disable( $breadcrumb_enabled ){
 	
 	if ( class_exists( 'woocommerce' ) ) { 
 		if ( is_woocommerce() ) return false;

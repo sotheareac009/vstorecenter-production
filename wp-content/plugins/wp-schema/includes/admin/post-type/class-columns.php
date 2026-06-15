@@ -1,6 +1,6 @@
 <?php
 /**
- * @package WordPress Schema - Class WordPress Schema CPT Columns 
+ * @package Schema - Class Schema CPT Columns 
  * @category Core
  * @author Hesham Zebida
  * @version 1.6.7
@@ -9,7 +9,7 @@
 // Exit if accessed directly
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-if ( ! class_exists('WordPress Schema_WP_CPT_columns') ) {
+if ( ! class_exists('Schema_WP_CPT_columns') ) {
   	/**
 	 * CPT_columns 
 	 * Simple class to add remove and manage admin post columns 
@@ -17,7 +17,7 @@ if ( ! class_exists('WordPress Schema_WP_CPT_columns') ) {
 	 * @version 0.1
 	 * @copyright 2013 Ohad Raz
 	 */
-	class WordPress Schema_WP_CPT_columns{
+	class Schema_WP_CPT_columns{
 		/**
 		 * $cpt_columns
 		 *
@@ -313,7 +313,7 @@ if ( ! class_exists('WordPress Schema_WP_CPT_columns') ) {
 
 /* usage:
 //create an instance
-$post_columns = new WordPress Schema_CPT_columns('post'); // if you want to replace and reorder columns then pass a second parameter as true
+$post_columns = new Schema_CPT_columns('post'); // if you want to replace and reorder columns then pass a second parameter as true
 //add native column
 $post_columns->add_column('title',
   array(

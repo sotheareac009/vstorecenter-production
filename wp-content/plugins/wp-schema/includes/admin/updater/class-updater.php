@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
  *
  * @souce https://github.com/easydigitaldownloads/easy-digital-downloads/blob/master/includes/EDD_SL_Plugin_Updater.php
  */
-class WordPress Schema_WP_SL_Plugin_Updater {
+class Schema_WP_SL_Plugin_Updater {
 
 	private $api_url     = '';
 	private $api_data    = array();

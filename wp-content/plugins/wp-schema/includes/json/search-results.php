@@ -8,28 +8,28 @@
 // Exit if accessed directly
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-add_action('wp_head', 'WordPress Schema_wp_output_sitelinks_search_box');
+add_action('wp_head', 'schema_wp_output_sitelinks_search_box');
 /**
- * The main function responsible for output WordPress Schema json-ld into
+ * The main function responsible for output schema json-ld into
  *
  * @since 1.0
- * @return WordPress Schema json-ld final output
+ * @return schema json-ld final output
  */
-function WordPress Schema_wp_output_sitelinks_search_box() {
+function schema_wp_output_sitelinks_search_box() {
 	
 	// Run only on front page 
 	if ( is_front_page() ) {
 		$output 				= '';
-		$sitelinks_search_box	= WordPress Schema_wp_get_option( 'sitelinks_search_box' );
-		$site_name_enable		= WordPress Schema_wp_get_option( 'site_name_enable' );
-		$site_name				= WordPress Schema_wp_get_option( 'site_name' );
-		$site_alternate_name	= WordPress Schema_wp_get_option( 'site_alternate_name' );
+		$sitelinks_search_box	= schema_wp_get_option( 'sitelinks_search_box' );
+		$site_name_enable		= schema_wp_get_option( 'site_name_enable' );
+		$site_name				= schema_wp_get_option( 'site_name' );
+		$site_alternate_name	= schema_wp_get_option( 'site_alternate_name' );
 		
 		if ( ! isset($sitelinks_search_box) || ! $sitelinks_search_box ) return;
 		
 		$output .= PHP_EOL . '<script type="application/ld+json">' . PHP_EOL;
 		$output .= '{' . PHP_EOL;
-		$output .= '  "@context": "https://WordPress Schema.org",' . PHP_EOL;
+		$output .= '  "@context": "https://schema.org",' . PHP_EOL;
 		$output .= '  "@type": "WebSite",' . PHP_EOL;
 		$output .= '  "@id": "#website",' . PHP_EOL;
 		
@@ -47,14 +47,14 @@ function WordPress Schema_wp_output_sitelinks_search_box() {
 		$output .= '}' . PHP_EOL;
 		$output .= '</script>' . PHP_EOL . PHP_EOL;
 		
-		$output = apply_filters( 'WordPress Schema_wp_output_sitelinks_search_box', $output );;
+		$output = apply_filters( 'schema_wp_output_sitelinks_search_box', $output );;
 		
 		echo $output;
 	}
 }
 
 
-//add_action('wp_head', 'WordPress Schema_wp_output_sitelinks_search_box_disable');
+//add_action('wp_head', 'schema_wp_output_sitelinks_search_box_disable');
 /**
  * Disable SiteLinks Search Box
  *
@@ -63,12 +63,12 @@ function WordPress Schema_wp_output_sitelinks_search_box() {
  * @return meta
  */
  /*
-function WordPress Schema_wp_output_sitelinks_search_box_disable() {
+function schema_wp_output_sitelinks_search_box_disable() {
 	
 	// Run only on front page 
 	if ( is_front_page() ) {
 		
-		$sitelinks_search_box_disable	= WordPress Schema_wp_get_option( 'sitelinks_search_box_disable' );
+		$sitelinks_search_box_disable	= schema_wp_get_option( 'sitelinks_search_box_disable' );
 		
 		if ( isset($sitelinks_search_box_disable) && $sitelinks_search_box_disable == 1 ) {
 			echo "\n";

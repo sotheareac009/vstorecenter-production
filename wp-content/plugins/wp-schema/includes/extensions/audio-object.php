@@ -3,7 +3,7 @@
 /**
  *  AudioObject extention
  *
- *  Adds WordPress Schema AudioObject to oEmbed
+ *  Adds schema AudioObject to oEmbed
  *
  *  @since 1.5.9.6
  */
@@ -11,44 +11,44 @@
 if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
 
-add_action( 'admin_init', 'WordPress Schema_wp_audio_object_admin_init' );
+add_action( 'admin_init', 'schema_wp_audio_object_admin_init' );
 /**
- * WordPress Schema AudioObject init
+ * Schema AudioObject init
  *
  * @since 1.5.9.6
  */
-function WordPress Schema_wp_audio_object_admin_init() {
+function schema_wp_audio_object_admin_init() {
 	
 	if ( ! is_admin() ) return;
 	
-	if ( ! class_exists( 'WordPress Schema_WP' ) ) return;
+	if ( ! class_exists( 'Schema_WP' ) ) return;
 	
-	$audio_object_enable = WordPress Schema_wp_get_option( 'audio_object_enable' );
+	$audio_object_enable = schema_wp_get_option( 'audio_object_enable' );
 	
 	if ( $audio_object_enable != true )
 		return;
 		
-	$prefix = '_WordPress Schema_audio_object_';
+	$prefix = '_schema_audio_object_';
 
 	$fields = array(
 	
 		array ( // Radio group
-		'label'	=> __('Audio Markups', 'WordPress Schema-wp'), // <label>
-		'tip'	=> __('Select audio markup type.', 'WordPress Schema-wp'),
-		'desc'	=> __('Note: You can enable markups to multiple audios on the same page. However, this may slow down your site, make sure your site is hosted on a reliable web host and cache your site pages by a good caching plugin. (Recommended setting: Single Audio)', 'WordPress Schema-wp'), // description
+		'label'	=> __('Audio Markups', 'schema-wp'), // <label>
+		'tip'	=> __('Select audio markup type.', 'schema-wp'),
+		'desc'	=> __('Note: You can enable markups to multiple audios on the same page. However, this may slow down your site, make sure your site is hosted on a reliable web host and cache your site pages by a good caching plugin. (Recommended setting: Single Audio)', 'schema-wp'), // description
 		'id'	=> $prefix.'type', // field id and name
 		'type'	=> 'radio', // type of field
 		'options' => array ( // array of options
 			'none' => array ( // array key needs to be the same as the option value
-				'label' => __('None', 'WordPress Schema-wp'), // text displayed as the option
+				'label' => __('None', 'schema-wp'), // text displayed as the option
 				'value'	=> 'none' // value stored for the option
 				),
 			'one' => array (
-				'label' => __('Single audio', 'WordPress Schema-wp'),
+				'label' => __('Single audio', 'schema-wp'),
 				'value'	=> 'single'
 				),
 			'two' => array (
-				'label' => __('Multiple audios', 'WordPress Schema-wp'),
+				'label' => __('Multiple audios', 'schema-wp'),
 				'value'	=> 'multiple'
 				)
 			)
@@ -65,25 +65,25 @@ function WordPress Schema_wp_audio_object_admin_init() {
 	* var $priority string meta box priority (high, core, default, low) 
 	* var $js bool including javascript or not
 	*/
-	$WordPress Schema_wp_audio_object = new WordPress Schema_Custom_Add_Meta_Box( 'WordPress Schema_audio_object', 'AudioObject', $fields, 'WordPress Schema', 'normal', 'high', true );
+	$schema_wp_audio_object = new Schema_Custom_Add_Meta_Box( 'schema_audio_object', 'AudioObject', $fields, 'schema', 'normal', 'high', true );
 }
 
 
-add_action( 'current_screen', 'WordPress Schema_wp_audio_object_post_meta' );
+add_action( 'current_screen', 'schema_wp_audio_object_post_meta' );
 /**
  * Create AudioObject post meta box for active post types edit screens
  *
  * @since 1.5.9.6
  */
-function WordPress Schema_wp_audio_object_post_meta() {
+function schema_wp_audio_object_post_meta() {
 	
 	if ( ! is_admin() ) return;
 	
-	if ( ! class_exists( 'WordPress Schema_WP' ) ) return;
+	if ( ! class_exists( 'Schema_WP' ) ) return;
 	
 	global $post;
 	
-	$prefix = '_WordPress Schema_audio_object_';
+	$prefix = '_schema_audio_object_';
 	
 	/**
 	* Create meta box on active post types edit screens
@@ -92,35 +92,35 @@ function WordPress Schema_wp_audio_object_post_meta() {
 		
 		array( 
 			'label'	=> '', 
-			'desc'	=> __('You have enabled AudioObject, if you see an error in the <a target="_blank" href="https://search.google.com/structured-data/testing-tool">testing tool</a>, use the fields below to fill the missing fields, correct markup errors, and add additional details about the audio embedded in your content editor.', 'WordPress Schema-wp'), 
+			'desc'	=> __('You have enabled AudioObject, if you see an error in the <a target="_blank" href="https://search.google.com/structured-data/testing-tool">testing tool</a>, use the fields below to fill the missing fields, correct markup errors, and add additional details about the audio embedded in your content editor.', 'schema-wp'), 
 			'id'	=> $prefix.'headline', 
 			'type'	=> 'desc' 
 		),
 		array( // Text Input
-			'label'	=> __('Title', 'WordPress Schema-wp'), // <label>
-			'tip'	=> __('Audio title', 'WordPress Schema-wp'), // tooltip
-			'desc'	=> __('', 'WordPress Schema-wp'), // description
+			'label'	=> __('Title', 'schema-wp'), // <label>
+			'tip'	=> __('Audio title', 'schema-wp'), // tooltip
+			'desc'	=> __('', 'schema-wp'), // description
 			'id'	=> $prefix.'name', // field id and name
 			'type'	=> 'text' // type of field
 		),
 		array( 
-			'label'	=> __('Upload Date', 'WordPress Schema-wp'),  
-			'tip'	=> __('Audio upload date in ISO 8601 format YYYY-MM-DD example: 2016-06-23', 'WordPress Schema-wp'), 
-			'desc'	=> __('', 'WordPress Schema-wp'), 
+			'label'	=> __('Upload Date', 'schema-wp'),  
+			'tip'	=> __('Audio upload date in ISO 8601 format YYYY-MM-DD example: 2016-06-23', 'schema-wp'), 
+			'desc'	=> __('', 'schema-wp'), 
 			'id'	=> $prefix.'upload_date', 
 			'type'	=> 'text' 
 		),
 		array( 
-			'label'	=> __('Duration', 'WordPress Schema-wp'), 
-			'tip'	=> __('Audio duration, example: if duration is 1 Hour 35 MIN, use: PT1H35M', 'WordPress Schema-wp'),  
-			'desc'	=> __('', 'WordPress Schema-wp'), 
+			'label'	=> __('Duration', 'schema-wp'), 
+			'tip'	=> __('Audio duration, example: if duration is 1 Hour 35 MIN, use: PT1H35M', 'schema-wp'),  
+			'desc'	=> __('', 'schema-wp'), 
 			'id'	=> $prefix.'duration', 
 			'type'	=> 'text' 
 		),
 		array( // Textarea
-			'label'	=> __('Description', 'WordPress Schema-wp'), 
-			'tip'	=> __('Audio short description.', 'WordPress Schema-wp'), 
-			'desc'	=> __('', 'WordPress Schema-wp'), 
+			'label'	=> __('Description', 'schema-wp'), 
+			'tip'	=> __('Audio short description.', 'schema-wp'), 
+			'desc'	=> __('', 'schema-wp'), 
 			'id'	=> $prefix.'description',  
 			'type'	=> 'textarea'  
 		),
@@ -129,77 +129,77 @@ function WordPress Schema_wp_audio_object_post_meta() {
 	/**
 	* Get enabled post types to create a meta box on
 	*/
-	$WordPress Schemas_enabled = array();
+	$schemas_enabled = array();
 	
 	// Get schame enabled array
-	$WordPress Schemas_enabled = WordPress Schema_wp_cpt_get_enabled();
+	$schemas_enabled = schema_wp_cpt_get_enabled();
 	
-	if ( empty($WordPress Schemas_enabled) ) return;
+	if ( empty($schemas_enabled) ) return;
 
 	// Get post type from current screen
 	$current_screen = get_current_screen();
 	$post_type = $current_screen->post_type;
 	
-	foreach( $WordPress Schemas_enabled as $WordPress Schema_enabled ) : 
+	foreach( $schemas_enabled as $schema_enabled ) : 
 		
-		$type = (isset($WordPress Schema_enabled['audio_object_type']) && $WordPress Schema_enabled['audio_object_type'] != '') ? $WordPress Schema_enabled['audio_object_type'] : '';
+		$type = (isset($schema_enabled['audio_object_type']) && $schema_enabled['audio_object_type'] != '') ? $schema_enabled['audio_object_type'] : '';
 		
 		// Add meta box only for type signle, preset an entry with one embed audio
 		if ( $type == 'single' )  {
 		
-		// Get WordPress Schema enabled post types array
-		$WordPress Schema_cpt = $WordPress Schema_enabled['post_type'];
+		// Get Schema enabled post types array
+		$schema_cpt = $schema_enabled['post_type'];
 		
-			if ( ! empty($WordPress Schema_cpt) && in_array( $post_type, $WordPress Schema_cpt, true ) ) {
+			if ( ! empty($schema_cpt) && in_array( $post_type, $schema_cpt, true ) ) {
 		
-				$WordPress Schema_wp_audio_object_active = new WordPress Schema_Custom_Add_Meta_Box( 'WordPress Schema_audio_object', 'AudioObject', $fields, $WordPress Schema_cpt, 'normal', 'high', true );
+				$schema_wp_audio_object_active = new Schema_Custom_Add_Meta_Box( 'schema_audio_object', 'AudioObject', $fields, $schema_cpt, 'normal', 'high', true );
 			}
 		}
 		
 		// debug
-		//print_r($WordPress Schema_enabled);
+		//print_r($schema_enabled);
 		
 	endforeach;
 }
 
 
 
-add_filter('WordPress Schema_wp_cpt_enabled', 'WordPress Schema_wp_WordPress Schema_audio_object_extend_cpt_enabled');
+add_filter('schema_wp_cpt_enabled', 'schema_wp_schema_audio_object_extend_cpt_enabled');
 /**
  * Extend the CPT Enabled array
  *
  * @since 1.5.9.6
  */
-function WordPress Schema_wp_WordPress Schema_audio_object_extend_cpt_enabled( $cpt_enabled ) {
+function schema_wp_schema_audio_object_extend_cpt_enabled( $cpt_enabled ) {
 		
 	if ( empty($cpt_enabled) )
 		return;
 	
-	$audio_object_enable = WordPress Schema_wp_get_option( 'audio_object_enable' );
+	$audio_object_enable = schema_wp_get_option( 'audio_object_enable' );
 	
 	if ( $audio_object_enable != true )
 		return $cpt_enabled;
 		
 	$args = array(
-					'post_type'			=> 'WordPress Schema',
+					'post_type'			=> 'schema',
 					'post_status'		=> 'publish',
 					'posts_per_page'	=> -1
 				);
 				
-	$WordPress Schemas_query = new WP_Query( $args );
+	$schemas_query = new WP_Query( $args );
 	
-	$WordPress Schemas = $WordPress Schemas_query->get_posts();
+	$schemas = $schemas_query->get_posts();
 	
-	// If there is no WordPress Schema types set, return and empty array
-	if ( empty($WordPress Schemas) ) 
+	// If there is no schema types set, return and empty array
+	if ( empty($schemas) ) 
 		return array();
 	
 	$i = 0;
 	
-	foreach ( $WordPress Schemas as $WordPress Schema ) : 
+	foreach ( $schemas as $schema ) : 
 		
 		// Get post meta
-		$type = get_post_meta( $WordPress Schema->ID, '_WordPress Schema_audio_object_type', true );
+		$type = get_post_meta( $schema->ID, '_schema_audio_object_type', true );
 		
 		if ( ! isset($type) ) $type = 'none'; // default
 	
@@ -210,7 +210,7 @@ function WordPress Schema_wp_WordPress Schema_audio_object_extend_cpt_enabled( $
 		
 		// Or maybe use...
 		/*$cpt_enabled[$i]['misc']  = array (
-									'review_type'	=>	$WordPress Schema_review_type
+									'review_type'	=>	$schema_review_type
 								);*/
 								
 		$i++;
@@ -225,47 +225,47 @@ function WordPress Schema_wp_WordPress Schema_audio_object_extend_cpt_enabled( $
 
 
 
-add_filter( 'WordPress Schema_output', 'WordPress Schema_wp_audio_object_output' );
+add_filter( 'schema_output', 'schema_wp_audio_object_output' );
 /**
- * Audio qoject output, filter the WordPress Schema_output
+ * Audio qoject output, filter the schema_output
  *
- * @param array $WordPress Schema
+ * @param array $schema
  * @since 1.5.9.6
- * @return array $WordPress Schema 
+ * @return array $schema 
  */
-function WordPress Schema_wp_audio_object_output( $WordPress Schema ) {
+function schema_wp_audio_object_output( $schema ) {
 	
-	//echo'<pre>'; print_r( $WordPress Schema ); echo'</pre>';
+	//echo'<pre>'; print_r( $schema ); echo'</pre>';
 	//exit;
 			
 	// Debug - start of script
 	//$time_start = microtime(true);
 
-	if ( empty($WordPress Schema) ) 
+	if ( empty($schema) ) 
 		return;
 	
-	$audio_object_enable = WordPress Schema_wp_get_option( 'audio_object_enable' );
+	$audio_object_enable = schema_wp_get_option( 'audio_object_enable' );
 	
 	if ( $audio_object_enable != true )
-		return $WordPress Schema;
+		return $schema;
 	
 	global $wp_query, $post, $wp_embed;
 	
 	// Maybe this is not needed!
 	if ( ! $wp_query->is_main_query() )
-		return $WordPress Schema;
+		return $schema;
 	
 	// This didn't work, that's why it's commented
-	//if ( $wp_embed->last_url == '' || ! isset($wp_embed->last_url) ) return $WordPress Schema;
+	//if ( $wp_embed->last_url == '' || ! isset($wp_embed->last_url) ) return $schema;
 	
 	// Get post meta
-	$WordPress Schema_ref = get_post_meta( $post->ID, '_WordPress Schema_ref', true );
+	$schema_ref = get_post_meta( $post->ID, '_schema_ref', true );
 	
 	// Check for ref, if is not presented, then get out!
-	if ( ! isset($WordPress Schema_ref) || $WordPress Schema_ref  == '' ) return $WordPress Schema;
+	if ( ! isset($schema_ref) || $schema_ref  == '' ) return $schema;
 	
-	// Get audio object type value from enabled WordPress Schema post type
-	$type = get_post_meta( $WordPress Schema_ref, '_WordPress Schema_audio_object_type', true );
+	// Get audio object type value from enabled Schema post type
+	$type = get_post_meta( $schema_ref, '_schema_audio_object_type', true );
 	
 	//if ( ! isset($enabled) ) $enabled = false; // default
 	//if ( ! isset($audio_object_type_enabled)  || $audio_object_type_enabled == '' )	$audio_object_type_enabled	= false;		// default
@@ -292,9 +292,9 @@ function WordPress Schema_wp_audio_object_output( $WordPress Schema ) {
 		
 			// Get one audio
 			$reg = preg_match( $regex, $content, $matches );
-			//$matches = WordPress Schema_wp_get_string_urls($content);
+			//$matches = schema_wp_get_string_urls($content);
 			
-			if ( ! $reg ) return $WordPress Schema;
+			if ( ! $reg ) return $schema;
 			
 			$autoembed = new WP_oEmbed();
 			
@@ -303,7 +303,7 @@ function WordPress Schema_wp_audio_object_output( $WordPress Schema ) {
 			if (filter_var($provider, FILTER_VALIDATE_URL) != FALSE) {
 				$data = $autoembed->fetch( $provider, $url );
 				if (!empty($data) ) {
-					$WordPress Schema['audio'] = WordPress Schema_wp_get_audio_object_array( $data );
+					$schema['audio'] = schema_wp_get_audio_object_array( $data );
 				}
 			}
 		
@@ -314,7 +314,7 @@ function WordPress Schema_wp_audio_object_output( $WordPress Schema ) {
 				if (filter_var($provider, FILTER_VALIDATE_URL) != FALSE) {
 					$data = $autoembed->fetch( $provider, $url );
 					if (!empty($data) ) {
-						$WordPress Schema['audio'] = WordPress Schema_wp_get_audio_object_array( $data );
+						$schema['audio'] = schema_wp_get_audio_object_array( $data );
 					}
 				}
 			}*/
@@ -326,18 +326,18 @@ function WordPress Schema_wp_audio_object_output( $WordPress Schema ) {
 			// Or we can use this
 			$matches = wp_extract_urls( $content );
 			
-			if ( empty($matches) ) return $WordPress Schema;
+			if ( empty($matches) ) return $schema;
 			
-			//$matches = WordPress Schema_wp_get_string_urls($content);
+			//$matches = schema_wp_get_string_urls($content);
 			$autoembed = new WP_oEmbed();
-			$WordPress Schema['audio'] = array();
+			$schema['audio'] = array();
 			foreach ( $matches as $key => $url ) {
 				$url = trim($url); // remove white spaces if any
 				$provider = $autoembed->discover( $url );
 				if (filter_var($provider, FILTER_VALIDATE_URL) != FALSE) {
 					$data = $autoembed->fetch( $provider, $url );
 					if (!empty($data) ) {
-						$WordPress Schema['audio'][] = WordPress Schema_wp_get_audio_object_array( $data );
+						$schema['audio'][] = schema_wp_get_audio_object_array( $data );
 					}
 				}
 			}
@@ -347,13 +347,13 @@ function WordPress Schema_wp_audio_object_output( $WordPress Schema ) {
 	
 	// Debug
 	//if (current_user_can( 'manage_options' )) {
-			//echo'<pre>'; print_r( $WordPress Schema ); echo'</pre>';
+			//echo'<pre>'; print_r( $schema ); echo'</pre>';
 			//exit;
 			//echo 'Execution time in seconds: ' . (microtime(true) - $time_start) . '<br>';
 	//}
 	
 	// finally!
-	return $WordPress Schema;
+	return $schema;
 }
 	
 
@@ -365,7 +365,7 @@ function WordPress Schema_wp_audio_object_output( $WordPress Schema ) {
  * @since 1.5
  * @return array 
  */
-function WordPress Schema_wp_get_audio_object_array( $data ) {
+function schema_wp_get_audio_object_array( $data ) {
 	
 	global $post;
 	
@@ -391,10 +391,10 @@ function WordPress Schema_wp_get_audio_object_array( $data ) {
 	if ( ! in_array( $host, $supported_hosts) ) return;
 	
 	// Get values from post meta
-	$meta_name			= get_post_meta( $post->ID, '_WordPress Schema_audio_object_name', true );
-	$meta_description	= get_post_meta( $post->ID, '_WordPress Schema_audio_object_description', true );
-	$meta_upload_date	= get_post_meta( $post->ID, '_WordPress Schema_audio_object_upload_date', true );
-	$meta_duration		= get_post_meta( $post->ID, '_WordPress Schema_audio_object_duration', true );
+	$meta_name			= get_post_meta( $post->ID, '_schema_audio_object_name', true );
+	$meta_description	= get_post_meta( $post->ID, '_schema_audio_object_description', true );
+	$meta_upload_date	= get_post_meta( $post->ID, '_schema_audio_object_upload_date', true );
+	$meta_duration		= get_post_meta( $post->ID, '_schema_audio_object_duration', true );
 	
 	// Override values if found via parsing the data
 	$audio_id		= isset($data->audio_id) ? $data->audio_id : '';
@@ -403,9 +403,9 @@ function WordPress Schema_wp_get_audio_object_array( $data ) {
 	$image			= isset($data->image) ? $data->image : '';
 	$thumbnail_url	= isset($data->thumbnail_url) ? $data->thumbnail_url : '';
 	$upload_date	= isset($data->upload_date) ? $data->upload_date : $meta_upload_date;
-	$duration		= isset($data->duration) ? WordPress Schema_wp_get_time_second_to_iso8601_duration( $data->duration ) : $meta_duration;
+	$duration		= isset($data->duration) ? schema_wp_get_time_second_to_iso8601_duration( $data->duration ) : $meta_duration;
 	
-	$WordPress Schema = array( 
+	$schema = array( 
 						'@type'			=> 'AudioObject',
 						"name"			=> $name,
 						"description"	=> $description,
@@ -415,5 +415,5 @@ function WordPress Schema_wp_get_audio_object_array( $data ) {
 						"duration"		=> $duration
 					);
 					
-	return $WordPress Schema;
+	return $schema;
 }

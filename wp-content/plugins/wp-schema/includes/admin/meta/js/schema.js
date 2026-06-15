@@ -1,41 +1,41 @@
 jQuery(function($) {
 	
 	// Reset
-	//$("#WordPress Schema_article").hide();
+	//$("#schema_article").hide();
 	
-	var WordPress Schema_type = $("#_WordPress Schema_type").val();
+	var schema_type = $("#_schema_type").val();
 	
-	if ( WordPress Schema_type == 'Article')
-		$("#WordPress Schema_article").show();
+	if ( schema_type == 'Article')
+		$("#schema_article").show();
 	 
-	$('#_WordPress Schema_type').on('change', function() {
+	$('#_schema_type').on('change', function() {
       if ( this.value == 'Article')
       //.....................^.......
       {
-        $("#WordPress Schema_article").show();
+        $("#schema_article").show();
       }
       else
       {
-        $("#WordPress Schema_article").hide();
+        $("#schema_article").hide();
       }
     });
 	
 	
 	// repeated post meta group / show hide main meta box
 	
-	$('#WordPress Schema_post_meta_box').hide();
+	$('#schema_post_meta_box').hide();
 	
-	var post_meta_enabled = $("#_WordPress Schema_post_meta_box_enabled").prop('checked');
+	var post_meta_enabled = $("#_schema_post_meta_box_enabled").prop('checked');
 	
 	if (post_meta_enabled)
-		$('#WordPress Schema_post_meta_box').show();
+		$('#schema_post_meta_box').show();
 		
-	$('#_WordPress Schema_post_meta_box_enabled').change(function(){
+	$('#_schema_post_meta_box_enabled').change(function(){
         var checked = $(this).prop('checked');
         if (checked) {
-           $('#WordPress Schema_post_meta_box').show();             
+           $('#schema_post_meta_box').show();             
         } else {
-            $('#WordPress Schema_post_meta_box').hide();
+            $('#schema_post_meta_box').hide();
         }
 	});
 	

@@ -13,13 +13,13 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 
-add_action( 'WordPress Schema_wp_post_types', 'WordPress Schema_wp_thirstyaffiliates_remove_cpt' );
+add_action( 'schema_wp_post_types', 'schema_wp_thirstyaffiliates_remove_cpt' );
 /*
 * Unset ThirstyAffiliates post type "thirstylink", plugin shouldn't ever run here at this pont!
 *
 * @since 1.6.9.1
 */
-function WordPress Schema_wp_thirstyaffiliates_remove_cpt( $post_types ) {
+function schema_wp_thirstyaffiliates_remove_cpt( $post_types ) {
 	
 	if (!is_plugin_active('thirstyaffiliates/thirstyaffiliates.php')) 
 		return $post_types;

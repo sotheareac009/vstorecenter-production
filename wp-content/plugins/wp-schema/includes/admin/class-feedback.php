@@ -14,8 +14,8 @@
 // Exit if accessed directly
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-if ( ! class_exists( 'WordPress Schema_DotOrg_Plugin_Feedback' ) ) :
-class WordPress Schema_DotOrg_Plugin_Feedback {
+if ( ! class_exists( 'Schema_DotOrg_Plugin_Feedback' ) ) :
+class Schema_DotOrg_Plugin_Feedback {
 
         /**
          * Private variables.
@@ -143,45 +143,45 @@ class WordPress Schema_DotOrg_Plugin_Feedback {
 						
 		?>
         <style>
-			.notice.WordPress Schema-notice {
+			.notice.schema-notice {
 				border-left-color: #990000 !important;
 				padding: 20px;
 			}
-			.rtl .notice.WordPress Schema-notice {
+			.rtl .notice.schema-notice {
 				border-right-color: #990000 !important;
 			}
-			.notice.notice.WordPress Schema-notice .WordPress Schema-notice-inner {
+			.notice.notice.schema-notice .schema-notice-inner {
 				display: table;
 				width: 100%;
 			}
-			.notice.WordPress Schema-notice .WordPress Schema-notice-inner .WordPress Schema-notice-icon,
-			.notice.WordPress Schema-notice .WordPress Schema-notice-inner .WordPress Schema-notice-content,
-			.notice.WordPress Schema-notice .WordPress Schema-notice-inner .WordPress Schema-install-now {
+			.notice.schema-notice .schema-notice-inner .schema-notice-icon,
+			.notice.schema-notice .schema-notice-inner .schema-notice-content,
+			.notice.schema-notice .schema-notice-inner .schema-install-now {
 				display: table-cell;
 				vertical-align: middle;
 			}
-			.notice.WordPress Schema-notice .WordPress Schema-notice-icon {
+			.notice.schema-notice .schema-notice-icon {
 				color: #990000;
 				font-size: 50px;
 				width: 60px;
 			}
-			.notice.WordPress Schema-notice .WordPress Schema-notice-icon img {
+			.notice.schema-notice .schema-notice-icon img {
 				width: 60px;
 			}
-			.notice.WordPress Schema-notice .WordPress Schema-notice-content {
+			.notice.schema-notice .schema-notice-content {
 				padding: 0 20px;
 			}
-			.notice.WordPress Schema-notice p {
+			.notice.schema-notice p {
 				padding: 0;
 				margin: 0;
 			}
-			.notice.WordPress Schema-notice h3 {
+			.notice.schema-notice h3 {
 				margin: 0 0 5px;
 			}
-			.notice.WordPress Schema-notice .WordPress Schema-install-now {
+			.notice.schema-notice .schema-install-now {
 				text-align: center;
 			}
-			.notice.WordPress Schema-notice .WordPress Schema-install-now .WordPress Schema-install-button {
+			.notice.schema-notice .schema-install-now .schema-install-button {
 				background-color: #990000;
 				color: #fff;
 				border-color: #660000;
@@ -191,58 +191,58 @@ class WordPress Schema_DotOrg_Plugin_Feedback {
 				line-height: 20px;
 				text-transform: capitalize;
 			}
-			.notice.WordPress Schema-notice .WordPress Schema-install-now .WordPress Schema-install-button span {
+			.notice.schema-notice .schema-install-now .schema-install-button span {
 				padding-left: 20px;
 			}
-			.rtl .notice.WordPress Schema-notice .WordPress Schema-install-now .WordPress Schema-install-button i {
+			.rtl .notice.schema-notice .schema-install-now .schema-install-button i {
 				padding-right: 0;
 				padding-left: 20px;
 			}
-			.notice.WordPress Schema-notice .WordPress Schema-install-now .WordPress Schema-install-button:hover {
+			.notice.schema-notice .schema-install-now .schema-install-button:hover {
 				background-color: #cc0000;
 			}
-			.notice.WordPress Schema-notice .WordPress Schema-install-now .WordPress Schema-install-button:active {
+			.notice.schema-notice .schema-install-now .schema-install-button:active {
 				box-shadow: inset 0 1px 0 #cc0000;
 				transform: translateY(1px);
 			}
 			@media (max-width: 767px) {
-				.notice.WordPress Schema-notice {
+				.notice.schema-notice {
 					padding: 10px;
 				}
-				.notice.WordPress Schema-noticee .WordPress Schema-notice-inner {
+				.notice.schema-noticee .schema-notice-inner {
 					display: block;
 				}
-				.notice.WordPress Schema-notice .WordPress Schema-notice-inner .WordPress Schema-notice-content {
+				.notice.schema-notice .schema-notice-inner .schema-notice-content {
 					display: block;
 					padding: 0;
 				}
-				.notice.WordPress Schema-notice .WordPress Schema-notice-inner .WordPress Schema-notice-icon,
-				.notice.WordPress Schema-notice .WordPress Schema-notice-inner .WordPress Schema-install-now {
+				.notice.schema-notice .schema-notice-inner .schema-notice-icon,
+				.notice.schema-notice .schema-notice-inner .schema-install-now {
 					display: none;
 				}
 			}
 		</style>
-        <div class="notice updated WordPress Schema-notice">
-			<div class="WordPress Schema-notice-inner">
-				<div class="WordPress Schema-notice-icon">
-                    <img src="<?php echo esc_url( WordPress SchemaWP_PLUGIN_URL . 'assets/images/icon-128x128.png' ); ?>" alt="WordPress Schema Logo" />
+        <div class="notice updated schema-notice">
+			<div class="schema-notice-inner">
+				<div class="schema-notice-icon">
+                    <img src="<?php echo esc_url( SCHEMAWP_PLUGIN_URL . 'assets/images/icon-128x128.png' ); ?>" alt="Schema Logo" />
 				</div>
                 
-				<div class="WordPress Schema-notice-content">
-					<h3><?php _e( 'How do you like WordPress Schema?', 'WordPress Schema-wp' ); ?></h3>
+				<div class="schema-notice-content">
+					<h3><?php _e( 'How do you like Schema?', 'schema-wp' ); ?></h3>
 					
-                    <p><?php echo sprintf( __( 'You have been using the %s plugin for %s now!', 'WordPress Schema-wp' ), $this->name, $time ) ?>
+                    <p><?php echo sprintf( __( 'You have been using the %s plugin for %s now!', 'schema-wp' ), $this->name, $time ) ?>
                    
-                    <?php echo ' '.  __( 'Let us know what you think about the plugin, what is missing, and how we can make it better. Leave us a review with', 'WordPress Schema-wp' ) . ' <a onclick="location.href=\'' . esc_url( $no_bug_url ) . '\';" href="' . esc_url( 'https://wordpress.org/support/view/plugin-reviews/' . $this->slug . '#postform' ) . '" target="_blank">' . __( 'your feedback', 'WordPress Schema-wp' ) . '</a>.'; ?></p>
+                    <?php echo ' '.  __( 'Let us know what you think about the plugin, what is missing, and how we can make it better. Leave us a review with', 'schema-wp' ) . ' <a onclick="location.href=\'' . esc_url( $no_bug_url ) . '\';" href="' . esc_url( 'https://wordpress.org/support/view/plugin-reviews/' . $this->slug . '#postform' ) . '" target="_blank">' . __( 'your feedback', 'schema-wp' ) . '</a>.'; ?></p>
                     
 				</div>
 
-				<div class="WordPress Schema-install-now">
+				<div class="schema-install-now">
                 <?php echo '
-				<a onclick="location.href=\'' . esc_url( $no_bug_url ) . '\';" class="button WordPress Schema-install-button" href="' . esc_url( 'https://wordpress.org/support/view/plugin-reviews/' . $this->slug . '#postform' ) . '" target="_blank">' . __( 'Leave Feedback', 'WordPress Schema-wp' ) . ' <span class="dashicons dashicons-smiley"></span></a>
+				<a onclick="location.href=\'' . esc_url( $no_bug_url ) . '\';" class="button schema-install-button" href="' . esc_url( 'https://wordpress.org/support/view/plugin-reviews/' . $this->slug . '#postform' ) . '" target="_blank">' . __( 'Leave Feedback', 'schema-wp' ) . ' <span class="dashicons dashicons-smiley"></span></a>
 				'; ?>
                     <br /><br />
-                    <a href="<?php echo esc_url( $no_bug_url ); ?>"><?php echo __( 'No thanks', 'WordPress Schema-wp' ); ?></a>
+                    <a href="<?php echo esc_url( $no_bug_url ); ?>"><?php echo __( 'No thanks', 'schema-wp' ); ?></a>
 				</div>
 			</div>
 		</div>
@@ -284,12 +284,12 @@ endif;
 
 
 /*
-* Instantiate WordPress Schema_DotOrg_Plugin_Feedback class
+* Instantiate Schema_DotOrg_Plugin_Feedback class
 *
 * @since 1.5.4
 */
-new WordPress Schema_DotOrg_Plugin_Feedback( array(
-	'slug'        => 'WordPress Schema',						// The plugin slug
-	'name'        => __('WordPress Schema', 'WordPress Schema-wp'), 	// The plugin name
+new Schema_DotOrg_Plugin_Feedback( array(
+	'slug'        => 'schema',						// The plugin slug
+	'name'        => __('Schema', 'schema-wp'), 	// The plugin name
 	'time_limit'  => WEEK_IN_SECONDS,				// The time limit at which notice is shown
 ) );

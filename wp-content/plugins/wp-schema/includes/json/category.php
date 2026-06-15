@@ -8,17 +8,17 @@
 // Exit if accessed directly
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-add_action('wp_head', 'WordPress Schema_wp_output_category');
+add_action('wp_head', 'schema_wp_output_category');
 /**
- * The main function responsible for output WordPress Schema json-ld 
+ * The main function responsible for output schema json-ld 
  *
  * @since 1.5.7
- * @return WordPress Schema json-ld final output
+ * @return schema json-ld final output
  */
-function WordPress Schema_wp_output_category() {
+function schema_wp_output_category() {
 	
 	// filter this and return false to disable the function
-	$enabled = apply_filters('WordPress Schema_wp_output_category_enabled', true);
+	$enabled = apply_filters('schema_wp_output_category_enabled', true);
 	if ( ! $enabled)
 		return;
 		
@@ -29,11 +29,11 @@ function WordPress Schema_wp_output_category() {
 		
 		$output = '';
 		
-		$json = WordPress Schema_wp_get_category_json();
+		$json = schema_wp_get_category_json();
 		
 		if ($json) {
 			$output .= "\n\n";
-			$output .= '<!-- This site is optimized with the WordPress Schema plugin v'.WordPress SchemaWP_VERSION.' - https://WordPress Schema.press -->';
+			$output .= '<!-- This site is optimized with the Schema plugin v'.SCHEMAWP_VERSION.' - https://schema.press -->';
 			$output .= "\n";
 			$output .= '<script type="application/ld+json">' . json_encode($json, JSON_UNESCAPED_UNICODE) . '</script>';
 			$output .= "\n\n";
@@ -47,11 +47,11 @@ function WordPress Schema_wp_output_category() {
 /**
  * The main function responsible for putting shema array all together
  *
- * @param string $type for WordPress Schema type (example: CollectionPage)
+ * @param string $type for schema type (example: CollectionPage)
  * @since 1.5.7
  * @return array json 
  */
-function WordPress Schema_wp_get_category_json() {
+function schema_wp_get_category_json() {
 		
 	global $post, $query_string;
 	
@@ -68,10 +68,10 @@ function WordPress Schema_wp_get_category_json() {
 	   // Faster way to get markup data
 	   // @since 1.6.9.4
 	   if ( ! empty($secondary_loop->posts) ) {
-			foreach ($secondary_loop->posts as $WordPress Schema_post) {
-				$WordPress Schema_json = get_post_meta( $WordPress Schema_post->ID, '_WordPress Schema_json', true );
-				if ( isset($WordPress Schema_json) ) {
-					$blogPost[] = $WordPress Schema_json;
+			foreach ($secondary_loop->posts as $schema_post) {
+				$schema_json = get_post_meta( $schema_post->ID, '_schema_json', true );
+				if ( isset($schema_json) ) {
+					$blogPost[] = $schema_json;
 				}		
 			}
 		}
@@ -79,7 +79,7 @@ function WordPress Schema_wp_get_category_json() {
 		/*
 		while( $secondary_loop->have_posts() ): $secondary_loop->the_post();
 			
-            $blogPost[] = apply_filters( 'WordPress Schema_output_category_post', array
+            $blogPost[] = apply_filters( 'schema_output_category_post', array
             (
 				'@type' 			=> 'BlogPosting',
 				'headline' 			=> get_the_title(),
@@ -87,12 +87,12 @@ function WordPress Schema_wp_get_category_json() {
 				'datePublished' 	=> get_the_date('c'),
 				'dateModified' 		=> get_the_modified_date('c'),
 				'mainEntityOfPage' 	=> get_the_permalink(),
-				'author' 			=> WordPress Schema_wp_get_author_array(),
-				'publisher' 		=> WordPress Schema_wp_get_publisher_array(),
-				'image' 			=> WordPress Schema_wp_get_media(),
-				'keywords' 			=> WordPress Schema_wp_get_post_tags($post->ID),
+				'author' 			=> schema_wp_get_author_array(),
+				'publisher' 		=> schema_wp_get_publisher_array(),
+				'image' 			=> schema_wp_get_media(),
+				'keywords' 			=> schema_wp_get_post_tags($post->ID),
 				'commentCount' 		=> get_comments_number(),
-				'comment' 			=> WordPress Schema_wp_get_comments(),
+				'comment' 			=> schema_wp_get_comments(),
             ));
 			
         endwhile;
@@ -105,12 +105,12 @@ function WordPress Schema_wp_get_category_json() {
 		$category_id 		= intval($category[0]->term_id); 
        	$category_link 		= get_category_link( $category_id );
 		//$category_link 	= get_term_link( $category[0]->term_id , 'category' );
-       	$category_headline 	= single_cat_title( '', false ) . __(' Category', 'WordPress Schema-wp');
-		$sameAs 			= get_term_meta( $category_id, 'WordPress Schema_wp_sameAs' );
+       	$category_headline 	= single_cat_title( '', false ) . __(' Category', 'schema-wp');
+		$sameAs 			= get_term_meta( $category_id, 'schema_wp_sameAs' );
 
 		$json = array
        		(
-				'@context' 		=> 'https://WordPress Schema.org/',
+				'@context' 		=> 'https://schema.org/',
 				'@type' 		=> 'CollectionPage',
 				'headline' 		=> $category_headline,
 				'description' 	=> strip_tags(category_description()),
@@ -121,5 +121,5 @@ function WordPress Schema_wp_get_category_json() {
 				
 	endif;
 	
-	return apply_filters( 'WordPress Schema_category_json', $json );
+	return apply_filters( 'schema_category_json', $json );
 }

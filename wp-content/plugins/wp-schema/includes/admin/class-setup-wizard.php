@@ -10,12 +10,12 @@
 // Exit if accessed directly
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-if ( ! class_exists( 'WordPress Schema_WP_Setup_Wizard' ) ) :
+if ( ! class_exists( 'Schema_WP_Setup_Wizard' ) ) :
 
 /**
  * The class
  */
-class WordPress Schema_WP_Setup_Wizard {
+class Schema_WP_Setup_Wizard {
     /** @var string Currenct Step */
     protected $step   = '';
 
@@ -42,45 +42,45 @@ class WordPress Schema_WP_Setup_Wizard {
 		
         $suffix     = defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ? '' : '.min';
 		$suffix     = '';
-		$url 		= WordPress SchemaWP_PLUGIN_URL . 'assets/vendors/woo-setup-wiz/';
+		$url 		= SCHEMAWP_PLUGIN_URL . 'assets/vendors/woo-setup-wiz/';
 		
         wp_register_script( 'jquery-blockui', $url . 'js/jquery-blockui/jquery.blockUI' . $suffix . '.js', array( 'jquery' ), '2.70', true );
         wp_register_script( 'selectWoo', $url . 'js/selectWoo/selectWoo.full' . $suffix . '.js', array( 'jquery' ), '1.0.1' );
-        wp_register_script( 'wc-enhanced-select', $url . 'js/wc-enhanced-select' . $suffix . '.js', array( 'jquery', 'selectWoo' ), WordPress SchemaWP_VERSION );
+        wp_register_script( 'wc-enhanced-select', $url . 'js/wc-enhanced-select' . $suffix . '.js', array( 'jquery', 'selectWoo' ), SCHEMAWP_VERSION );
         wp_localize_script( 'wc-enhanced-select', 'wc_enhanced_select_params', array(
-            'i18n_matches_1'            => _x( 'One result is available, press enter to select it.', 'enhanced select', 'WordPress Schema-wp' ),
-            'i18n_matches_n'            => _x( '%qty% results are available, use up and down arrow keys to navigate.', 'enhanced select', 'WordPress Schema-wp' ),
-            'i18n_no_matches'           => _x( 'No matches found', 'enhanced select', 'WordPress Schema-wp' ),
-            'i18n_ajax_error'           => _x( 'Loading failed', 'enhanced select', 'WordPress Schema-wp' ),
-            'i18n_input_too_short_1'    => _x( 'Please enter 1 or more characters', 'enhanced select', 'WordPress Schema-wp' ),
-            'i18n_input_too_short_n'    => _x( 'Please enter %qty% or more characters', 'enhanced select', 'WordPress Schema-wp' ),
-            'i18n_input_too_long_1'     => _x( 'Please delete 1 character', 'enhanced select', 'WordPress Schema-wp' ),
-            'i18n_input_too_long_n'     => _x( 'Please delete %qty% characters', 'enhanced select', 'WordPress Schema-wp' ),
-            'i18n_selection_too_long_1' => _x( 'You can only select 1 item', 'enhanced select', 'WordPress Schema-wp' ),
-            'i18n_selection_too_long_n' => _x( 'You can only select %qty% items', 'enhanced select', 'WordPress Schema-wp' ),
-            'i18n_load_more'            => _x( 'Loading more results&hellip;', 'enhanced select', 'WordPress Schema-wp' ),
-            'i18n_searching'            => _x( 'Searching&hellip;', 'enhanced select', 'WordPress Schema-wp' ),
+            'i18n_matches_1'            => _x( 'One result is available, press enter to select it.', 'enhanced select', 'schema-wp' ),
+            'i18n_matches_n'            => _x( '%qty% results are available, use up and down arrow keys to navigate.', 'enhanced select', 'schema-wp' ),
+            'i18n_no_matches'           => _x( 'No matches found', 'enhanced select', 'schema-wp' ),
+            'i18n_ajax_error'           => _x( 'Loading failed', 'enhanced select', 'schema-wp' ),
+            'i18n_input_too_short_1'    => _x( 'Please enter 1 or more characters', 'enhanced select', 'schema-wp' ),
+            'i18n_input_too_short_n'    => _x( 'Please enter %qty% or more characters', 'enhanced select', 'schema-wp' ),
+            'i18n_input_too_long_1'     => _x( 'Please delete 1 character', 'enhanced select', 'schema-wp' ),
+            'i18n_input_too_long_n'     => _x( 'Please delete %qty% characters', 'enhanced select', 'schema-wp' ),
+            'i18n_selection_too_long_1' => _x( 'You can only select 1 item', 'enhanced select', 'schema-wp' ),
+            'i18n_selection_too_long_n' => _x( 'You can only select %qty% items', 'enhanced select', 'schema-wp' ),
+            'i18n_load_more'            => _x( 'Loading more results&hellip;', 'enhanced select', 'schema-wp' ),
+            'i18n_searching'            => _x( 'Searching&hellip;', 'enhanced select', 'schema-wp' ),
             'ajax_url'                  => admin_url( 'admin-ajax.php' ),
         ) );
 		
-		wp_enqueue_style( 'WordPress Schema-wp-admin', WordPress SchemaWP_PLUGIN_URL . 'assets/css/admin' . $suffix . '.css', WordPress SchemaWP_VERSION );
-        wp_enqueue_style( 'woocommerce_admin_styles', $url . 'css/admin.css', array(), WordPress SchemaWP_VERSION );
-        wp_enqueue_style( 'wc-setup', $url . 'css/wc-setup.css', array( 'dashicons', 'install' ), WordPress SchemaWP_VERSION );
+		wp_enqueue_style( 'schema-wp-admin', SCHEMAWP_PLUGIN_URL . 'assets/css/admin' . $suffix . '.css', SCHEMAWP_VERSION );
+        wp_enqueue_style( 'woocommerce_admin_styles', $url . 'css/admin.css', array(), SCHEMAWP_VERSION );
+        wp_enqueue_style( 'wc-setup', $url . 'css/wc-setup.css', array( 'dashicons', 'install' ), SCHEMAWP_VERSION );
 		
-		wp_enqueue_style( 'WordPress Schema-wp-setup', $url . 'css/WordPress Schema-setup.css', WordPress SchemaWP_VERSION );
+		wp_enqueue_style( 'schema-wp-setup', $url . 'css/schema-setup.css', SCHEMAWP_VERSION );
 
-        wp_register_script( 'wc-setup', $url . 'js/wc-setup.js', array( 'jquery', 'wc-enhanced-select', 'jquery-blockui' ), WordPress SchemaWP_VERSION );
+        wp_register_script( 'wc-setup', $url . 'js/wc-setup.js', array( 'jquery', 'wc-enhanced-select', 'jquery-blockui' ), SCHEMAWP_VERSION );
         wp_localize_script( 'wc-setup', 'wc_setup_params', array() );
 		
-		wp_register_script( 'WordPress Schema-wp-setup', $url . 'js/WordPress Schema-setup.js', array( 'jquery' ), WordPress SchemaWP_VERSION );
-		wp_localize_script( 'WordPress Schema-wp-setup', 'WordPress Schema_wp_vars', array(
+		wp_register_script( 'schema-wp-setup', $url . 'js/schema-setup.js', array( 'jquery' ), SCHEMAWP_VERSION );
+		wp_localize_script( 'schema-wp-setup', 'schema_wp_vars', array(
 			//'post_id'                     => isset( $post->ID ) ? $post->ID : null,
 			'post_id'                     => null,
-			'WordPress Schema_wp_version'           => WordPress SchemaWP_VERSION,
-			'use_this_file'               => __( 'Use This File', 'WordPress Schema-wp' ),
-			'remove_text'                 => __( 'Remove', 'WordPress Schema-wp' ),
-			'new_media_ui'                => apply_filters( 'WordPress Schema_wp_use_35_media_ui', 1 ),
-			'unsupported_browser'         => __( 'We are sorry but your browser is not compatible with this kind of file upload. Please upgrade your browser.', 'WordPress Schema-wp' ),
+			'schema_wp_version'           => SCHEMAWP_VERSION,
+			'use_this_file'               => __( 'Use This File', 'schema-wp' ),
+			'remove_text'                 => __( 'Remove', 'schema-wp' ),
+			'new_media_ui'                => apply_filters( 'schema_wp_use_35_media_ui', 1 ),
+			'unsupported_browser'         => __( 'We are sorry but your browser is not compatible with this kind of file upload. Please upgrade your browser.', 'schema-wp' ),
 		));
 	
 		//wp_enqueue_style( 'wp-color-picker' );
@@ -102,7 +102,7 @@ class WordPress Schema_WP_Setup_Wizard {
      * Add admin menus/screens.
      */
     public function admin_menus() {
-        add_dashboard_page( __('WordPress Schema Setup', 'WordPress Schema-wp'), __('WordPress Schema Setup Wizard', 'WordPress Schema-wp'), 'manage_options', 'WordPress Schema-setup', '' );
+        add_dashboard_page( __('Schema Setup', 'schema-wp'), __('Schema Setup Wizard', 'schema-wp'), 'manage_options', 'schema-setup', '' );
     }
 		
 	/**
@@ -111,45 +111,45 @@ class WordPress Schema_WP_Setup_Wizard {
 	 * @since 1.7.1
      */
     public function hide_admin_menus() {
-        remove_submenu_page( 'index.php', 'WordPress Schema-setup' );
+        remove_submenu_page( 'index.php', 'schema-setup' );
     }
 
     /**
      * Show the setup wizard.
      */
     public function setup_wizard() {
-        if ( empty( $_GET['page'] ) || 'WordPress Schema-setup' !== $_GET['page'] ) {
+        if ( empty( $_GET['page'] ) || 'schema-setup' !== $_GET['page'] ) {
             return;
         }
         $this->steps = array(
             'introduction' => array(
-                'name'    =>  __( 'Introduction', 'WordPress Schema-wp' ),
-                'view'    => array( $this, 'WordPress Schema_setup_introduction' ),
+                'name'    =>  __( 'Introduction', 'schema-wp' ),
+                'view'    => array( $this, 'schema_setup_introduction' ),
                 'handler' => ''
             ),
 			'site_type' => array(
-                'name'    =>  __( 'Site Type', 'WordPress Schema-wp' ),
-                'view'    => array( $this, 'WordPress Schema_setup_site_type' ),
-                'handler' => array( $this, 'WordPress Schema_setup_save' ),
+                'name'    =>  __( 'Site Type', 'schema-wp' ),
+                'view'    => array( $this, 'schema_setup_site_type' ),
+                'handler' => array( $this, 'schema_setup_save' ),
             ),
-            'general_WordPress Schema' => array(
-                'name'    =>  __( 'General', 'WordPress Schema-wp' ),
-                'view'    => array( $this, 'WordPress Schema_setup_general' ),
-                'handler' => array( $this, 'WordPress Schema_setup_save' ),
+            'general_schema' => array(
+                'name'    =>  __( 'General', 'schema-wp' ),
+                'view'    => array( $this, 'schema_setup_general' ),
+                'handler' => array( $this, 'schema_setup_save' ),
             ),
 			'social_profiles' => array(
-                'name'    =>  __( 'Social Profiles', 'WordPress Schema-wp' ),
-                'view'    => array( $this, 'WordPress Schema_setup_social_profiles' ),
-                'handler' => array( $this, 'WordPress Schema_setup_save' ),
+                'name'    =>  __( 'Social Profiles', 'schema-wp' ),
+                'view'    => array( $this, 'schema_setup_social_profiles' ),
+                'handler' => array( $this, 'schema_setup_save' ),
             ),
-            'WordPress Schemas' => array(
-                'name'    =>  __( 'WordPress Schemas', 'WordPress Schema-wp' ),
-                'view'    => array( $this, 'WordPress Schema_setup_WordPress Schemas' ),
-                'handler' => array( $this, 'WordPress Schema_setup_save' ),
+            'schemas' => array(
+                'name'    =>  __( 'Schemas', 'schema-wp' ),
+                'view'    => array( $this, 'schema_setup_schemas' ),
+                'handler' => array( $this, 'schema_setup_save' ),
             ),
             'next_steps' => array(
-                'name'    =>  __( 'Ready!', 'WordPress Schema-wp' ),
-                'view'    => array( $this, 'WordPress Schema_setup_ready' ),
+                'name'    =>  __( 'Ready!', 'schema-wp' ),
+                'view'    => array( $this, 'schema_setup_ready' ),
                 'handler' => ''
             )
         );
@@ -185,9 +185,9 @@ class WordPress Schema_WP_Setup_Wizard {
         <head>
             <meta name="viewport" content="width=device-width" />
             <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-            <title><?php _e( 'WordPress Schema &rsaquo; Setup Wizard', 'WordPress Schema-wp' ); ?></title>
+            <title><?php _e( 'Schema &rsaquo; Setup Wizard', 'schema-wp' ); ?></title>
 			<?php wp_print_scripts( 'wc-setup' ); ?>
-            <?php wp_print_scripts( 'WordPress Schema-wp-setup' ); ?>
+            <?php wp_print_scripts( 'schema-wp-setup' ); ?>
             <?php do_action( 'admin_print_styles' ); ?>
             <?php do_action( 'admin_head' ); ?>
 			<style type="text/css">
@@ -238,11 +238,11 @@ class WordPress Schema_WP_Setup_Wizard {
         </head>
         <body class="wc-setup wp-core-ui">
             <?php
-                $badge_url = WordPress SchemaWP_PLUGIN_URL . 'assets/images/WordPress Schema-badge.png';
-				//$badge_url = WordPress SchemaWP_PLUGIN_URL . 'assets/images/icon-128x128.png';
+                $badge_url = SCHEMAWP_PLUGIN_URL . 'assets/images/schema-badge.png';
+				//$badge_url = SCHEMAWP_PLUGIN_URL . 'assets/images/icon-128x128.png';
 				
             ?>
-            <h1 id="wc-logo"><a href="https://WordPress Schema.press"><img src="<?php echo $badge_url; ?>" alt="WordPress Schema" /></a></h1>
+            <h1 id="wc-logo"><a href="https://schema.press"><img src="<?php echo $badge_url; ?>" alt="Schema" /></a></h1>
         <?php
     }
 
@@ -252,7 +252,7 @@ class WordPress Schema_WP_Setup_Wizard {
     public function setup_wizard_footer() {
         ?>
             <?php if ( 'next_steps' === $this->step ) : ?>
-                <a class="wc-return-to-dashboard" href="<?php echo esc_url( admin_url() ); ?>"><?php _e( 'Return to the WordPress Dashboard', 'WordPress Schema-wp' ); ?></a>
+                <a class="wc-return-to-dashboard" href="<?php echo esc_url( admin_url() ); ?>"><?php _e( 'Return to the WordPress Dashboard', 'schema-wp' ); ?></a>
             <?php endif; ?>
             </body>
             <?php   // Commented this since it through a Fatal error with Divi
@@ -289,7 +289,7 @@ class WordPress Schema_WP_Setup_Wizard {
      * Output the content for the current step.
      */
     public function setup_wizard_content() {
-        echo '<div class="wc-setup-content WordPress Schema-setup-content">';
+        echo '<div class="wc-setup-content schema-setup-content">';
         call_user_func( $this->steps[ $this->step ]['view'] );
         echo '</div>';
     }
@@ -297,14 +297,14 @@ class WordPress Schema_WP_Setup_Wizard {
 	 /**
      * Save options.
      */
-    public function WordPress Schema_setup_save() {
-        check_admin_referer( 'WordPress Schema-setup' );
+    public function schema_setup_save() {
+        check_admin_referer( 'schema-setup' );
 	
-		$options 			= get_option( 'WordPress Schema_wp_settings', array() );
-		$sanitize_settings 	= array_map("strip_tags", $_POST['WordPress Schema_wp_settings']); // sanitize
+		$options 			= get_option( 'schema_wp_settings', array() );
+		$sanitize_settings 	= array_map("strip_tags", $_POST['schema_wp_settings']); // sanitize
 		$new_settings		= array_replace( $options, $sanitize_settings); // merge
 		
-		update_option( 'WordPress Schema_wp_settings', $new_settings );
+		update_option( 'schema_wp_settings', $new_settings );
 		
         wp_redirect( esc_url_raw( $this->get_next_step_link() ) );
         exit;
@@ -313,14 +313,14 @@ class WordPress Schema_WP_Setup_Wizard {
     /**
      * Introduction step.
      */
-    public function WordPress Schema_setup_introduction() {
+    public function schema_setup_introduction() {
         ?>
-        <h1><?php _e( 'Welcome to WordPress Schema!', 'WordPress Schema-wp' ); ?></h1>
-        <p><?php _e( 'Thank you for choosing WordPress Schema to power your website! This quick setup wizard will help you configure the basic settings. <strong>It’s completely optional and shouldn’t take longer than two minutes.</strong>', 'WordPress Schema-wp' ); ?></p>
-        <p><?php _e( 'No time right now? If you don’t want to go through the wizard, you can skip and return to the WordPress dashboard. Come back anytime if you change your mind!', 'WordPress Schema-wp' ); ?></p>
+        <h1><?php _e( 'Welcome to Schema!', 'schema-wp' ); ?></h1>
+        <p><?php _e( 'Thank you for choosing Schema to power your website! This quick setup wizard will help you configure the basic settings. <strong>It’s completely optional and shouldn’t take longer than two minutes.</strong>', 'schema-wp' ); ?></p>
+        <p><?php _e( 'No time right now? If you don’t want to go through the wizard, you can skip and return to the WordPress dashboard. Come back anytime if you change your mind!', 'schema-wp' ); ?></p>
         <p class="wc-setup-actions step">
-            <a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button-primary button button-large button-next"><?php _e( 'Let\'s Go!', 'WordPress Schema-wp' ); ?></a>
-            <a href="<?php echo esc_url( admin_url( 'admin.php?page=WordPress Schema' ) ); ?>" class="button button-large"><?php _e( 'Not right now', 'WordPress Schema-wp' ); ?></a>
+            <a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button-primary button button-large button-next"><?php _e( 'Let\'s Go!', 'schema-wp' ); ?></a>
+            <a href="<?php echo esc_url( admin_url( 'admin.php?page=schema' ) ); ?>" class="button button-large"><?php _e( 'Not right now', 'schema-wp' ); ?></a>
         </p>
         <?php
     }
@@ -328,21 +328,21 @@ class WordPress Schema_WP_Setup_Wizard {
 	/**
      * Person or Organization step.
      */
-    public function WordPress Schema_setup_site_type() {
+    public function schema_setup_site_type() {
         ?>
-        <h1><?php _e( 'Site Type', 'WordPress Schema-wp' ); ?></h1>
+        <h1><?php _e( 'Site Type', 'schema-wp' ); ?></h1>
         
-        <p><?php _e( 'What is your site about?', 'WordPress Schema-wp' ); ?></p>
+        <p><?php _e( 'What is your site about?', 'schema-wp' ); ?></p>
         
-        <p class="description"><?php _e( 'This information can help us to prioritize future additions to our plugin for specific types of sites', 'WordPress Schema-wp' ); ?>.</p>
+        <p class="description"><?php _e( 'This information can help us to prioritize future additions to our plugin for specific types of sites', 'schema-wp' ); ?>.</p>
 
         <form method="post">
             <table class="form-table">
                 <tr>
-                	<th scope="row"><label for="site_type"><?php //_e( 'This Website Represent', 'WordPress Schema-wp' ); ?></label></th>
-                    <td><?php WordPress Schema_wp_wiz_radio_callback( array(
+                	<th scope="row"><label for="site_type"><?php //_e( 'This Website Represent', 'schema-wp' ); ?></label></th>
+                    <td><?php schema_wp_wiz_radio_callback( array(
 						'id' => 'site_type',
-						'name' => __( 'Site Type', 'WordPress Schema-wp' ),
+						'name' => __( 'Site Type', 'schema-wp' ),
 						'desc' => '',
 						'type' => 'radio',
 						'options' => array(
@@ -367,9 +367,9 @@ class WordPress Schema_WP_Setup_Wizard {
                 </tr>
             </table>
             <p class="wc-setup-actions step">
-                <input type="submit" class="button-primary button button-large button-next" value="<?php esc_attr_e( 'Continue', 'WordPress Schema-wp' ); ?>" name="save_step" />
-                <a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button button-large button-next"><?php _e( 'Skip this step', 'WordPress Schema-wp' ); ?></a>
-                <?php wp_nonce_field( 'WordPress Schema-setup' ); ?>
+                <input type="submit" class="button-primary button button-large button-next" value="<?php esc_attr_e( 'Continue', 'schema-wp' ); ?>" name="save_step" />
+                <a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button button-large button-next"><?php _e( 'Skip this step', 'schema-wp' ); ?></a>
+                <?php wp_nonce_field( 'schema-setup' ); ?>
             </p>
         </form>
         <?php
@@ -378,21 +378,21 @@ class WordPress Schema_WP_Setup_Wizard {
     /**
      * General step.
      */
-    public function WordPress Schema_setup_general() {
+    public function schema_setup_general() {
         ?>
-        <h1><?php _e( 'Person or Organization', 'WordPress Schema-wp' ); ?></h1>
+        <h1><?php _e( 'Person or Organization', 'schema-wp' ); ?></h1>
         
-        <p><?php _e( 'Does your site represent a Person or Organization?', 'WordPress Schema-wp' ); ?></p>
+        <p><?php _e( 'Does your site represent a Person or Organization?', 'schema-wp' ); ?></p>
         
-        <p class="description"><?php _e( 'This information will be used in Google\'s Knowledge Graph Card, the big block of information you see on the right side of the search results.', 'WordPress Schema-wp' ); ?></p>
+        <p class="description"><?php _e( 'This information will be used in Google\'s Knowledge Graph Card, the big block of information you see on the right side of the search results.', 'schema-wp' ); ?></p>
 
         <form method="post">
             <table class="form-table">
                 <tr>
-                	<th scope="row"><label for="organization_or_person"><?php _e( 'This Website Represent', 'WordPress Schema-wp' ); ?></label></th>
-                    <td><?php WordPress Schema_wp_wiz_radio_callback( array(
+                	<th scope="row"><label for="organization_or_person"><?php _e( 'This Website Represent', 'schema-wp' ); ?></label></th>
+                    <td><?php schema_wp_wiz_radio_callback( array(
 						'id' => 'organization_or_person',
-						'name' => __( 'Organization or Person?', 'WordPress Schema-wp' ),
+						'name' => __( 'Organization or Person?', 'schema-wp' ),
 						'desc' => '',
 						'type' => 'radio',
 						'options' => array(
@@ -403,10 +403,10 @@ class WordPress Schema_WP_Setup_Wizard {
 					)); ?></td>
                 </tr>
                 <tr class="organization_or_person">
-                	<th scope="row"><label for="name"><?php _e( 'Name', 'WordPress Schema-wp' ); ?></label></th>
-                    <td><?php WordPress Schema_wp_wiz_text_callback( array(
+                	<th scope="row"><label for="name"><?php _e( 'Name', 'schema-wp' ); ?></label></th>
+                    <td><?php schema_wp_wiz_text_callback( array(
 						'id' => 'name',
-						'name' => __( 'Name', 'WordPress Schema-wp' ),
+						'name' => __( 'Name', 'schema-wp' ),
 						'desc' => '',
 						'type' => 'text',
 						'std' => '',
@@ -415,13 +415,13 @@ class WordPress Schema_WP_Setup_Wizard {
 					)); ?></td>
                 </tr>
                 <tr class="organization-logo">
-                    <th scope="row"><label for="logo"><?php _e( 'Organization Logo', 'WordPress Schema-wp' ); ?></label></th>
+                    <th scope="row"><label for="logo"><?php _e( 'Organization Logo', 'schema-wp' ); ?></label></th>
                     <td> 
                     <?php
-                         WordPress Schema_wp_wiz_image_upload_callback( array(
+                         schema_wp_wiz_image_upload_callback( array(
 							'id' => 'logo',
-							'name' => __( 'Logo', 'WordPress Schema-wp' ),
-							'desc' => __( 'Specify the image of your organization\'s logo to be used in Google Search results and in the Knowledge Graph.<br />Learn more about', 'WordPress Schema-wp') . ' <a href="https://developers.google.com/search/docs/data-types/logo" target="_blank">'.__('Logo guidelines', 'WordPress Schema-wp').'</a>',
+							'name' => __( 'Logo', 'schema-wp' ),
+							'desc' => __( 'Specify the image of your organization\'s logo to be used in Google Search results and in the Knowledge Graph.<br />Learn more about', 'schema-wp') . ' <a href="https://developers.google.com/search/docs/data-types/logo" target="_blank">'.__('Logo guidelines', 'schema-wp').'</a>',
 							'type' => 'image_upload',
 							'std' => ''
 						));
@@ -430,9 +430,9 @@ class WordPress Schema_WP_Setup_Wizard {
                 </tr>
             </table>
             <p class="wc-setup-actions step">
-                <input type="submit" class="button-primary button button-large button-next" value="<?php esc_attr_e( 'Continue', 'WordPress Schema-wp' ); ?>" name="save_step" />
-                <a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button button-large button-next"><?php _e( 'Skip this step', 'WordPress Schema-wp' ); ?></a>
-                <?php wp_nonce_field( 'WordPress Schema-setup' ); ?>
+                <input type="submit" class="button-primary button button-large button-next" value="<?php esc_attr_e( 'Continue', 'schema-wp' ); ?>" name="save_step" />
+                <a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button button-large button-next"><?php _e( 'Skip this step', 'schema-wp' ); ?></a>
+                <?php wp_nonce_field( 'schema-setup' ); ?>
             </p>
         </form>
         <?php
@@ -441,22 +441,22 @@ class WordPress Schema_WP_Setup_Wizard {
    /**
      * Social Profiles step.
      */
-    public function WordPress Schema_setup_social_profiles() {
+    public function schema_setup_social_profiles() {
        
         ?>
-        <h1><?php _e( 'Social Profiles', 'WordPress Schema-wp' ); ?></h1>
+        <h1><?php _e( 'Social Profiles', 'schema-wp' ); ?></h1>
         
-        <p><?php _e( 'Provide your social profile information to a Google Knowledge panel.', 'WordPress Schema-wp' ); ?></p>
+        <p><?php _e( 'Provide your social profile information to a Google Knowledge panel.', 'schema-wp' ); ?></p>
         
-        <p class="description"><?php _e( 'Knowledge panels prominently display your social profile information in some Google Search results.', 'WordPress Schema-wp' ); ?></p>
+        <p class="description"><?php _e( 'Knowledge panels prominently display your social profile information in some Google Search results.', 'schema-wp' ); ?></p>
 
         <form method="post">
             <table class="form-table">
                 <tr>
-                	<th scope="row"><label for="name"><?php _e( 'Facebook', 'WordPress Schema-wp' ); ?></label></th>
-                    <td><?php WordPress Schema_wp_wiz_text_callback( array(
+                	<th scope="row"><label for="name"><?php _e( 'Facebook', 'schema-wp' ); ?></label></th>
+                    <td><?php schema_wp_wiz_text_callback( array(
 						'id' => 'facebook',
-						'name' => __( 'Facebook', 'WordPress Schema-wp' ),
+						'name' => __( 'Facebook', 'schema-wp' ),
 						'desc' => '',
 						'type' => 'text',
 						'std' => '',
@@ -465,10 +465,10 @@ class WordPress Schema_WP_Setup_Wizard {
 					)); ?></td>
                 </tr>
                 <tr>
-                	<th scope="row"><label for="name"><?php _e( 'Twitter', 'WordPress Schema-wp' ); ?></label></th>
-                    <td><?php WordPress Schema_wp_wiz_text_callback( array(
+                	<th scope="row"><label for="name"><?php _e( 'Twitter', 'schema-wp' ); ?></label></th>
+                    <td><?php schema_wp_wiz_text_callback( array(
 						'id' => 'twitter',
-						'name' => __( 'Twitter', 'WordPress Schema-wp' ),
+						'name' => __( 'Twitter', 'schema-wp' ),
 						'desc' => '',
 						'type' => 'text',
 						'std' => '',
@@ -477,10 +477,10 @@ class WordPress Schema_WP_Setup_Wizard {
 					)); ?></td>
                 </tr>
                 <tr>
-                	<th scope="row"><label for="name"><?php _e( 'Google+', 'WordPress Schema-wp' ); ?></label></th>
-                    <td><?php WordPress Schema_wp_wiz_text_callback( array(
+                	<th scope="row"><label for="name"><?php _e( 'Google+', 'schema-wp' ); ?></label></th>
+                    <td><?php schema_wp_wiz_text_callback( array(
 						'id' => 'google',
-						'name' => __( 'Google+', 'WordPress Schema-wp' ),
+						'name' => __( 'Google+', 'schema-wp' ),
 						'desc' => '',
 						'type' => 'text',
 						'std' => '',
@@ -489,10 +489,10 @@ class WordPress Schema_WP_Setup_Wizard {
 					)); ?></td>
                 </tr>
                 <tr>
-                	<th scope="row"><label for="name"><?php _e( 'Instagram', 'WordPress Schema-wp' ); ?></label></th>
-                    <td><?php WordPress Schema_wp_wiz_text_callback( array(
+                	<th scope="row"><label for="name"><?php _e( 'Instagram', 'schema-wp' ); ?></label></th>
+                    <td><?php schema_wp_wiz_text_callback( array(
 						'id' => 'instagram',
-						'name' => __( 'Instagram', 'WordPress Schema-wp' ),
+						'name' => __( 'Instagram', 'schema-wp' ),
 						'desc' => '',
 						'type' => 'text',
 						'std' => '',
@@ -501,10 +501,10 @@ class WordPress Schema_WP_Setup_Wizard {
 					)); ?></td>
                 </tr>
                 <tr>
-                	<th scope="row"><label for="name"><?php _e( 'YouTube', 'WordPress Schema-wp' ); ?></label></th>
-                    <td><?php WordPress Schema_wp_wiz_text_callback( array(
+                	<th scope="row"><label for="name"><?php _e( 'YouTube', 'schema-wp' ); ?></label></th>
+                    <td><?php schema_wp_wiz_text_callback( array(
 						'id' => 'youtube',
-						'name' => __( 'YouTube', 'WordPress Schema-wp' ),
+						'name' => __( 'YouTube', 'schema-wp' ),
 						'desc' => '',
 						'type' => 'text',
 						'std' => '',
@@ -513,10 +513,10 @@ class WordPress Schema_WP_Setup_Wizard {
 					)); ?></td>
                 </tr>
                 <tr>
-                	<th scope="row"><label for="name"><?php _e( 'LinkedIn', 'WordPress Schema-wp' ); ?></label></th>
-                    <td><?php WordPress Schema_wp_wiz_text_callback( array(
+                	<th scope="row"><label for="name"><?php _e( 'LinkedIn', 'schema-wp' ); ?></label></th>
+                    <td><?php schema_wp_wiz_text_callback( array(
 						'id' => 'linkedin',
-						'name' => __( 'Linkedin', 'WordPress Schema-wp' ),
+						'name' => __( 'Linkedin', 'schema-wp' ),
 						'desc' => '',
 						'type' => 'text',
 						'std' => '',
@@ -525,10 +525,10 @@ class WordPress Schema_WP_Setup_Wizard {
 					)); ?></td>
                 </tr>
                 <tr>
-                	<th scope="row"><label for="name"><?php _e( 'Myspace', 'WordPress Schema-wp' ); ?></label></th>
-                    <td><?php WordPress Schema_wp_wiz_text_callback( array(
+                	<th scope="row"><label for="name"><?php _e( 'Myspace', 'schema-wp' ); ?></label></th>
+                    <td><?php schema_wp_wiz_text_callback( array(
 						'id' => 'myspace',
-						'name' => __( 'Myspace', 'WordPress Schema-wp' ),
+						'name' => __( 'Myspace', 'schema-wp' ),
 						'desc' => '',
 						'type' => 'text',
 						'std' => '',
@@ -537,10 +537,10 @@ class WordPress Schema_WP_Setup_Wizard {
 					)); ?></td>
                 </tr>
                 <tr>
-                	<th scope="row"><label for="name"><?php _e( 'Pinterest', 'WordPress Schema-wp' ); ?></label></th>
-                    <td><?php WordPress Schema_wp_wiz_text_callback( array(
+                	<th scope="row"><label for="name"><?php _e( 'Pinterest', 'schema-wp' ); ?></label></th>
+                    <td><?php schema_wp_wiz_text_callback( array(
 						'id' => 'pinterest',
-						'name' => __( 'Pinterest', 'WordPress Schema-wp' ),
+						'name' => __( 'Pinterest', 'schema-wp' ),
 						'desc' => '',
 						'type' => 'text',
 						'std' => '',
@@ -549,10 +549,10 @@ class WordPress Schema_WP_Setup_Wizard {
 					)); ?></td>
                 </tr>
                 <tr>
-                	<th scope="row"><label for="name"><?php _e( 'SoundCloud', 'WordPress Schema-wp' ); ?></label></th>
-                    <td><?php WordPress Schema_wp_wiz_text_callback( array(
+                	<th scope="row"><label for="name"><?php _e( 'SoundCloud', 'schema-wp' ); ?></label></th>
+                    <td><?php schema_wp_wiz_text_callback( array(
 						'id' => 'soundcloud',
-						'name' => __( 'SoundCloud', 'WordPress Schema-wp' ),
+						'name' => __( 'SoundCloud', 'schema-wp' ),
 						'desc' => '',
 						'type' => 'text',
 						'std' => '',
@@ -561,10 +561,10 @@ class WordPress Schema_WP_Setup_Wizard {
 					)); ?></td>
                 </tr>
                 <tr>
-                	<th scope="row"><label for="name"><?php _e( 'Tumblr', 'WordPress Schema-wp' ); ?></label></th>
-                    <td><?php WordPress Schema_wp_wiz_text_callback( array(
+                	<th scope="row"><label for="name"><?php _e( 'Tumblr', 'schema-wp' ); ?></label></th>
+                    <td><?php schema_wp_wiz_text_callback( array(
 						'id' => 'tumblr',
-						'name' => __( 'Tumblr', 'WordPress Schema-wp' ),
+						'name' => __( 'Tumblr', 'schema-wp' ),
 						'desc' => '',
 						'type' => 'text',
 						'std' => '',
@@ -574,9 +574,9 @@ class WordPress Schema_WP_Setup_Wizard {
                 </tr>
             </table>
             <p class="wc-setup-actions step">
-                <input type="submit" class="button-primary button button-large button-next" value="<?php esc_attr_e( 'Continue', 'WordPress Schema-wp' ); ?>" name="save_step" />
-                <a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button button-large button-next"><?php _e( 'Skip this step', 'WordPress Schema-wp' ); ?></a>
-                <?php wp_nonce_field( 'WordPress Schema-setup' ); ?>
+                <input type="submit" class="button-primary button button-large button-next" value="<?php esc_attr_e( 'Continue', 'schema-wp' ); ?>" name="save_step" />
+                <a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button button-large button-next"><?php _e( 'Skip this step', 'schema-wp' ); ?></a>
+                <?php wp_nonce_field( 'schema-setup' ); ?>
             </p>
         </form>
         <?php
@@ -585,42 +585,42 @@ class WordPress Schema_WP_Setup_Wizard {
     /**
      * General step.
      */
-    public function WordPress Schema_setup_WordPress Schemas() {
+    public function schema_setup_schemas() {
         ?>
-        <h1><?php _e( 'Mark Up Your Content', 'WordPress Schema-wp' ); ?></h1>
+        <h1><?php _e( 'Mark Up Your Content', 'schema-wp' ); ?></h1>
         
-        <p><?php _e( 'Automatically, add additional WordPress Schema.org markups to your website content.', 'WordPress Schema-wp' ); ?></p>
+        <p><?php _e( 'Automatically, add additional schema.org markups to your website content.', 'schema-wp' ); ?></p>
         
         <form method="post">
             <table class="form-table">
                 <tr>
-                	<th scope="row"><label for="about_page"><?php _e( 'About Page', 'WordPress Schema-wp' ); ?></label></th>
-                    <td><?php WordPress Schema_wp_wiz_post_select_callback( array(
+                	<th scope="row"><label for="about_page"><?php _e( 'About Page', 'schema-wp' ); ?></label></th>
+                    <td><?php schema_wp_wiz_post_select_callback( array(
 							'id' => 'about_page',
-							'name' => __( 'About Page', 'WordPress Schema-wp' ),
-							'desc' => __( '', 'WordPress Schema-wp' ),
+							'name' => __( 'About Page', 'schema-wp' ),
+							'desc' => __( '', 'schema-wp' ),
 							'type' => 'post_select',
 							'post_type' => 'page'
 					)); ?></td>
                 </tr>
                 <tr>
-                	<th scope="row"><label for="contact_page"><?php _e( 'Contact Page', 'WordPress Schema-wp' ); ?></label></th>
-                    <td><?php WordPress Schema_wp_wiz_post_select_callback( array(
+                	<th scope="row"><label for="contact_page"><?php _e( 'Contact Page', 'schema-wp' ); ?></label></th>
+                    <td><?php schema_wp_wiz_post_select_callback( array(
 							'id' => 'contact_page',
-							'name' => __( 'Contact Page', 'WordPress Schema-wp' ),
-							'desc' => __( '', 'WordPress Schema-wp' ),
+							'name' => __( 'Contact Page', 'schema-wp' ),
+							'desc' => __( '', 'schema-wp' ),
 							'type' => 'post_select',
 							'post_type' => 'page'
 					)); ?></td>
                 </tr>
                 <tr class="organization-logo">
-                    <th scope="row"><label for="logo"><?php _e( 'Publisher Logo', 'WordPress Schema-wp' ); ?></label></th>
+                    <th scope="row"><label for="logo"><?php _e( 'Publisher Logo', 'schema-wp' ); ?></label></th>
                     <td> 
                     <?php
-                         WordPress Schema_wp_wiz_image_upload_callback( array(
+                         schema_wp_wiz_image_upload_callback( array(
 							'id' => 'publisher_logo',
-							'name' => __( 'Publisher Logo', 'WordPress Schema-wp' ),
-							'desc' => __( 'Publisher Logo should have a wide aspect ratio, not a square icon, it should be no wider than 600px, and no taller than 60px.', 'WordPress Schema-wp' ) . ' <a href="https://developers.google.com/search/docs/data-types/articles#logo-guidelines" target="_blank">'.__('Logo guidelines', 'WordPress Schema-wp').'</a>',
+							'name' => __( 'Publisher Logo', 'schema-wp' ),
+							'desc' => __( 'Publisher Logo should have a wide aspect ratio, not a square icon, it should be no wider than 600px, and no taller than 60px.', 'schema-wp' ) . ' <a href="https://developers.google.com/search/docs/data-types/articles#logo-guidelines" target="_blank">'.__('Logo guidelines', 'schema-wp').'</a>',
 							'type' => 'image_upload',
 							'std' => ''
 						));
@@ -628,55 +628,55 @@ class WordPress Schema_WP_Setup_Wizard {
                     </td>
                 </tr>
                 <tr>
-                	<th scope="row"><label for="web_page_element_enable"><?php _e( 'WPHeader and WPFooter', 'WordPress Schema-wp' ); ?></label></th>
-                    <td><?php WordPress Schema_wp_checkbox_callback( array(
+                	<th scope="row"><label for="web_page_element_enable"><?php _e( 'WPHeader and WPFooter', 'schema-wp' ); ?></label></th>
+                    <td><?php schema_wp_checkbox_callback( array(
 							'id' => 'web_page_element_enable',
-							'name' => __( 'WPHeader and WPFooter', 'WordPress Schema-wp' ),
-							'desc' => __( 'enable?', 'WordPress Schema-wp' ),
+							'name' => __( 'WPHeader and WPFooter', 'schema-wp' ),
+							'desc' => __( 'enable?', 'schema-wp' ),
 							'type' => 'post_select'
 					)); ?></td>
                 </tr>
                 <tr>
-                	<th scope="row"><label for="breadcrumbs_enable"><?php _e( 'Breadcrumbs', 'WordPress Schema-wp' ); ?></label></th>
-                    <td><?php WordPress Schema_wp_checkbox_callback( array(
+                	<th scope="row"><label for="breadcrumbs_enable"><?php _e( 'Breadcrumbs', 'schema-wp' ); ?></label></th>
+                    <td><?php schema_wp_checkbox_callback( array(
 							'id' => 'breadcrumbs_enable',
-							'name' => __( 'Breadcrumbs', 'WordPress Schema-wp' ),
-							'desc' => __( 'enable?', 'WordPress Schema-wp' ),
+							'name' => __( 'Breadcrumbs', 'schema-wp' ),
+							'desc' => __( 'enable?', 'schema-wp' ),
 							'type' => 'checkbox'
 					)); ?></td>
                 </tr>
                 <tr>
-                	<th scope="row"><label for="comments_enable"><?php _e( 'Comments', 'WordPress Schema-wp' ); ?></label></th>
-                    <td><?php WordPress Schema_wp_checkbox_callback( array(
+                	<th scope="row"><label for="comments_enable"><?php _e( 'Comments', 'schema-wp' ); ?></label></th>
+                    <td><?php schema_wp_checkbox_callback( array(
 							'id' => 'comments_enable',
-							'name' => __( 'Comments', 'WordPress Schema-wp' ),
-							'desc' => __( 'enable?', 'WordPress Schema-wp' ),
+							'name' => __( 'Comments', 'schema-wp' ),
+							'desc' => __( 'enable?', 'schema-wp' ),
 							'type' => 'checkbox'
 					)); ?></td>
                 </tr>
                 <tr>
-                	<th scope="row"><label for="video_object_enable"><?php _e( 'VideoObject', 'WordPress Schema-wp' ); ?></label></th>
-                    <td><?php WordPress Schema_wp_checkbox_callback( array(
+                	<th scope="row"><label for="video_object_enable"><?php _e( 'VideoObject', 'schema-wp' ); ?></label></th>
+                    <td><?php schema_wp_checkbox_callback( array(
 							'id' => 'video_object_enable',
-							'name' => __( 'VideoObject', 'WordPress Schema-wp' ),
-							'desc' => __( 'enable?', 'WordPress Schema-wp' ),
+							'name' => __( 'VideoObject', 'schema-wp' ),
+							'desc' => __( 'enable?', 'schema-wp' ),
 							'type' => 'checkbox'
 					)); ?></td>
                 </tr>
                 <tr>
-                	<th scope="row"><label for="audio_object_enable"><?php _e( 'AudioObject', 'WordPress Schema-wp' ); ?></label></th>
-                    <td><?php WordPress Schema_wp_checkbox_callback( array(
+                	<th scope="row"><label for="audio_object_enable"><?php _e( 'AudioObject', 'schema-wp' ); ?></label></th>
+                    <td><?php schema_wp_checkbox_callback( array(
 							'id' => 'audio_object_enable',
-							'name' => __( 'AudioObject', 'WordPress Schema-wp' ),
-							'desc' => __( 'enable?', 'WordPress Schema-wp' ),
+							'name' => __( 'AudioObject', 'schema-wp' ),
+							'desc' => __( 'enable?', 'schema-wp' ),
 							'type' => 'checkbox'
 					)); ?></td>
                 </tr>
             </table>
             <p class="wc-setup-actions step">
-                <input type="submit" class="button-primary button button-large button-next" value="<?php esc_attr_e( 'Continue', 'WordPress Schema-wp' ); ?>" name="save_step" />
-                <a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button button-large button-next"><?php _e( 'Skip this step', 'WordPress Schema-wp' ); ?></a>
-                <?php wp_nonce_field( 'WordPress Schema-setup' ); ?>
+                <input type="submit" class="button-primary button button-large button-next" value="<?php esc_attr_e( 'Continue', 'schema-wp' ); ?>" name="save_step" />
+                <a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button button-large button-next"><?php _e( 'Skip this step', 'schema-wp' ); ?></a>
+                <?php wp_nonce_field( 'schema-setup' ); ?>
             </p>
         </form>
         <?php
@@ -685,24 +685,24 @@ class WordPress Schema_WP_Setup_Wizard {
     /**
      * Final step.
      */
-    public function WordPress Schema_setup_ready() {
+    public function schema_setup_ready() {
         ?>
-        <h1><?php _e( 'You\'ve done it!', 'WordPress Schema-wp' ); ?></h1>
+        <h1><?php _e( 'You\'ve done it!', 'schema-wp' ); ?></h1>
 		
-        <p><?php _e( 'WordPress Schema will now take care of all the needed technical optimization of your site.', 'WordPress Schema-wp' ); ?></b>
+        <p><?php _e( 'Schema will now take care of all the needed technical optimization of your site.', 'schema-wp' ); ?></b>
         
-         <p><?php _e( 'You can change settings from', 'WordPress Schema-wp' ); ?> <a href="<?php echo esc_url( admin_url( 'admin.php?page=WordPress Schema' ) ); ?>"><?php _e( 'here', 'WordPress Schema-wp' ); ?></a>, or check plugin <a href="https://WordPress Schema.press/docs/" target="_blank">documentation</a>.</b>
+         <p><?php _e( 'You can change settings from', 'schema-wp' ); ?> <a href="<?php echo esc_url( admin_url( 'admin.php?page=schema' ) ); ?>"><?php _e( 'here', 'schema-wp' ); ?></a>, or check plugin <a href="https://schema.press/docs/" target="_blank">documentation</a>.</b>
         
         <div class="wc-setup-next-steps">
             <div class="wc-setup-next-steps-first">
-                <h2><?php _e( 'Next Step', 'WordPress Schema-wp' ); ?></h2>
+                <h2><?php _e( 'Next Step', 'schema-wp' ); ?></h2>
                 <ul>
-                    <li class="setup-product"><a class="button button-primary button-large" href="<?php echo esc_url( admin_url( 'edit.php?post_type=WordPress Schema' ) ); ?>"><?php _e( 'Configure Your WordPress Schema Types!', 'WordPress Schema-wp' ); ?></a></li>
+                    <li class="setup-product"><a class="button button-primary button-large" href="<?php echo esc_url( admin_url( 'edit.php?post_type=schema' ) ); ?>"><?php _e( 'Configure Your Schema Types!', 'schema-wp' ); ?></a></li>
                 </ul>
             </div>
             <!--
             <div class="wc-setup-next-steps-last">
-                <h2><a href="<?php echo esc_url( admin_url( 'admin.php?page=WordPress Schema-wp-what-is-new' ) ); ?>"><?php _e( 'Learn More', 'WordPress Schema-wp' ); ?></a></h2>
+                <h2><a href="<?php echo esc_url( admin_url( 'admin.php?page=schema-wp-what-is-new' ) ); ?>"><?php _e( 'Learn More', 'schema-wp' ); ?></a></h2>
             </div>
             -->
         </div>
@@ -722,11 +722,11 @@ endif;
  *
  * @return void
  */
-function WordPress Schema_wp_wiz_text_callback( $args ) {
-	$WordPress Schema_wp_option = WordPress Schema_wp_get_option( $args['id'] );
+function schema_wp_wiz_text_callback( $args ) {
+	$schema_wp_option = schema_wp_get_option( $args['id'] );
 
-	if ( $WordPress Schema_wp_option ) {
-		$value = $WordPress Schema_wp_option;
+	if ( $schema_wp_option ) {
+		$value = $schema_wp_option;
 	} else {
 		$value = isset( $args['std'] ) ? $args['std'] : '';
 	}
@@ -736,15 +736,15 @@ function WordPress Schema_wp_wiz_text_callback( $args ) {
 		$value = isset( $args['std'] ) ? $args['std'] : '';
 		$name  = '';
 	} else {
-		$name = 'name="WordPress Schema_wp_settings[' . esc_attr( $args['id'] ) . ']"';
+		$name = 'name="schema_wp_settings[' . esc_attr( $args['id'] ) . ']"';
 	}
 
 	$readonly = $args['readonly'] === true ? ' readonly="readonly"' : '';
 	$size     = ( isset( $args['size'] ) && ! is_null( $args['size'] ) ) ? $args['size'] : 'regular';
-	$html     = '<input type="text" class="' . sanitize_html_class( $size ) . '-text" id="WordPress Schema_wp_settings[' . WordPress Schema_wp_sanitize_key( $args['id'] ) . ']" ' . $name . ' value="' . esc_attr( stripslashes( $value ) ) . '" placeholder="' . $args['placeholder'] . '" ' . $readonly . '/>';
-	//$html    .= '<label for="WordPress Schema_wp_settings[' . WordPress Schema_wp_sanitize_key( $args['id'] ) . ']"> '  . wp_kses_post( $args['desc'] ) . '</label>';
+	$html     = '<input type="text" class="' . sanitize_html_class( $size ) . '-text" id="schema_wp_settings[' . schema_wp_sanitize_key( $args['id'] ) . ']" ' . $name . ' value="' . esc_attr( stripslashes( $value ) ) . '" placeholder="' . $args['placeholder'] . '" ' . $readonly . '/>';
+	//$html    .= '<label for="schema_wp_settings[' . schema_wp_sanitize_key( $args['id'] ) . ']"> '  . wp_kses_post( $args['desc'] ) . '</label>';
 
-	echo apply_filters( 'WordPress Schema_wp_after_setting_output', $html, $args );
+	echo apply_filters( 'schema_wp_after_setting_output', $html, $args );
 }
 
 /**
@@ -757,11 +757,11 @@ function WordPress Schema_wp_wiz_text_callback( $args ) {
  *
  * @return void
  */
-function WordPress Schema_wp_wiz_select_callback($args) {
-	$WordPress Schema_wp_option = WordPress Schema_wp_get_option( $args['id'] );
+function schema_wp_wiz_select_callback($args) {
+	$schema_wp_option = schema_wp_get_option( $args['id'] );
 
-	if ( $WordPress Schema_wp_option ) {
-		$value = $WordPress Schema_wp_option;
+	if ( $schema_wp_option ) {
+		$value = $schema_wp_option;
 	} else {
 		$value = isset( $args['std'] ) ? $args['std'] : '';
 	}
@@ -773,12 +773,12 @@ function WordPress Schema_wp_wiz_select_callback($args) {
 	}
 
 	if ( isset( $args['chosen'] ) ) {
-		$chosen = 'class="WordPress Schema-wp-chosen"';
+		$chosen = 'class="schema-wp-chosen"';
 	} else {
 		$chosen = '';
 	}
 
-	$html = '<select class="wc-enhanced-select" id="WordPress Schema_wp_settings[' . WordPress Schema_wp_sanitize_key( $args['id'] ) . ']" name="WordPress Schema_wp_settings[' . esc_attr( $args['id'] ) . ']" ' . $chosen . 'data-placeholder="' . esc_html( $placeholder ) . '" />';
+	$html = '<select class="wc-enhanced-select" id="schema_wp_settings[' . schema_wp_sanitize_key( $args['id'] ) . ']" name="schema_wp_settings[' . esc_attr( $args['id'] ) . ']" ' . $chosen . 'data-placeholder="' . esc_html( $placeholder ) . '" />';
 	
 	foreach ( $args['options'] as $option => $name ) {
 		$selected = selected( $option, $value, false );
@@ -786,9 +786,9 @@ function WordPress Schema_wp_wiz_select_callback($args) {
 	}
 
 	$html .= '</select>';
-	$html .= '<label for="WordPress Schema_wp_settings[' . WordPress Schema_wp_sanitize_key( $args['id'] ) . ']"> ' . wp_kses_post( $args['desc'] ) . '</label>';
+	$html .= '<label for="schema_wp_settings[' . schema_wp_sanitize_key( $args['id'] ) . ']"> ' . wp_kses_post( $args['desc'] ) . '</label>';
 
-	echo apply_filters( 'WordPress Schema_wp_after_setting_output', $html, $args );
+	echo apply_filters( 'schema_wp_after_setting_output', $html, $args );
 }
 
 /**
@@ -799,18 +799,18 @@ function WordPress Schema_wp_wiz_select_callback($args) {
  * @since 1.0
  * @param array $args Arguements passed by the setting
  */
-function WordPress Schema_wp_wiz_post_select_callback( $args ) {
+function schema_wp_wiz_post_select_callback( $args ) {
 		
-	$WordPress Schema_wp_option = WordPress Schema_wp_get_option( $args['id'] );
+	$schema_wp_option = schema_wp_get_option( $args['id'] );
 
-	if ( $WordPress Schema_wp_option ) {
-		$value = $WordPress Schema_wp_option;
+	if ( $schema_wp_option ) {
+		$value = $schema_wp_option;
 	} else {
 		$value = isset( $args['std'] ) ? $args['std'] : '';
 	}
 		
-	$html = '<select class="wc-enhanced-select" id="WordPress Schema_wp_settings[' . $args['id'] . ']" name="WordPress Schema_wp_settings[' . $args['id'] . ']"/>';
-	$html .= '<option value=""> - '.__('Select One', 'WordPress Schema-wp').' - </option>'; // Select One
+	$html = '<select class="wc-enhanced-select" id="schema_wp_settings[' . $args['id'] . ']" name="schema_wp_settings[' . $args['id'] . ']"/>';
+	$html .= '<option value=""> - '.__('Select One', 'schema-wp').' - </option>'; // Select One
 	$posts = get_posts( array( 'post_type' => $args['post_type'], 'posts_per_page' => -1, 'orderby' => 'name', 'order' => 'ASC' ) );
 	foreach ( $posts as $item ) :
 	$selected = selected( $item->ID , $value, false );
@@ -831,17 +831,17 @@ function WordPress Schema_wp_wiz_post_select_callback( $args ) {
  * @since 1.0
  * @param array $args Arguements passed by the setting
  */
-function WordPress Schema_wp_wiz_image_upload_callback( $args ) {
-	$WordPress Schema_wp_option = WordPress Schema_wp_get_option( $args['id'] );
+function schema_wp_wiz_image_upload_callback( $args ) {
+	$schema_wp_option = schema_wp_get_option( $args['id'] );
 	
-	if( $WordPress Schema_wp_option )
-		$value = $WordPress Schema_wp_option;
+	if( $schema_wp_option )
+		$value = $schema_wp_option;
 	else
 		$value = isset( $args['std'] ) ? $args['std'] : '';
 
 	$size = ( isset( $args['size'] ) && ! is_null( $args['size'] ) ) ? $args['size'] : 'regular';
-	$html = '<input type="text" class="' . sanitize_html_class( $size ) . '-text" style="width:initial" id="WordPress Schema_wp_settings[' . WordPress Schema_wp_sanitize_key( $args['id'] ) . ']" name="WordPress Schema_wp_settings[' . esc_attr( $args['id'] ) . ']" value="' . esc_attr( stripslashes( $value ) ) . '"/>';
-	$html .= '<span>&nbsp;<input type="button" class="WordPress Schema_wp_settings_upload_button button-secondary" style="width:initial" value="' . __( 'Select Image', 'wp-WordPress Schema' ) . '"/></span>';
+	$html = '<input type="text" class="' . sanitize_html_class( $size ) . '-text" style="width:initial" id="schema_wp_settings[' . schema_wp_sanitize_key( $args['id'] ) . ']" name="schema_wp_settings[' . esc_attr( $args['id'] ) . ']" value="' . esc_attr( stripslashes( $value ) ) . '"/>';
+	$html .= '<span>&nbsp;<input type="button" class="schema_wp_settings_upload_button button-secondary" style="width:initial" value="' . __( 'Select Image', 'wp-schema' ) . '"/></span>';
 	
 	$html .= '<p class="description">' . wp_kses_post( $args['desc'] ) . '</p>';
 		
@@ -853,7 +853,7 @@ function WordPress Schema_wp_wiz_image_upload_callback( $args ) {
 		$html .= '<div id="preview_image" style="display: none;"></div>';
 	}
 	
-	echo apply_filters( 'WordPress Schema_wp_after_setting_output', $html, $args );
+	echo apply_filters( 'schema_wp_after_setting_output', $html, $args );
 }
 
 /**
@@ -866,29 +866,29 @@ function WordPress Schema_wp_wiz_image_upload_callback( $args ) {
  *
  * @return void
  */
-function WordPress Schema_wp_wiz_checkbox_callback( $args ) {
-	$WordPress Schema_wp_option = WordPress Schema_wp_get_option( $args['id'] );
+function schema_wp_wiz_checkbox_callback( $args ) {
+	$schema_wp_option = schema_wp_get_option( $args['id'] );
 
 	if ( isset( $args['faux'] ) && true === $args['faux'] ) {
 		$name = '';
 	} else {
-		$name = 'name="WordPress Schema_wp_settings[' . WordPress Schema_wp_sanitize_key( $args['id'] ) . ']"';
+		$name = 'name="schema_wp_settings[' . schema_wp_sanitize_key( $args['id'] ) . ']"';
 	}
 	
 	if ( isset( $args['class_field'] ) ) {
-		$class_field = 'class="' . WordPress Schema_wp_sanitize_key( $args['class_field'] ) . ' wc-wizard-shipping-method-enable"';
+		$class_field = 'class="' . schema_wp_sanitize_key( $args['class_field'] ) . ' wc-wizard-shipping-method-enable"';
 	} else {
 		$class_field = 'class="wc-wizard-shipping-method-enable"';
 	}
 	
-	$checked  = ! empty( $WordPress Schema_wp_option ) ? checked( 1, $WordPress Schema_wp_option, false ) : '';
+	$checked  = ! empty( $schema_wp_option ) ? checked( 1, $schema_wp_option, false ) : '';
 	$html     = '<input type="hidden"' . $name . ' value="-1" />';
-	//$html    .= '<input ' . $class_field . 'type="checkbox" id="WordPress Schema_wp_settings[' . WordPress Schema_wp_sanitize_key( $args['id'] ) . ']"' . $name . ' value="1" ' . $checked . '/>';
-	$html    .= '<input ' . $class_field . 'id="WordPress Schema_wp_settings[' . WordPress Schema_wp_sanitize_key( $args['id'] ) . ']" type="checkbox"' . $name . ' value="1" ' . $checked . '/>';
+	//$html    .= '<input ' . $class_field . 'type="checkbox" id="schema_wp_settings[' . schema_wp_sanitize_key( $args['id'] ) . ']"' . $name . ' value="1" ' . $checked . '/>';
+	$html    .= '<input ' . $class_field . 'id="schema_wp_settings[' . schema_wp_sanitize_key( $args['id'] ) . ']" type="checkbox"' . $name . ' value="1" ' . $checked . '/>';
 										
-	$html    .= '<label for="WordPress Schema_wp_settings[' . WordPress Schema_wp_sanitize_key( $args['id'] ) . ']"> '  . wp_kses_post( $args['desc'] ) . '</label>';
+	$html    .= '<label for="schema_wp_settings[' . schema_wp_sanitize_key( $args['id'] ) . ']"> '  . wp_kses_post( $args['desc'] ) . '</label>';
 
-	echo apply_filters( 'WordPress Schema_wp_after_setting_output', $html, $args );
+	echo apply_filters( 'schema_wp_after_setting_output', $html, $args );
 }
 
 /**
@@ -901,26 +901,26 @@ function WordPress Schema_wp_wiz_checkbox_callback( $args ) {
  *
  * @return void
  */
-function WordPress Schema_wp_wiz_radio_callback( $args ) {
-	$WordPress Schema_wp_options = WordPress Schema_wp_get_option( $args['id'] );
+function schema_wp_wiz_radio_callback( $args ) {
+	$schema_wp_options = schema_wp_get_option( $args['id'] );
 
 	$html = '<fieldset class="">';
 
 	foreach ( $args['options'] as $key => $option ) :
 		$checked = false;
 
-		if ( $WordPress Schema_wp_options && $WordPress Schema_wp_options == $key )
+		if ( $schema_wp_options && $schema_wp_options == $key )
 			$checked = true;
-		elseif( isset( $args['std'] ) && $args['std'] == $key && ! $WordPress Schema_wp_options )
+		elseif( isset( $args['std'] ) && $args['std'] == $key && ! $schema_wp_options )
 			$checked = true;
 
-		$html .= '<input class="WordPress Schema-wizard-radio" name="WordPress Schema_wp_settings[' . WordPress Schema_wp_sanitize_key( $args['id'] ) . ']" id="WordPress Schema_wp_settings[' . WordPress Schema_wp_sanitize_key( $args['id'] ) . '][' . WordPress Schema_wp_sanitize_key( $key ) . ']" type="radio" value="' . WordPress Schema_wp_sanitize_key( $key ) . '" ' . checked(true, $checked, false) . '/>&nbsp;';
-		$html .= '<label for="WordPress Schema_wp_settings[' . WordPress Schema_wp_sanitize_key( $args['id'] ) . '][' . WordPress Schema_wp_sanitize_key( $key ) . ']">' . esc_html( $option ) . '</label><br/>';
+		$html .= '<input class="schema-wizard-radio" name="schema_wp_settings[' . schema_wp_sanitize_key( $args['id'] ) . ']" id="schema_wp_settings[' . schema_wp_sanitize_key( $args['id'] ) . '][' . schema_wp_sanitize_key( $key ) . ']" type="radio" value="' . schema_wp_sanitize_key( $key ) . '" ' . checked(true, $checked, false) . '/>&nbsp;';
+		$html .= '<label for="schema_wp_settings[' . schema_wp_sanitize_key( $args['id'] ) . '][' . schema_wp_sanitize_key( $key ) . ']">' . esc_html( $option ) . '</label><br/>';
 	endforeach;
 	
 	$html .= '</fieldset>';
 	
-	$html .= '<p class="description">' . apply_filters( 'WordPress Schema_wp_after_setting_output', wp_kses_post( $args['desc'] ), $args ) . '</p>';
+	$html .= '<p class="description">' . apply_filters( 'schema_wp_after_setting_output', wp_kses_post( $args['desc'] ), $args ) . '</p>';
 
 	echo $html;
 }

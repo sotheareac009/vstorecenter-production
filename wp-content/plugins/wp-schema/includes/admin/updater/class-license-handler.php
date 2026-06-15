@@ -11,12 +11,12 @@
 // Exit if accessed directly
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-if ( ! class_exists( 'WordPress Schema_WP_License' ) ) :
+if ( ! class_exists( 'Schema_WP_License' ) ) :
 
 /**
  * EDD_License Class
  */
-class WordPress Schema_WP_License {
+class Schema_WP_License {
 	private $file;
 	private $license;
 	private $item_name;
@@ -24,8 +24,8 @@ class WordPress Schema_WP_License {
 	private $item_shortname;
 	private $version;
 	private $author;
-	//private $api_url = 'https://WordPress Schema.press/edd-sl-api/';
-	private $api_url = 'https://WordPress Schema.press/';
+	//private $api_url = 'https://schema.press/edd-sl-api/';
+	private $api_url = 'https://schema.press/';
 
 	/**
 	 * Class constructor
@@ -49,7 +49,7 @@ class WordPress Schema_WP_License {
 
 		$this->item_shortname = preg_replace( '/[^a-zA-Z0-9_\s]/', '', str_replace( ' ', '_', strtolower( $this->item_name ) ) );
 		$this->version        = $_version;
-		$this->license        = trim( WordPress Schema_wp_get_option( $this->item_shortname . '_license_key', '' ) );
+		$this->license        = trim( schema_wp_get_option( $this->item_shortname . '_license_key', '' ) );
 		$this->author         = $_author;
 		$this->api_url        = is_null( $_api_url ) ? $this->api_url : $_api_url;
 
@@ -60,7 +60,7 @@ class WordPress Schema_WP_License {
 		 * user having to reactive their license.
 		 */
 		if ( ! empty( $_optname ) ) {
-			$opt = WordPress Schema_wp_get_option( $_optname, false );
+			$opt = schema_wp_get_option( $_optname, false );
 
 			if( isset( $opt ) && empty( $this->license ) ) {
 				$this->license = trim( $opt );
@@ -80,7 +80,7 @@ class WordPress Schema_WP_License {
 	 * @return  void
 	 */
 	private function includes() {
-		if ( ! class_exists( 'WordPress Schema_WP_SL_Plugin_Updater' ) )  {
+		if ( ! class_exists( 'Schema_WP_SL_Plugin_Updater' ) )  {
 			require_once 'class-updater.php';
 		}
 	}
@@ -94,10 +94,10 @@ class WordPress Schema_WP_License {
 	private function hooks() {
 
 		// Register settings
-		add_filter( 'WordPress Schema_wp_settings_licenses', array( $this, 'settings' ), 1 );
+		add_filter( 'schema_wp_settings_licenses', array( $this, 'settings' ), 1 );
 
 		// Display help text at the top of the Licenses tab
-		add_action( 'WordPress Schema_wp_settings_tab_top', array( $this, 'license_help_text' ) );
+		add_action( 'schema_wp_settings_tab_top', array( $this, 'license_help_text' ) );
 
 		// Activate license key on settings save
 		add_action( 'admin_init', array( $this, 'activate_license' ) );
@@ -106,7 +106,7 @@ class WordPress Schema_WP_License {
 		add_action( 'admin_init', array( $this, 'deactivate_license' ) );
 
 		// Check that license is valid once per week
-		add_action( 'WordPress Schema_wp_weekly_scheduled_events', array( $this, 'weekly_license_check' ) );
+		add_action( 'schema_wp_weekly_scheduled_events', array( $this, 'weekly_license_check' ) );
 
 		// For testing license notices, uncomment this line to force checks on every page load
 		//add_action( 'admin_init', array( $this, 'weekly_license_check' ) );
@@ -142,7 +142,7 @@ class WordPress Schema_WP_License {
 		}
 		
 		// Setup the updater
-		$edd_updater = new WordPress Schema_WP_SL_Plugin_Updater(
+		$edd_updater = new Schema_WP_SL_Plugin_Updater(
 			$this->api_url,
 			$this->file,
 			$args
@@ -165,7 +165,7 @@ class WordPress Schema_WP_License {
 		$edd_license_settings = array(
 			array(
 				'id'      => $this->item_shortname . '_license_key',
-				'name'    => sprintf( __( '%1$s', 'WordPress Schema-wp' ), $this->item_name ),
+				'name'    => sprintf( __( '%1$s', 'schema-wp' ), $this->item_name ),
 				'desc'    => '',
 				'type'    => 'license_key',
 				'options' => array( 'is_valid_license_option' => $this->item_shortname . '_license_active' ),
@@ -201,8 +201,8 @@ class WordPress Schema_WP_License {
 		}
 
 		echo '<p>' . sprintf(
-			__( 'Enter your extension license keys here to receive updates for purchased extensions. If your license key has expired, please <a href="%s" target="_blank">renew your license</a>.', 'WordPress Schema-wp' ),
-			'https://WordPress Schema.press/'
+			__( 'Enter your extension license keys here to receive updates for purchased extensions. If your license key has expired, please <a href="%s" target="_blank">renew your license</a>.', 'schema-wp' ),
+			'https://schema.press/'
 		) . '</p>';
 
 		$has_ran = true;
@@ -221,7 +221,7 @@ class WordPress Schema_WP_License {
 		// debug
 		//echo'<pre>';print_r($_POST);echo'</pre>';exit;
 		
-		if ( ! isset( $_POST['WordPress Schema_wp_settings'] ) ) {
+		if ( ! isset( $_POST['schema_wp_settings'] ) ) {
 			return;
 		}
 
@@ -236,7 +236,7 @@ class WordPress Schema_WP_License {
 			return;
 		}
 
-		if ( empty( $_POST['WordPress Schema_wp_settings'][ $this->item_shortname . '_license_key'] ) ) {
+		if ( empty( $_POST['schema_wp_settings'][ $this->item_shortname . '_license_key'] ) ) {
 
 			delete_option( $this->item_shortname . '_license_active' );
 
@@ -257,7 +257,7 @@ class WordPress Schema_WP_License {
 			return;
 		}
 
-		$license = sanitize_text_field( $_POST['WordPress Schema_wp_settings'][ $this->item_shortname . '_license_key'] );
+		$license = sanitize_text_field( $_POST['schema_wp_settings'][ $this->item_shortname . '_license_key'] );
 
 		if( empty( $license ) ) {
 			return;
@@ -308,15 +308,15 @@ class WordPress Schema_WP_License {
 	 */
 	public function deactivate_license() {
 
-		if ( ! isset( $_POST['WordPress Schema_wp_settings'] ) )
+		if ( ! isset( $_POST['schema_wp_settings'] ) )
 			return;
 
-		if ( ! isset( $_POST['WordPress Schema_wp_settings'][ $this->item_shortname . '_license_key'] ) )
+		if ( ! isset( $_POST['schema_wp_settings'][ $this->item_shortname . '_license_key'] ) )
 			return;
 
 		if( ! wp_verify_nonce( $_REQUEST[ $this->item_shortname . '_license_key-nonce'], $this->item_shortname . '_license_key-nonce' ) ) {
 
-			wp_die( __( 'Nonce verification failed', 'WordPress Schema-wp' ), __( 'Error', 'WordPress Schema-wp' ), array( 'response' => 403 ) );
+			wp_die( __( 'Nonce verification failed', 'schema-wp' ), __( 'Error', 'schema-wp' ), array( 'response' => 403 ) );
 
 		}
 
@@ -368,7 +368,7 @@ class WordPress Schema_WP_License {
 	 */
 	public function weekly_license_check() {
 
-		if( ! empty( $_POST['WordPress Schema_wp_settings'] ) ) {
+		if( ! empty( $_POST['schema_wp_settings'] ) ) {
 			return; // Don't fire when saving settings
 		}
 
@@ -433,8 +433,8 @@ class WordPress Schema_WP_License {
 			if( empty( $_GET['tab'] ) || 'licenses' !== $_GET['tab'] ) {
 
 				$messages[] = sprintf(
-					__( 'You have invalid or expired license keys for WordPress Schema. Please go to the <a href="%s">Licenses page</a> to correct this issue.', 'WordPress Schema-wp' ),
-					admin_url( 'admin.php?page=WordPress Schema&tab=licenses' )
+					__( 'You have invalid or expired license keys for Schema. Please go to the <a href="%s">Licenses page</a> to correct this issue.', 'schema-wp' ),
+					admin_url( 'admin.php?page=schema&tab=licenses' )
 				);
 
 				$showed_invalid_message = true;
@@ -472,7 +472,7 @@ class WordPress Schema_WP_License {
 
 		if( ( ! is_object( $license ) || 'valid' !== $license->license ) && empty( $showed_imissing_key_message[ $this->item_shortname ] ) ) {
 
-			echo '&nbsp;<strong><a href="' . esc_url( admin_url( 'admin.php?page=WordPress Schema&tab=licenses' ) ) . '">' . __( 'Enter valid license key for automatic updates.', 'WordPress Schema-wp' ) . '</a></strong>';
+			echo '&nbsp;<strong><a href="' . esc_url( admin_url( 'admin.php?page=schema&tab=licenses' ) ) . '">' . __( 'Enter valid license key for automatic updates.', 'schema-wp' ) . '</a></strong>';
 			$showed_imissing_key_message[ $this->item_shortname ] = true;
 		}
 

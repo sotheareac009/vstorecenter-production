@@ -1,11 +1,11 @@
 jQuery(document).ready(function($) {
    
    // Tooltips
-	$('.WordPress Schema-wp-help-tip').tooltip({
+	$('.schema-wp-help-tip').tooltip({
 		content: function() {
 			return $(this).prop('title');
 		},
-		tooltipClass: 'WordPress Schema-wp-ui-tooltip',
+		tooltipClass: 'schema-wp-ui-tooltip',
 		position: {
 			my: 'center top',
 			at: 'center bottom+10',
@@ -20,10 +20,10 @@ jQuery(document).ready(function($) {
 	});
 	
 	// Date picker
-	var WordPress Schema_wp_datepicker = $( '.WordPress Schema_wp_datepicker' );
-	if ( WordPress Schema_wp_datepicker.length > 0 ) {
+	var schema_wp_datepicker = $( '.schema_wp_datepicker' );
+	if ( schema_wp_datepicker.length > 0 ) {
 		var dateFormat = 'mm/dd/yy';
-		WordPress Schema_wp_datepicker.datepicker( {
+		schema_wp_datepicker.datepicker( {
 			dateFormat: dateFormat
 		} );
 	}
@@ -33,7 +33,7 @@ jQuery(document).ready(function($) {
 	/**
 	 * Settings screen JS
 	 */
-	var WordPress Schema_WP_Settings = {
+	var Schema_WP_Settings = {
 
 		init : function() {
 			this.general();
@@ -41,29 +41,29 @@ jQuery(document).ready(function($) {
 
 		general : function() {
 
-			var WordPress Schema_wp_color_picker = $('.WordPress Schema-wp-color-picker');
+			var schema_wp_color_picker = $('.schema-wp-color-picker');
 
-			if( WordPress Schema_wp_color_picker.length ) {
-				WordPress Schema_wp_color_picker.wpColorPicker();
+			if( schema_wp_color_picker.length ) {
+				schema_wp_color_picker.wpColorPicker();
 			}
 
 			// Settings Upload field JS
-			if ( typeof wp === "undefined" || '1' !== WordPress Schema_wp_vars.new_media_ui ) {
+			if ( typeof wp === "undefined" || '1' !== schema_wp_vars.new_media_ui ) {
 				//Old Thickbox uploader
-				var WordPress Schema_wp_settings_upload_button = $( '.WordPress Schema_wp_settings_upload_button' );
-				if ( WordPress Schema_wp_settings_upload_button.length > 0 ) {
+				var schema_wp_settings_upload_button = $( '.schema_wp_settings_upload_button' );
+				if ( schema_wp_settings_upload_button.length > 0 ) {
 					window.formfield = '';
 
-					$( document.body ).on('click', WordPress Schema_wp_settings_upload_button, function(e) {
+					$( document.body ).on('click', schema_wp_settings_upload_button, function(e) {
 						e.preventDefault();
 						window.formfield = $(this).parent().prev();
 						window.tbframe_interval = setInterval(function() {
-							jQuery('#TB_iframeContent').contents().find('.savesend .button').val(WordPress Schema_wp_vars.use_this_file).end().find('#insert-gallery, .wp-post-thumbnail').hide();
+							jQuery('#TB_iframeContent').contents().find('.savesend .button').val(schema_wp_vars.use_this_file).end().find('#insert-gallery, .wp-post-thumbnail').hide();
 						}, 2000);
-						tb_show( WordPress Schema_wp_vars.add_new_download, 'media-upload.php?TB_iframe=true' );
+						tb_show( schema_wp_vars.add_new_download, 'media-upload.php?TB_iframe=true' );
 					});
 
-					window.WordPress Schema_wp_send_to_editor = window.send_to_editor;
+					window.schema_wp_send_to_editor = window.send_to_editor;
 					window.send_to_editor = function (html) {
 						if (window.formfield) {
 							imgurl = $('a', '<div>' + html + '</div>').attr('href');
@@ -71,9 +71,9 @@ jQuery(document).ready(function($) {
 							window.clearInterval(window.tbframe_interval);
 							tb_remove();
 						} else {
-							window.WordPress Schema_wp_send_to_editor(html);
+							window.schema_wp_send_to_editor(html);
 						}
-						window.send_to_editor = window.WordPress Schema_wp_send_to_editor;
+						window.send_to_editor = window.schema_wp_send_to_editor;
 						window.formfield = '';
 						window.imagefield = false;
 					};
@@ -83,7 +83,7 @@ jQuery(document).ready(function($) {
 				var file_frame;
 				window.formfield = '';
 
-				$( document.body ).on('click', '.WordPress Schema_wp_settings_upload_button', function(e) {
+				$( document.body ).on('click', '.schema_wp_settings_upload_button', function(e) {
 
 					e.preventDefault();
 
@@ -174,14 +174,14 @@ jQuery(document).ready(function($) {
 		},
 		
 	}
-	WordPress Schema_WP_Settings.init();
+	Schema_WP_Settings.init();
 
 /*
 	// Settings media uploader
 	var file_frame;
 	window.formfield = '';
 	
-	$('body').on('click', '.WordPress Schema_wp_settings_upload_button', function(e) {
+	$('body').on('click', '.schema_wp_settings_upload_button', function(e) {
 
 		e.preventDefault();
 

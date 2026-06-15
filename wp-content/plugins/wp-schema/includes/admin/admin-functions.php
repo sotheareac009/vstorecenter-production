@@ -2,7 +2,7 @@
 /**
  * Admin Functions
  *
- * @package     WordPress Schema
+ * @package     Schema
  * @subpackage  Admin Functions/Formatting
  * @copyright   Copyright (c) 2016, Hesham Zebida
  * @license     http://opensource.org/licenses/gpl-2.0.php GNU Public License
@@ -13,34 +13,34 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 
-add_action( 'WordPress Schema_wp_do_after_settings_updated', 'WordPress Schema_wp_after_update_settings' );
+add_action( 'schema_wp_do_after_settings_updated', 'schema_wp_after_update_settings' );
 /**
- * Delete WordPress Schema KSON-LD cached data in post meta  on plugin settings update
+ * Delete Schema KSON-LD cached data in post meta  on plugin settings update
  *
  *
  * @since  1.6.1
  */
-function WordPress Schema_wp_after_update_settings() {
+function schema_wp_after_update_settings() {
     
 	// Delete cached data in post meta
-	WordPress Schema_wp_json_delete_cache();
+	schema_wp_json_delete_cache();
 }
 
 /**
- * Delete WordPress Schema KSON-LD cached data in post meta 
+ * Delete Schema KSON-LD cached data in post meta 
  *
  *
  * @since  1.6.1
  */
-function WordPress Schema_wp_json_delete_cache() {
+function schema_wp_json_delete_cache() {
     
 	// Delete cached data in post meta
-	delete_post_meta_by_key( '_WordPress Schema_json' );
-	delete_post_meta_by_key( '_WordPress Schema_json_timestamp' );
+	delete_post_meta_by_key( '_schema_json' );
+	delete_post_meta_by_key( '_schema_json_timestamp' );
 }
 
 /**
- * Sanitizes a string key for WordPress Schema Settings
+ * Sanitizes a string key for Schema Settings
  *
  * Keys are used as internal identifiers. Alphanumeric characters, dashes, underscores, stops, colons and slashes are allowed
  *
@@ -48,7 +48,7 @@ function WordPress Schema_wp_json_delete_cache() {
  * @param  string $key String key
  * @return string Sanitized key
  */
-function WordPress Schema_wp_sanitize_key( $key ) {
+function schema_wp_sanitize_key( $key ) {
 	$raw_key = $key;
 	$key = preg_replace( '/[^a-zA-Z0-9_\-\.\:\/]/', '', $key );
 
@@ -59,7 +59,7 @@ function WordPress Schema_wp_sanitize_key( $key ) {
 	 * @param string $key     Sanitized key.
 	 * @param string $raw_key The key prior to sanitization.
 	 */
-	return apply_filters( 'WordPress Schema_wp_sanitize_key', $key, $raw_key );
+	return apply_filters( 'schema_wp_sanitize_key', $key, $raw_key );
 }
 
 /**
@@ -72,11 +72,11 @@ function WordPress Schema_wp_sanitize_key( $key ) {
  * @param unknown $data
  * @return array
  */
-function WordPress Schema_wp_object_to_array( $data ) {
+function schema_wp_object_to_array( $data ) {
 	if ( is_array( $data ) || is_object( $data ) ) {
 		$result = array();
 		foreach ( $data as $key => $value ) {
-			$result[ $key ] = WordPress Schema_wp_object_to_array( $value );
+			$result[ $key ] = schema_wp_object_to_array( $value );
 		}
 		return $result;
 	}
@@ -89,7 +89,7 @@ function WordPress Schema_wp_object_to_array( $data ) {
  * @since 1.4.7
  * @return flat array
  */
-function WordPress Schema_wp_array_flatten($array) {
+function schema_wp_array_flatten($array) {
 
 	$return = array();
 	foreach ($array as $key => $value) {
@@ -114,7 +114,7 @@ function WordPress Schema_wp_array_flatten($array) {
 * @param string $output Optional. Output type. OBJECT, ARRAY_N, or ARRAY_A.
 * @return mixed
 */
-function WordPress Schema_wp_get_post_by_title($page_title, $post_type = 'post' , $output = OBJECT) {
+function schema_wp_get_post_by_title($page_title, $post_type = 'post' , $output = OBJECT) {
     global $wpdb;
         $post = $wpdb->get_var( $wpdb->prepare( "SELECT ID FROM $wpdb->posts WHERE post_title = %s AND post_type= %s", $page_title, $post_type));
         if ( $post )
@@ -131,10 +131,10 @@ function WordPress Schema_wp_get_post_by_title($page_title, $post_type = 'post' 
  * @since 1.6
  * @return Returns the key for needle if it is found in the array, FALSE otherwise. 
  */
-function WordPress Schema_wp_recursive_array_search( $needle, $haystack ) {
+function schema_wp_recursive_array_search( $needle, $haystack ) {
     foreach($haystack as $key=>$value) {
         $current_key=$key;
-        if($needle===$value OR (is_array($value) && WordPress Schema_wp_recursive_array_search($needle,$value) !== false)) {
+        if($needle===$value OR (is_array($value) && schema_wp_recursive_array_search($needle,$value) !== false)) {
             return $current_key;
         }
     }
@@ -147,23 +147,23 @@ function WordPress Schema_wp_recursive_array_search( $needle, $haystack ) {
  * @since 1.0
  * @return array $corporate_contacts_types A list of the available types
  */
-function WordPress Schema_wp_get_corporate_contacts_types() {
+function schema_wp_get_corporate_contacts_types() {
 
 	$corporate_contacts_types = array(
-		'customer_support'		=> __( 'Customer Support', 'WordPress Schema-wp' ),
-		'technical_support'		=> __( 'Technical Support', 'WordPress Schema-wp' ),
-		'billing_support'		=> __( 'Billing Support', 'WordPress Schema-wp' ),
-		'bill_payment'			=> __( 'Bill Payment', 'WordPress Schema-wp' ),
-		'sales'					=> __( 'Sales', 'WordPress Schema-wp' ),
-		'reservations'			=> __( 'Reservations', 'WordPress Schema-wp' ),
-		'credit_card_support'	=> __( 'Credit Card Support', 'WordPress Schema-wp' ),
-		'emergency'				=> __( 'Emergency', 'WordPress Schema-wp' ),
-		'baggage_tracking'		=> __( 'Baggage Tracking', 'WordPress Schema-wp' ),
-		'roadside_assistance'	=> __( 'Roadside Assistance', 'WordPress Schema-wp' ),
-		'package_tracking'		=> __( 'Package Tracking', 'WordPress Schema-wp' ),
+		'customer_support'		=> __( 'Customer Support', 'schema-wp' ),
+		'technical_support'		=> __( 'Technical Support', 'schema-wp' ),
+		'billing_support'		=> __( 'Billing Support', 'schema-wp' ),
+		'bill_payment'			=> __( 'Bill Payment', 'schema-wp' ),
+		'sales'					=> __( 'Sales', 'schema-wp' ),
+		'reservations'			=> __( 'Reservations', 'schema-wp' ),
+		'credit_card_support'	=> __( 'Credit Card Support', 'schema-wp' ),
+		'emergency'				=> __( 'Emergency', 'schema-wp' ),
+		'baggage_tracking'		=> __( 'Baggage Tracking', 'schema-wp' ),
+		'roadside_assistance'	=> __( 'Roadside Assistance', 'schema-wp' ),
+		'package_tracking'		=> __( 'Package Tracking', 'schema-wp' ),
 	);
 
-	return apply_filters( 'WordPress Schema_wp_corporate_contacts_types', $corporate_contacts_types );
+	return apply_filters( 'schema_wp_corporate_contacts_types', $corporate_contacts_types );
 }
 
 /**
@@ -172,7 +172,7 @@ function WordPress Schema_wp_get_corporate_contacts_types() {
  * @since 1.6.9.1
  * @return array $post_types of all registered post types 
  */
-function WordPress Schema_wp_get_post_types() {
+function schema_wp_get_post_types() {
 
 	$post_types = array();
 	$builtin = array();
@@ -213,7 +213,7 @@ function WordPress Schema_wp_get_post_types() {
 	// debug
 	//echo'<pre>';print_r($post_types);echo'</pre>';
 
-	return apply_filters( 'WordPress Schema_wp_post_types', $post_types );
+	return apply_filters( 'schema_wp_post_types', $post_types );
 }
 
 /**
@@ -223,7 +223,7 @@ function WordPress Schema_wp_get_post_types() {
  * @since 1.6.9.6
  * @return array $post_types of all registered post types 
  */
-function WordPress Schema_wp_get_current_post_type() {
+function schema_wp_get_current_post_type() {
 	global $post, $typenow, $current_screen;
 	//we have a post so we can just get the post type from that
 	if ( $post && $post->post_type ) {

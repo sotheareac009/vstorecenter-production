@@ -2,7 +2,7 @@
 /**
  * Misc functions
  *
- * @package     WordPress Schema
+ * @package     Schema
  * @subpackage  Functions/Formatting
  * @copyright   Copyright (c) 2016, Hesham Zebida
  * @license     http://opensource.org/licenses/gpl-2.0.php GNU Public License
@@ -11,15 +11,15 @@
 
 // Exit if accessed directly
 if ( ! defined( 'ABSPATH' ) ) exit;
-add_filter( 'WordPress Schema_wp_types', 'WordPress Schema_wp_new_add_WordPress Schema_type_7623456' );
+add_filter( 'schema_wp_types', 'schema_wp_new_add_schema_type_7623456' );
 /**
- * Add New type to WordPress Schema Types options
+ * Add New type to Schema Types options
  *
  * @since 1.0
  */
-function WordPress Schema_wp_new_add_WordPress Schema_type_7623456( $options ) {
+function schema_wp_new_add_schema_type_7623456( $options ) {
 	
-	// Change 'NewType' to the actual WordPress Schema.org type you want to add
+	// Change 'NewType' to the actual schema.org type you want to add
 	// Example: Event, Product, JobPosting, ...etc.
 	$options['NewType'] =  array ( 
 						'label' => __('NewType'),
@@ -35,77 +35,77 @@ function WordPress Schema_wp_new_add_WordPress Schema_type_7623456( $options ) {
  * @param int $post_type The post type.
  * @return string post ID, or false
  */
-function WordPress Schema_wp_is_post_type_enabled( $post_type = null ) {
+function schema_wp_is_post_type_enabled( $post_type = null ) {
 	
 	if ( ! isset($post_type) ) $post_type = get_post_type();
 	if ( ! isset($post_type) ) 
 		return false;
 	
 	$enabled 			= false;
-	$enabled_post_types	= WordPress Schema_wp_cpt_get_enabled_post_types();
+	$enabled_post_types	= schema_wp_cpt_get_enabled_post_types();
 	
 	if ( in_array( $post_type, $enabled_post_types, false ) )  $enabled = true;
 	
-	return apply_filters( 'WordPress Schema_wp_is_post_type_enabled', $enabled );
+	return apply_filters( 'schema_wp_is_post_type_enabled', $enabled );
 }
 
 /**
- * Get WordPress Schema ref for a post
+ * Get schema ref for a post
  *
  * @since 1.6.9.5
  *
  * @param int $post_id The post ID.
  * @return string post ID, or false
  */
-function WordPress Schema_wp_get_ref( $post_id = null ) {
+function schema_wp_get_ref( $post_id = null ) {
 	
 	if ( ! isset($post_id) ) $post_id = isset($_GET['post']) ? $_GET['post'] : null;
 	
 	if ( ! isset($post_id) ) return false;
 	
-	$WordPress Schema_ref = get_post_meta( $post_id, '_WordPress Schema_ref', true );
+	$schema_ref = get_post_meta( $post_id, '_schema_ref', true );
 	
-	If ( ! isset($WordPress Schema_ref) ) $WordPress Schema_ref = false;
+	If ( ! isset($schema_ref) ) $schema_ref = false;
 	
-	return apply_filters( 'WordPress Schema_wp_ref', $WordPress Schema_ref );
+	return apply_filters( 'schema_wp_ref', $schema_ref );
 }
 
 /**
- * Get WordPress Schema type for a post
+ * Get schema type for a post
  *
  * @since 1.6.9.5
  *
  * @param int $post_id The post ID.
- * @return string WordPress Schema type, or false 
+ * @return string schema type, or false 
  */
-function WordPress Schema_wp_get_type( $post_id = null ) {
+function schema_wp_get_type( $post_id = null ) {
 	
 	if ( ! isset($post_id) ) $post_id = isset($_GET['post']) ? $_GET['post'] : null;
 	
 	if ( ! isset($post_id) ) return false;
 	
 	
-	$WordPress Schema_ref = WordPress Schema_wp_get_ref( $post_id );
+	$schema_ref = schema_wp_get_ref( $post_id );
 	
-	$WordPress Schema_type = false;
+	$schema_type = false;
 	
-	if ( $WordPress Schema_ref ) {
+	if ( $schema_ref ) {
 		
-		$WordPress Schema_type = get_post_meta( $WordPress Schema_ref, '_WordPress Schema_type', true );
+		$schema_type = get_post_meta( $schema_ref, '_schema_type', true );
 	}
 	
-	return apply_filters( 'WordPress Schema_wp_type', $WordPress Schema_type );
+	return apply_filters( 'schema_wp_type', $schema_type );
 }
 
 /**
- * Get WordPress Schema json-ld for a post
+ * Get schema json-ld for a post
  *
  * @since 1.6.9.5
  *
  * @param int $post_id The post ID.
  * @return string post ID, or false
  */
-function WordPress Schema_wp_get_jsonld( $post_id ) {
+function schema_wp_get_jsonld( $post_id ) {
 	
 	global $post;
 	
@@ -113,11 +113,11 @@ function WordPress Schema_wp_get_jsonld( $post_id ) {
 	
 	if ( ! isset($post_id ) ) return false;
 	
-	$WordPress Schema_json = get_post_meta( $post_id, '_WordPress Schema_json', true);
+	$schema_json = get_post_meta( $post_id, '_schema_json', true);
 	
-	If ( ! isset($WordPress Schema_json )) $WordPress Schema_json = array();
+	If ( ! isset($schema_json )) $schema_json = array();
 	
-	return apply_filters( 'WordPress Schema_wp_json', $WordPress Schema_json );
+	return apply_filters( 'schema_wp_json', $schema_json );
 }
 
 /**
@@ -126,22 +126,22 @@ function WordPress Schema_wp_get_jsonld( $post_id ) {
  * @since 1.2
  * @return array
  */
-function WordPress Schema_wp_get_publisher_array() {
+function schema_wp_get_publisher_array() {
 	
 	$publisher = array();
 	
-	$name = WordPress Schema_wp_get_option( 'name' );
+	$name = schema_wp_get_option( 'name' );
 	
 	// Use site name as organization name for publisher if not presented in plugin settings
 	// @since 1.5.9.5
 	if ( empty($name) ) $name = get_bloginfo( 'name' );
 	
 	// @since 1.5.9.3
-	$logo = esc_attr( stripslashes( WordPress Schema_wp_get_option( 'publisher_logo'  ) ) );
+	$logo = esc_attr( stripslashes( schema_wp_get_option( 'publisher_logo'  ) ) );
 	
 	$publisher = array(
 		"@type"	=> "Organization",	// default required value
-		"@id" => WordPress Schema_wp_get_home_url() . "#organization",
+		"@id" => schema_wp_get_home_url() . "#organization",
 		"name"	=> wp_filter_nohtml_kses($name),
 		"logo"	=> array(
     		"@type" => "ImageObject",
@@ -151,48 +151,48 @@ function WordPress Schema_wp_get_publisher_array() {
 		)
 	);
 
-	return apply_filters( 'WordPress Schema_wp_publisher', $publisher );
+	return apply_filters( 'schema_wp_publisher', $publisher );
 }
 
 /**
  * Get an array of enabled post types
  *
  * @since 1.4
- * @return array of enabled post types, WordPress Schema type
+ * @return array of enabled post types, schema type
  */
-function WordPress Schema_wp_cpt_get_enabled() {
+function schema_wp_cpt_get_enabled() {
 	
 	$cpt_enabled = array();
 	
 	$args = array(
-					'post_type'			=> 'WordPress Schema',
+					'post_type'			=> 'schema',
 					'post_status'		=> 'publish',
 					'posts_per_page'	=> -1
 				);
 				
-	$WordPress Schemas_query = new WP_Query( $args );
+	$schemas_query = new WP_Query( $args );
 	
-	$WordPress Schemas = $WordPress Schemas_query->get_posts();
+	$schemas = $schemas_query->get_posts();
 	
-	// If there is no WordPress Schema types set, return and empty array
-	if ( empty($WordPress Schemas) ) return array();
+	// If there is no schema types set, return and empty array
+	if ( empty($schemas) ) return array();
 	
-	foreach( $WordPress Schemas as $WordPress Schema ) : 
+	foreach( $schemas as $schema ) : 
 		
 		// Get post meta
-		$WordPress Schema_type			= get_post_meta( $WordPress Schema->ID, '_WordPress Schema_type'			, true );
-		$WordPress Schema_type_sub_pre	= get_post_meta( $WordPress Schema->ID, '_WordPress Schema_article_type'	, true );
-		$WordPress Schema_type_sub		= ( $WordPress Schema_type_sub_pre == 'General' ) ? $WordPress Schema_type : $WordPress Schema_type_sub_pre;
-		$WordPress Schema_post_types 		= get_post_meta( $WordPress Schema->ID, '_WordPress Schema_post_types'	, true );
-		$WordPress Schema_categories 		= WordPress Schema_wp_get_categories( $WordPress Schema->ID );
+		$schema_type			= get_post_meta( $schema->ID, '_schema_type'			, true );
+		$schema_type_sub_pre	= get_post_meta( $schema->ID, '_schema_article_type'	, true );
+		$schema_type_sub		= ( $schema_type_sub_pre == 'General' ) ? $schema_type : $schema_type_sub_pre;
+		$schema_post_types 		= get_post_meta( $schema->ID, '_schema_post_types'	, true );
+		$schema_categories 		= schema_wp_get_categories( $schema->ID );
 		
 		// Build our array
 		$cpt_enabled[] = array (
-									'id'			=>	$WordPress Schema->ID,
-									'type'			=>	$WordPress Schema_type,
-									'type_sub'		=>	$WordPress Schema_type_sub,
-									'post_type'		=>	$WordPress Schema_post_types,
-									'categories'	=>	$WordPress Schema_categories
+									'id'			=>	$schema->ID,
+									'type'			=>	$schema_type,
+									'type_sub'		=>	$schema_type_sub,
+									'post_type'		=>	$schema_post_types,
+									'categories'	=>	$schema_categories
 								);
 		
 	endforeach;
@@ -202,38 +202,38 @@ function WordPress Schema_wp_cpt_get_enabled() {
 	// debug
 	//echo '<pre>'; print_r($cpt_enabled); echo '</pre>'; exit;
 	
-	return apply_filters('WordPress Schema_wp_cpt_enabled', $cpt_enabled);
+	return apply_filters('schema_wp_cpt_enabled', $cpt_enabled);
 }
 
 /**
  * Get an array of enabled post types
  *
  * @since 1.5.9.6
- * @return array of enabled post types, WordPress Schema type
+ * @return array of enabled post types, schema type
  */
-function WordPress Schema_wp_cpt_get_enabled_post_types() {
+function schema_wp_cpt_get_enabled_post_types() {
 	
 	$cpt_enabled = array();
 	
 	$args = array(
-					'post_type'			=> 'WordPress Schema',
+					'post_type'			=> 'schema',
 					'post_status'		=> 'publish',
 					'posts_per_page'	=> -1
 				);
 				
-	$WordPress Schemas_query = new WP_Query( $args );
+	$schemas_query = new WP_Query( $args );
 	
-	$WordPress Schemas = $WordPress Schemas_query->get_posts();
+	$schemas = $schemas_query->get_posts();
 	
-	// If there is no WordPress Schema types set, return and empty array
-	if ( empty($WordPress Schemas) ) return array();
+	// If there is no schema types set, return and empty array
+	if ( empty($schemas) ) return array();
 	
-	foreach( $WordPress Schemas as $WordPress Schema ) : 
+	foreach( $schemas as $schema ) : 
 		
-		$WordPress Schema_post_types = get_post_meta( $WordPress Schema->ID, '_WordPress Schema_post_types'	, true );
+		$schema_post_types = get_post_meta( $schema->ID, '_schema_post_types'	, true );
 		
 		// Build our array
-		$cpt_enabled[] = (is_array($WordPress Schema_post_types)) ? reset($WordPress Schema_post_types) : array();
+		$cpt_enabled[] = (is_array($schema_post_types)) ? reset($schema_post_types) : array();
 		
 	endforeach;
 	
@@ -242,16 +242,16 @@ function WordPress Schema_wp_cpt_get_enabled_post_types() {
 	// debug
 	//echo '<pre>'; print_r($cpt_enabled); echo '</pre>'; exit;
 	//echo reset($cpt_enabled[0]);
-	return apply_filters('WordPress Schema_wp_cpt_enabled_post_types', $cpt_enabled);
+	return apply_filters('schema_wp_cpt_enabled_post_types', $cpt_enabled);
 }
 
 /**
- * Get WordPress Schema ref by post type in admin page editor screen
+ * Get schema ref by post type in admin page editor screen
  *
  * @since 1.6.9.3
- * @return array of enabled post types, WordPress Schema type
+ * @return array of enabled post types, schema type
  */
-function WordPress Schema_wp_get_ref_by_post_type( $post_type = null ) {
+function schema_wp_get_ref_by_post_type( $post_type = null ) {
 	
 	global $wpdb, $post;
 	
@@ -261,18 +261,18 @@ function WordPress Schema_wp_get_ref_by_post_type( $post_type = null ) {
 		$post_type = $current_screen->post_type;
 	}
 	
-	$WordPress Schema_posts = $wpdb->get_results ( "
+	$schema_posts = $wpdb->get_results ( "
     	SELECT * 
     	FROM  $wpdb->posts
-        WHERE post_type = 'WordPress Schema'
+        WHERE post_type = 'schema'
 			AND post_status = 'publish'
 	" );
 	
-	//echo '<pre>'; print_r($WordPress Schema_posts); echo '</pre>';exit;
-	if ( empty($WordPress Schema_posts) ) return array();
+	//echo '<pre>'; print_r($schema_posts); echo '</pre>';exit;
+	if ( empty($schema_posts) ) return array();
 	 
-	foreach ( $WordPress Schema_posts as $key => $post ) {
-		$supported_types = get_post_meta( $post->ID, '_WordPress Schema_post_types', true );
+	foreach ( $schema_posts as $key => $post ) {
+		$supported_types = get_post_meta( $post->ID, '_schema_post_types', true );
 		if ( ! empty($supported_types) && in_array( $post_type, $supported_types, true ) ) {
 			return $post->ID;
 		}	
@@ -285,7 +285,7 @@ function WordPress Schema_wp_get_ref_by_post_type( $post_type = null ) {
  * @since 1.6.9.4
  * return string
  */
-function WordPress Schema_wp_get_description( $post_id = null ) {
+function schema_wp_get_description( $post_id = null ) {
 	
 	global $post;
 	
@@ -304,13 +304,13 @@ function WordPress Schema_wp_get_description( $post_id = null ) {
 	
 	// Filter content before it gets shorter ;)
 	// @since 1.5.9
-	$full_content 		= apply_filters( 'WordPress Schema_wp_filter_content', $full_content );
+	$full_content 		= apply_filters( 'schema_wp_filter_content', $full_content );
 	
-	$desc_word_count	= apply_filters( 'WordPress Schema_wp_filter_description_word_count', 49 );
+	$desc_word_count	= apply_filters( 'schema_wp_filter_description_word_count', 49 );
 	$short_content		= wp_trim_words( $full_content, $desc_word_count, '' ); 
 	
 	// Use excerpt if presnet, or use short_content
-	$description		= apply_filters( 'WordPress Schema_wp_filter_description', ( $excerpt != '' ) ? $excerpt : $short_content ); 
+	$description		= apply_filters( 'schema_wp_filter_description', ( $excerpt != '' ) ? $excerpt : $short_content ); 
 	
 	return $description;
 }
@@ -321,7 +321,7 @@ function WordPress Schema_wp_get_description( $post_id = null ) {
  * @since 1.4
  * @return array 
  */
-function WordPress Schema_wp_get_media( $post_id = null) {
+function schema_wp_get_media( $post_id = null) {
 	
 	global $post;
 	
@@ -395,7 +395,7 @@ function WordPress Schema_wp_get_media( $post_id = null) {
 	// debug
 	//echo '<pre>'; print_r($media); echo '</pre>';
 	
-	return apply_filters( 'WordPress Schema_wp_filter_media', $media );
+	return apply_filters( 'schema_wp_filter_media', $media );
 }
 
 /**
@@ -405,7 +405,7 @@ function WordPress Schema_wp_get_media( $post_id = null) {
  * @return string - attachment ID 
  * @since 1.7.7
  */
-function WordPress Schema_wp_get_attachment_id_from_url( $image_url ) {
+function schema_wp_get_attachment_id_from_url( $image_url ) {
 	
 	global $wpdb;
 	
@@ -421,7 +421,7 @@ function WordPress Schema_wp_get_attachment_id_from_url( $image_url ) {
  * @return array ImageObject
  * @since 1.7.7
  */
-function WordPress Schema_wp_get_image_object_by_attachment_id( $attachment_id ) {
+function schema_wp_get_image_object_by_attachment_id( $attachment_id ) {
 	
 	if ( ! isset($attachment_id) ) 
 		return array();
@@ -463,7 +463,7 @@ function WordPress Schema_wp_get_image_object_by_attachment_id( $attachment_id )
  * @param int $post_id The post ID.
  * @since 1.7.9
  */
-function WordPress Schema_wp_get_post_category( $post_id ) {
+function schema_wp_get_post_category( $post_id ) {
 	
 	global $post;
 	
@@ -478,12 +478,12 @@ function WordPress Schema_wp_get_post_category( $post_id ) {
 	
 /**
  * Get post tags separate by commas,
- * to be used as WordPress Schema keywords for BlogPosting
+ * to be used as schema keywords for BlogPosting
  *
  * @param int $post_id The post ID.
  * @since 1.4.5
  */
-function WordPress Schema_wp_get_post_tags( $post_id ) {
+function schema_wp_get_post_tags( $post_id ) {
 	
 	global $post;
 	
@@ -503,13 +503,13 @@ function WordPress Schema_wp_get_post_tags( $post_id ) {
 }
 
 /**
- * Get an array of WordPress Schema enabed categories
+ * Get an array of schema enabed categories
  * 
  * @since 1.4.7
- * @return array of enabled categories, WordPress Schema type
+ * @return array of enabled categories, schema type
  */
 
-function WordPress Schema_wp_get_categories( $post_id ) {
+function schema_wp_get_categories( $post_id ) {
 	
 	global $post;
 	
@@ -530,29 +530,29 @@ function WordPress Schema_wp_get_categories( $post_id ) {
 	if ( empty($cats) ) return $categories;
 	
 	// Flat
-	$categories = WordPress Schema_wp_array_flatten($cats);
+	$categories = schema_wp_array_flatten($cats);
 	
-	return apply_filters( 'WordPress Schema_wp_filter_categories', $categories );
+	return apply_filters( 'schema_wp_filter_categories', $categories );
 }
 
-add_action( 'save_post', 'WordPress Schema_save_categories', 10, 3 );
+add_action( 'save_post', 'schema_save_categories', 10, 3 );
 /**
- * Save categories when a WordPress Schema post is saved.
+ * Save categories when a Schema post is saved.
  *
  * @param int $post_id The post ID.
  * @param post $post The post object.
  * @param bool $update Whether this is an existing post being updated or not.
  * @since 1.4.7
  */
-function WordPress Schema_save_categories( $post_id, $post, $update ) {
+function schema_save_categories( $post_id, $post, $update ) {
 	
 	if( ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) 
     || ( defined( 'DOING_AJAX' ) && DOING_AJAX ) ) 
         return;
 		
-	$slug = 'WordPress Schema';
+	$slug = 'schema';
 
-    // If this isn't a 'WordPress Schema' post, don't update it.
+    // If this isn't a 'schema' post, don't update it.
     if ( $slug != $post->post_type ) {
         return;
     }
@@ -562,9 +562,9 @@ function WordPress Schema_save_categories( $post_id, $post, $update ) {
 		return;
 		
     // - Update the post's metadata.
-	$post_categories = WordPress Schema_wp_get_categories( $post_id );
+	$post_categories = schema_wp_get_categories( $post_id );
 	
-	update_post_meta($post_id, '_WordPress Schema_categories', $post_categories);
+	update_post_meta($post_id, '_schema_categories', $post_categories);
 }
 
 /**
@@ -573,7 +573,7 @@ function WordPress Schema_save_categories( $post_id, $post, $update ) {
  * @since 1.6.9.8
  * @return string
  */
-function WordPress Schema_wp_get_categories_as_keywords() {
+function schema_wp_get_categories_as_keywords() {
 	
 	$categories = get_categories( array(
     	'orderby' => 'name',
@@ -589,7 +589,7 @@ function WordPress Schema_wp_get_categories_as_keywords() {
 	// transform into a comma separated string
 	$cat = implode(", ", $cat);
 	
-	return apply_filters( 'WordPress Schema_wp_get_categories', $cat );
+	return apply_filters( 'schema_wp_get_categories', $cat );
 }
 
 /**
@@ -598,11 +598,11 @@ function WordPress Schema_wp_get_categories_as_keywords() {
  * @since 1.5.3
  * @return array 
  */
-function WordPress Schema_wp_get_support_article_types() {
+function schema_wp_get_support_article_types() {
 
 	$support_article_types = array( 'Article', 'BlogPosting', 'NewsArticle', 'Report', 'ScholarlyArticle', 'TechArticle' );
 	
-	return apply_filters( 'WordPress Schema_wp_support_article_types', $support_article_types );
+	return apply_filters( 'schema_wp_support_article_types', $support_article_types );
 }
 
 /**
@@ -613,7 +613,7 @@ function WordPress Schema_wp_get_support_article_types() {
  * @since 1.5
  * @return string The time Seconds in ISO format
  */
-function WordPress Schema_wp_get_time_second_to_iso8601_duration( $time ) {
+function schema_wp_get_time_second_to_iso8601_duration( $time ) {
 	
 	$units = array(
         "Y" => 365*24*3600,
@@ -642,24 +642,24 @@ function WordPress Schema_wp_get_time_second_to_iso8601_duration( $time ) {
     return $str;
 }
 
-add_action( 'save_post', 'WordPress Schema_wp_clear_json_on_post_save', 10, 3 );
+add_action( 'save_post', 'schema_wp_clear_json_on_post_save', 10, 3 );
 /**
- * Clear WordPress Schema json on post save
+ * Clear schema json on post save
  *
  * @param int $post_id The post ID.
  * @param post $post The post object.
  * @param bool $update Whether this is an existing post being updated or not.
  * @since 1.5.9.8
  */
-function WordPress Schema_wp_clear_json_on_post_save( $post_id, $post, $update ) {
+function schema_wp_clear_json_on_post_save( $post_id, $post, $update ) {
 	
 	if( ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) 
     || ( defined( 'DOING_AJAX' ) && DOING_AJAX ) ) 
 		return $post_id;
 		
-	$slug = 'WordPress Schema';
+	$slug = 'schema';
 
-    // If this is a 'WordPress Schema' post, don't update it.
+    // If this is a 'schema' post, don't update it.
 	if ( get_post_type( $post_id ) == $slug ) {
         return $post_id;
     }
@@ -669,12 +669,12 @@ function WordPress Schema_wp_clear_json_on_post_save( $post_id, $post, $update )
 		 return $post_id;
 		
     // - Delete the post's metadata.
-	delete_post_meta( $post_id, '_WordPress Schema_json' );
-	delete_post_meta( $post_id, '_WordPress Schema_json_timestamp' );
+	delete_post_meta( $post_id, '_schema_json' );
+	delete_post_meta( $post_id, '_schema_json_timestamp' );
 	
 	// update ref
 	// @since 1.6
-	WordPress Schema_wp_update_meta_ref( $post_id );
+	schema_wp_update_meta_ref( $post_id );
 	
 	// Debug
 	//$msg = 'Is this un update? ';
@@ -690,55 +690,55 @@ function WordPress Schema_wp_clear_json_on_post_save( $post_id, $post, $update )
  * @since   1.6.9
  * @return  array
  */
-function WordPress Schema_wp_get_currencies() {
+function schema_wp_get_currencies() {
 	$currencies = array(
-		'AUD' => __( 'Australian Dollars', 'WordPress Schema-wp' ),
-		'BDT' => __( 'Bangladeshi Taka', 'WordPress Schema-wp' ),
-		'BRL' => __( 'Brazilian Real', 'WordPress Schema-wp' ),
-		'BGN' => __( 'Bulgarian Lev', 'WordPress Schema-wp' ),
-		'CAD' => __( 'Canadian Dollars', 'WordPress Schema-wp' ),
-		'CLP' => __( 'Chilean Peso', 'WordPress Schema-wp' ),
-		'CNY' => __( 'Chinese Yuan', 'WordPress Schema-wp' ),
-		'COP' => __( 'Colombian Peso', 'WordPress Schema-wp' ),
-		'CZK' => __( 'Czech Koruna', 'WordPress Schema-wp' ),
-		'DKK' => __( 'Danish Krone', 'WordPress Schema-wp' ),
-		'DOP' => __( 'Dominican Peso', 'WordPress Schema-wp' ),
-		'EUR' => __( 'Euros', 'WordPress Schema-wp' ),
-		'HKD' => __( 'Hong Kong Dollar', 'WordPress Schema-wp' ),
-		'HRK' => __( 'Croatia kuna', 'WordPress Schema-wp' ),
-		'HUF' => __( 'Hungarian Forint', 'WordPress Schema-wp' ),
-		'ISK' => __( 'Icelandic krona', 'WordPress Schema-wp' ),
-		'IDR' => __( 'Indonesia Rupiah', 'WordPress Schema-wp' ),
-		'INR' => __( 'Indian Rupee', 'WordPress Schema-wp' ),
-		'NPR' => __( 'Nepali Rupee', 'WordPress Schema-wp' ),
-		'ILS' => __( 'Israeli Shekel', 'WordPress Schema-wp' ),
-		'JPY' => __( 'Japanese Yen', 'WordPress Schema-wp' ),
-		'KIP' => __( 'Lao Kip', 'WordPress Schema-wp' ),
-		'KRW' => __( 'South Korean Won', 'WordPress Schema-wp' ),
-		'MYR' => __( 'Malaysian Ringgits', 'WordPress Schema-wp' ),
-		'MXN' => __( 'Mexican Peso', 'WordPress Schema-wp' ),
-		'NGN' => __( 'Nigerian Naira', 'WordPress Schema-wp' ),
-		'NOK' => __( 'Norwegian Krone', 'WordPress Schema-wp' ),
-		'NZD' => __( 'New Zealand Dollar', 'WordPress Schema-wp' ),
-		'PYG' => __( 'Paraguayan Guaraní', 'WordPress Schema-wp' ),
-		'PHP' => __( 'Philippine Pesos', 'WordPress Schema-wp' ),
-		'PLN' => __( 'Polish Zloty', 'WordPress Schema-wp' ),
-		'GBP' => __( 'Pounds Sterling', 'WordPress Schema-wp' ),
-		'RON' => __( 'Romanian Leu', 'WordPress Schema-wp' ),
-		'RUB' => __( 'Russian Ruble', 'WordPress Schema-wp' ),
-		'SGD' => __( 'Singapore Dollar', 'WordPress Schema-wp' ),
-		'ZAR' => __( 'South African rand', 'WordPress Schema-wp' ),
-		'SEK' => __( 'Swedish Krona', 'WordPress Schema-wp' ),
-		'CHF' => __( 'Swiss Franc', 'WordPress Schema-wp' ),
-		'TWD' => __( 'Taiwan New Dollars', 'WordPress Schema-wp' ),
-		'THB' => __( 'Thai Baht', 'WordPress Schema-wp' ),
-		'TRY' => __( 'Turkish Lira', 'WordPress Schema-wp' ),
-		'USD' => __( 'US Dollars', 'WordPress Schema-wp' ),
-		'VND' => __( 'Vietnamese Dong', 'WordPress Schema-wp' ),
-		'EGP' => __( 'Egyptian Pound', 'WordPress Schema-wp' ),
+		'AUD' => __( 'Australian Dollars', 'schema-wp' ),
+		'BDT' => __( 'Bangladeshi Taka', 'schema-wp' ),
+		'BRL' => __( 'Brazilian Real', 'schema-wp' ),
+		'BGN' => __( 'Bulgarian Lev', 'schema-wp' ),
+		'CAD' => __( 'Canadian Dollars', 'schema-wp' ),
+		'CLP' => __( 'Chilean Peso', 'schema-wp' ),
+		'CNY' => __( 'Chinese Yuan', 'schema-wp' ),
+		'COP' => __( 'Colombian Peso', 'schema-wp' ),
+		'CZK' => __( 'Czech Koruna', 'schema-wp' ),
+		'DKK' => __( 'Danish Krone', 'schema-wp' ),
+		'DOP' => __( 'Dominican Peso', 'schema-wp' ),
+		'EUR' => __( 'Euros', 'schema-wp' ),
+		'HKD' => __( 'Hong Kong Dollar', 'schema-wp' ),
+		'HRK' => __( 'Croatia kuna', 'schema-wp' ),
+		'HUF' => __( 'Hungarian Forint', 'schema-wp' ),
+		'ISK' => __( 'Icelandic krona', 'schema-wp' ),
+		'IDR' => __( 'Indonesia Rupiah', 'schema-wp' ),
+		'INR' => __( 'Indian Rupee', 'schema-wp' ),
+		'NPR' => __( 'Nepali Rupee', 'schema-wp' ),
+		'ILS' => __( 'Israeli Shekel', 'schema-wp' ),
+		'JPY' => __( 'Japanese Yen', 'schema-wp' ),
+		'KIP' => __( 'Lao Kip', 'schema-wp' ),
+		'KRW' => __( 'South Korean Won', 'schema-wp' ),
+		'MYR' => __( 'Malaysian Ringgits', 'schema-wp' ),
+		'MXN' => __( 'Mexican Peso', 'schema-wp' ),
+		'NGN' => __( 'Nigerian Naira', 'schema-wp' ),
+		'NOK' => __( 'Norwegian Krone', 'schema-wp' ),
+		'NZD' => __( 'New Zealand Dollar', 'schema-wp' ),
+		'PYG' => __( 'Paraguayan Guaraní', 'schema-wp' ),
+		'PHP' => __( 'Philippine Pesos', 'schema-wp' ),
+		'PLN' => __( 'Polish Zloty', 'schema-wp' ),
+		'GBP' => __( 'Pounds Sterling', 'schema-wp' ),
+		'RON' => __( 'Romanian Leu', 'schema-wp' ),
+		'RUB' => __( 'Russian Ruble', 'schema-wp' ),
+		'SGD' => __( 'Singapore Dollar', 'schema-wp' ),
+		'ZAR' => __( 'South African rand', 'schema-wp' ),
+		'SEK' => __( 'Swedish Krona', 'schema-wp' ),
+		'CHF' => __( 'Swiss Franc', 'schema-wp' ),
+		'TWD' => __( 'Taiwan New Dollars', 'schema-wp' ),
+		'THB' => __( 'Thai Baht', 'schema-wp' ),
+		'TRY' => __( 'Turkish Lira', 'schema-wp' ),
+		'USD' => __( 'US Dollars', 'schema-wp' ),
+		'VND' => __( 'Vietnamese Dong', 'schema-wp' ),
+		'EGP' => __( 'Egyptian Pound', 'schema-wp' ),
 	);
 
-	return apply_filters( 'WordPress Schema_wp_currencies', $currencies );
+	return apply_filters( 'schema_wp_currencies', $currencies );
 }
 
 /**
@@ -750,7 +750,7 @@ function WordPress Schema_wp_get_currencies() {
  *
  * @return string $currency_symbol Currency symbol.
  */
-function WordPress Schema_wp_get_currency_symbol( $currency ) {
+function schema_wp_get_currency_symbol( $currency ) {
 	switch ( $currency ) {
 		case 'BDT':
 			$currency_symbol = '&#2547;&nbsp;';
@@ -872,7 +872,7 @@ function WordPress Schema_wp_get_currency_symbol( $currency ) {
 			break;
 	}
 
-	return apply_filters( 'WordPress Schema_wp_currency_symbol', $currency_symbol, $currency );
+	return apply_filters( 'schema_wp_currency_symbol', $currency_symbol, $currency );
 }
 
 /**
@@ -882,7 +882,7 @@ function WordPress Schema_wp_get_currency_symbol( $currency ) {
  * @since 1.6.9.8
  * @return string
  */
-function WordPress Schema_wp_get_archive_link( $post_type ) {
+function schema_wp_get_archive_link( $post_type ) {
 	global $wp_post_types;
 	$archive_link = false;
 	$slug = '';
@@ -897,7 +897,7 @@ function WordPress Schema_wp_get_archive_link( $post_type ) {
 				$slug = $post_type;
 			$archive_link = get_option( 'siteurl' ) . "/{$slug}/";
 	}
-	return apply_filters( 'WordPress Schema_wp_archive_link', $archive_link, $post_type );
+	return apply_filters( 'schema_wp_archive_link', $archive_link, $post_type );
 }
 
 /**
@@ -907,7 +907,7 @@ function WordPress Schema_wp_get_archive_link( $post_type ) {
  * @since 1.6.9.8
  * @return string The blog posts page URL.
  */
-function WordPress Schema_wp_get_blog_posts_page_url() {
+function schema_wp_get_blog_posts_page_url() {
 	// If front page is set to display a static page, get the URL of the posts page.
 	if ( 'page' === get_option( 'show_on_front' ) ) {
 		return get_permalink( get_option( 'page_for_posts' ) );
@@ -922,7 +922,7 @@ function WordPress Schema_wp_get_blog_posts_page_url() {
  * @since 1.7.1
  * @return string
  */
-function WordPress Schema_wp_get_home_url( $path = '', $scheme = null ) {
+function schema_wp_get_home_url( $path = '', $scheme = null ) {
 
 	$home_url = home_url( $path, $scheme );
 
@@ -944,7 +944,7 @@ function WordPress Schema_wp_get_home_url( $path = '', $scheme = null ) {
 		return user_trailingslashit( $home_url );
 	}
 
-	return apply_filters( 'WordPress Schema_wp_home_url', $home_url );
+	return apply_filters( 'schema_wp_home_url', $home_url );
 }
 
 /**
@@ -953,7 +953,7 @@ function WordPress Schema_wp_get_home_url( $path = '', $scheme = null ) {
  * @since 1.7.1
  * @return true or false
  */
-function WordPress Schema_wp_is_blog() {
+function schema_wp_is_blog() {
 	
 	// Return true if is Blog (post list page)
 	if ( ! is_front_page() && is_home() || is_home() ) {
@@ -969,9 +969,9 @@ function WordPress Schema_wp_is_blog() {
  * @since 1.7.1
  * @return string
  */
-function WordPress Schema_wp_get_truncate_to_word( $string, $limit = 110, $end = '...' ) {
+function schema_wp_get_truncate_to_word( $string, $limit = 110, $end = '...' ) {
 	
-	$limit 	= apply_filters( 'WordPress Schema_wp_truncate_to_word_limit', $limit );
+	$limit 	= apply_filters( 'schema_wp_truncate_to_word_limit', $limit );
 
 	if (strlen($string) > $limit || $string == '') {
 		$words = preg_split('/\s/', $string);      

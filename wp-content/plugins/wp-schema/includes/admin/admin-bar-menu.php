@@ -10,13 +10,13 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 
-add_action( 'admin_bar_menu', 'WordPress Schema_wp_admin_bar_menu_items', 99 );
+add_action( 'admin_bar_menu', 'schema_wp_admin_bar_menu_items', 99 );
 /*
 * Add Google Rich Snippet Test Tool link to admin bar menu
 *	
 * @since 1.5.4
 */
-function WordPress Schema_wp_admin_bar_menu_items( $admin_bar ) {
+function schema_wp_admin_bar_menu_items( $admin_bar ) {
 		
 	/* This print_r will show you the current contents of the admin menu bar, use it if you want to examine the $admin_bar array
 	* echo "<pre>";
@@ -41,12 +41,12 @@ function WordPress Schema_wp_admin_bar_menu_items( $admin_bar ) {
 	$hl = 'hl=' . $lang . '&';
 
 	$admin_bar->add_menu( array(
-		'id'	=> 'WordPress Schema-test-item',
-		'title'	=> __('', 'WordPress Schema-wp'),
-		'href' => 'https://validator.WordPress Schema.org/?' . $hl . 'url=' . $url,
+		'id'	=> 'schema-test-item',
+		'title'	=> __('', 'schema-wp'),
+		'href' => 'https://validator.schema.org/?' . $hl . 'url=' . $url,
 		'meta'	=> array(
-			'title'		=> __('WordPress Schema Markup Validator', 'WordPress Schema-wp'),
-			'class'		=> 'WordPress Schema_google_developers',
+			'title'		=> __('Schema Markup Validator', 'schema-wp'),
+			'class'		=> 'schema_google_developers',
 			'target'	=> __('_blank')
 		),
 	) );
@@ -54,27 +54,27 @@ function WordPress Schema_wp_admin_bar_menu_items( $admin_bar ) {
 
 
 // on backend area
-//add_action( 'admin_head', 'WordPress Schema_wp_admin_bar_styles' );
+//add_action( 'admin_head', 'schema_wp_admin_bar_styles' );
 // on frontend area
-add_action( 'wp_head', 'WordPress Schema_wp_admin_bar_styles' );
+add_action( 'wp_head', 'schema_wp_admin_bar_styles' );
 /*
 * Add styles to admin bar
 *
 * @since 1.5.4
 */
-function WordPress Schema_wp_admin_bar_styles() {
+function schema_wp_admin_bar_styles() {
 	
 	if ( ! is_admin_bar_showing() ) return;
 	
 	?>
 	<style type="text/css">
 		/* admin bar */
-		.WordPress Schema_google_developers a {
+		.schema_google_developers a {
 			padding-left:20px !important;
-			background:	transparent url('<?php echo WordPress SchemaWP_PLUGIN_URL; ?>assets/images/admin-bar/google-developers.png') 8px 50% no-repeat !important;
+			background:	transparent url('<?php echo SCHEMAWP_PLUGIN_URL; ?>assets/images/admin-bar/google-developers.png') 8px 50% no-repeat !important;
 		}
-		.WordPress Schema_google_developers a:hover {
-			background:	transparent url('<?php echo WordPress SchemaWP_PLUGIN_URL; ?>assets/images/admin-bar/google-developers-hover.png') 8px 50% no-repeat !important;
+		.schema_google_developers a:hover {
+			background:	transparent url('<?php echo SCHEMAWP_PLUGIN_URL; ?>assets/images/admin-bar/google-developers-hover.png') 8px 50% no-repeat !important;
 		}
 	</style>
 <?php

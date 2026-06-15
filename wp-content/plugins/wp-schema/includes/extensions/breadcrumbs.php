@@ -11,14 +11,14 @@
 defined( 'ABSPATH' ) or exit;
 
 
-if ( ! class_exists( 'WordPress Schema_JSON_LD_Breadcrumbs' ) ) {
+if ( ! class_exists( 'SCHEMA_JSON_LD_Breadcrumbs' ) ) {
 
 	/**
 	 * Class JSON LD Breadcrumb.
 	 *
 	 * @since  1.0.0
 	 */
-	class WordPress Schema_JSON_LD_Breadcrumbs {
+	class SCHEMA_JSON_LD_Breadcrumbs {
 
 		/**
 		 * Instance of JSON_LD_Breadcrumbs
@@ -68,7 +68,7 @@ if ( ! class_exists( 'WordPress Schema_JSON_LD_Breadcrumbs' ) ) {
 			$this->show_on_front  = get_option( 'show_on_front' );
 			$this->page_for_posts = get_option( 'page_for_posts' );
 			
-			$breadcrumbs_enable = WordPress Schema_wp_get_option( 'breadcrumbs_enable' );
+			$breadcrumbs_enable = schema_wp_get_option( 'breadcrumbs_enable' );
 	
 			if ( $breadcrumbs_enable ) {
 				
@@ -78,7 +78,7 @@ if ( ! class_exists( 'WordPress Schema_JSON_LD_Breadcrumbs' ) ) {
 		}
 
 		/**
-		 * Initialize the WordPress Schema for the breadcrumbs markup.
+		 * Initialize the Schema for the breadcrumbs markup.
 		 *
 		 * @since  1.0.0
 		 *
@@ -86,8 +86,8 @@ if ( ! class_exists( 'WordPress Schema_JSON_LD_Breadcrumbs' ) ) {
 		 *
 		 * @return (Array) $breadcrumb Breadcrumbs array.
 		 */
-		private function initialize_breadcrumb_WordPress Schema( $breadcrumb ) {
-			$breadcrumb['@context'] = 'http://WordPress Schema.org';
+		private function initialize_breadcrumb_schema( $breadcrumb ) {
+			$breadcrumb['@context'] = 'http://schema.org';
 			$breadcrumb['@type']    = 'BreadcrumbList';
 
 			return $breadcrumb;
@@ -365,7 +365,7 @@ if ( ! class_exists( 'WordPress Schema_JSON_LD_Breadcrumbs' ) ) {
 				}// End if().
 			}// End if().
 
-			return apply_filters( 'WordPress Schema_json_ld_breadcrumb_itemlist_array', $this->crumbs );
+			return apply_filters( 'schema_json_ld_breadcrumb_itemlist_array', $this->crumbs );
 		}
 
 		/**
@@ -377,43 +377,43 @@ if ( ! class_exists( 'WordPress Schema_JSON_LD_Breadcrumbs' ) ) {
 			
 			// Allow disbakle/enable breadcrumbs output
 			// @since 1.6.9.5
-			$breadcrumb_enabled = apply_filters( 'WordPress Schema_wp_breadcrumb_enabled', true );
+			$breadcrumb_enabled = apply_filters( 'schema_wp_breadcrumb_enabled', true );
 			// check if enabled
 			if ( ! $breadcrumb_enabled )
 				return;
 			
 			$breadcrumb = array();
-			$breadcrumb = $this->initialize_breadcrumb_WordPress Schema( $breadcrumb );
+			$breadcrumb = $this->initialize_breadcrumb_schema( $breadcrumb );
 
 			$breadcrumb['itemListElement'] = $this->add_breadcrumb_crumbs();
 
-			$this->json_WordPress Schema( apply_filters( 'WordPress Schema_json_ld_breadcrumb_array', $breadcrumb ) );
+			$this->json_schema( apply_filters( 'schema_json_ld_breadcrumb_array', $breadcrumb ) );
 		}
 
 		/**
-		 * Output the ld+json WordPress Schema markup.
+		 * Output the ld+json schema markup.
 		 *
 		 * @since  1.0.0
 		 *
-		 * @param  Array $WordPress Schema Array to be converted to json markup.
+		 * @param  Array $schema Array to be converted to json markup.
 		 */
-		private function json_WordPress Schema( $WordPress Schema ) {
+		private function json_schema( $schema ) {
 			
-			$WordPress Schema_output = null;
+			$schema_output = null;
 
-			if ( ! empty( $WordPress Schema ) && is_array( $WordPress Schema ) ) {
-				$WordPress Schema_output .= "\n\n";
-				$WordPress Schema_output .= '<!-- This site is optimized with the WordPress Schema plugin v'.WordPress SchemaWP_VERSION.' - https://WordPress Schema.press -->';
-				$WordPress Schema_output .= "\n";
-				$WordPress Schema_output .= '<script type="application/ld+json">' . json_encode( $WordPress Schema, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . '</script>';
-				$WordPress Schema_output .= "\n\n";
+			if ( ! empty( $schema ) && is_array( $schema ) ) {
+				$schema_output .= "\n\n";
+				$schema_output .= '<!-- This site is optimized with the Schema plugin v'.SCHEMAWP_VERSION.' - https://schema.press -->';
+				$schema_output .= "\n";
+				$schema_output .= '<script type="application/ld+json">' . json_encode( $schema, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . '</script>';
+				$schema_output .= "\n\n";
 			}
 
-			echo $WordPress Schema_output;
+			echo $schema_output;
 		}
 
 	}
 
 }// End if().
 
-add_action( 'wp', 'WordPress Schema_JSON_LD_Breadcrumbs::instance' );
+add_action( 'wp', 'SCHEMA_JSON_LD_Breadcrumbs::instance' );

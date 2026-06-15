@@ -8,21 +8,21 @@
 // Exit if accessed directly
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-add_action('wp_head', 'WordPress Schema_wp_output_blog');
+add_action('wp_head', 'schema_wp_output_blog');
 /**
- * The main function responsible for output WordPress Schema json-ld 
+ * The main function responsible for output schema json-ld 
  *
  * @since 1.5.4
- * @return WordPress Schema json-ld final output
+ * @return schema json-ld final output
  */
-function WordPress Schema_wp_output_blog() {
+function schema_wp_output_blog() {
 		
 	// Run only on blog list page
 	//if ( ! is_front_page() && is_home() || is_home() ) {
 	
-	if ( WordPress Schema_wp_is_blog() ) {
+	if ( schema_wp_is_blog() ) {
 		
-		$json = WordPress Schema_wp_get_blog_json( 'Blog' );
+		$json = schema_wp_get_blog_json( 'Blog' );
 		
 		$output = '';
 		
@@ -31,7 +31,7 @@ function WordPress Schema_wp_output_blog() {
 		
 		if ( $json ) {
 			$output .= "\n\n";
-			$output .= '<!-- This site is optimized with the WordPress Schema plugin v'.WordPress SchemaWP_VERSION.' - https://WordPress Schema.press -->';
+			$output .= '<!-- This site is optimized with the Schema plugin v'.SCHEMAWP_VERSION.' - https://schema.press -->';
 			$output .= "\n";
 			$output .= '<script type="application/ld+json">' . json_encode($json, JSON_UNESCAPED_UNICODE) . '</script>';
 			$output .= "\n\n";
@@ -45,11 +45,11 @@ function WordPress Schema_wp_output_blog() {
 /**
  * The main function responsible for putting shema array all together
  *
- * @param string $type for WordPress Schema type (example: Person)
+ * @param string $type for schema type (example: Person)
  * @since 1.6.9.5
- * @return WordPress Schema output
+ * @return schema output
  */
-function WordPress Schema_wp_get_blog_json( $type ) {
+function schema_wp_get_blog_json( $type ) {
 	
 	global $post, $wp_query, $query_string;
 	
@@ -60,7 +60,7 @@ function WordPress Schema_wp_get_blog_json( $type ) {
 	if ( empty($wp_query->query_vars) ) return;
 	
 	$blogPost 	= array();
-	$WordPress Schema 	= array();
+	$schema 	= array();
 	
 	$secondary_loop = new WP_Query( $wp_query->query_vars );
 	
@@ -68,34 +68,34 @@ function WordPress Schema_wp_get_blog_json( $type ) {
 	   
 	   // get markup data for each post in the query
 	   if ( ! empty($secondary_loop->posts) ) {
-			foreach ($secondary_loop->posts as $WordPress Schema_post) {
+			foreach ($secondary_loop->posts as $schema_post) {
 				
 				// pull json from post meta
-				$WordPress Schema_json = get_post_meta( $WordPress Schema_post->ID, '_WordPress Schema_json', true );
+				$schema_json = get_post_meta( $schema_post->ID, '_schema_json', true );
 				
-				if ( isset($WordPress Schema_json) && is_array($WordPress Schema_json) ) {
+				if ( isset($schema_json) && is_array($schema_json) ) {
 					
-					$blogPost[] = $WordPress Schema_json;
+					$blogPost[] = $schema_json;
 				
 				} else { 
 				
 					// create it
-					$blogPost[] = apply_filters( 'WordPress Schema_output_blog_post', array
+					$blogPost[] = apply_filters( 'schema_output_blog_post', array
            			(
 						'@type' => 'BlogPosting',
-						'headline' => wp_filter_nohtml_kses( get_the_title($WordPress Schema_post->ID) ),
-						'description' => WordPress Schema_wp_get_description($WordPress Schema_post->ID),
-						'url' => get_the_permalink($WordPress Schema_post->ID),
-						'sameAs' => WordPress Schema_wp_get_sameAs($WordPress Schema_post->ID),
-						'datePublished' => get_the_date('c', $WordPress Schema_post->ID),
-						'dateModified' => get_the_modified_date('c', $WordPress Schema_post->ID),
-						'mainEntityOfPage' => get_the_permalink($WordPress Schema_post->ID),
-						'author' => WordPress Schema_wp_get_author_array(),
-						'publisher' => WordPress Schema_wp_get_publisher_array(),
-						'image' => WordPress Schema_wp_get_media($WordPress Schema_post->ID),
-						'keywords' => WordPress Schema_wp_get_post_tags($WordPress Schema_post->ID),
-						'commentCount' => get_comments_number($WordPress Schema_post->ID),
-						'comment' => WordPress Schema_wp_get_comments($WordPress Schema_post->ID),
+						'headline' => wp_filter_nohtml_kses( get_the_title($schema_post->ID) ),
+						'description' => schema_wp_get_description($schema_post->ID),
+						'url' => get_the_permalink($schema_post->ID),
+						'sameAs' => schema_wp_get_sameAs($schema_post->ID),
+						'datePublished' => get_the_date('c', $schema_post->ID),
+						'dateModified' => get_the_modified_date('c', $schema_post->ID),
+						'mainEntityOfPage' => get_the_permalink($schema_post->ID),
+						'author' => schema_wp_get_author_array(),
+						'publisher' => schema_wp_get_publisher_array(),
+						'image' => schema_wp_get_media($schema_post->ID),
+						'keywords' => schema_wp_get_post_tags($schema_post->ID),
+						'commentCount' => get_comments_number($schema_post->ID),
+						'comment' => schema_wp_get_comments($schema_post->ID),
             		));
 				}
 			}
@@ -104,9 +104,9 @@ function WordPress Schema_wp_get_blog_json( $type ) {
 		wp_reset_postdata();
 		
 		// put all together
-		$WordPress Schema = array
+		$schema = array
         (
-			'@context' => 'http://WordPress Schema.org/',
+			'@context' => 'http://schema.org/',
 			'@type' => "Blog",
 			'headline' => get_option( 'page_for_posts' ) ? wp_filter_nohtml_kses( get_the_title( get_option( 'page_for_posts' ) ) ) : get_bloginfo( 'name' ),
 			'description' => get_bloginfo( 'description' ),
@@ -117,7 +117,7 @@ function WordPress Schema_wp_get_blog_json( $type ) {
 	endif;
 	
 	// debug
-	//echo'<pre>';print_r($WordPress Schema);echo'</pre>';exit;
+	//echo'<pre>';print_r($schema);echo'</pre>';exit;
 	
-	return apply_filters( 'WordPress Schema_blog_output', $WordPress Schema );
+	return apply_filters( 'schema_blog_output', $schema );
 }

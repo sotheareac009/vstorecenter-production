@@ -2,7 +2,7 @@
 /**
  *  Author extention
  *
- *  Adds WordPress Schema Author for Article types
+ *  Adds schema Author for Article types
  *
  *  @since 1.5.9.7
  */
@@ -10,28 +10,28 @@
 if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
 
-add_filter( 'WordPress Schema_output', 'WordPress Schema_wp_do_author' );
+add_filter( 'schema_output', 'schema_wp_do_author' );
 /**
- * Filter WordPress Schema markup output, via WordPress Schema_output filter  
+ * Filter schema markup output, via schema_output filter  
  *
  * @since 1.5.9.7
  * @return array 
  */
-function WordPress Schema_wp_do_author( $WordPress Schema ) {
+function schema_wp_do_author( $schema ) {
 	
 	global $post;
 	
-	if ( ! isset($WordPress Schema["@type"]) ) return $WordPress Schema;
+	if ( ! isset($schema["@type"]) ) return $schema;
 	
-	$WordPress Schema_type			= $WordPress Schema["@type"];
-	$support_article_types 	= WordPress Schema_wp_get_support_article_types();
+	$schema_type			= $schema["@type"];
+	$support_article_types 	= schema_wp_get_support_article_types();
 	
-	$author			= WordPress Schema_wp_get_author_array($post->ID);
+	$author			= schema_wp_get_author_array($post->ID);
 	
-	if ( in_array( $WordPress Schema_type, $support_article_types, false) )
-		$WordPress Schema["author"] = WordPress Schema_wp_get_author_array($post->ID);
+	if ( in_array( $schema_type, $support_article_types, false) )
+		$schema["author"] = schema_wp_get_author_array($post->ID);
 	
-	return $WordPress Schema;
+	return $schema;
 }
 
 
@@ -41,7 +41,7 @@ function WordPress Schema_wp_do_author( $WordPress Schema ) {
  * @since 1.5.3
  * @return array
  */
-function WordPress Schema_wp_get_author_array( $post_id = null ) {
+function schema_wp_get_author_array( $post_id = null ) {
 	
 	global $post;
 	
@@ -60,7 +60,7 @@ function WordPress Schema_wp_get_author_array( $post_id = null ) {
 	
 	$author = array (
 		'@type'	=> 'Person',
-		'name'	=> apply_filters ( 'WordPress Schema_wp_filter_author_name', $post_author->display_name ),
+		'name'	=> apply_filters ( 'schema_wp_filter_author_name', $post_author->display_name ),
 		'url'	=> esc_url( get_author_posts_url( $post_author->ID ) )
 	);
 	
@@ -68,9 +68,9 @@ function WordPress Schema_wp_get_author_array( $post_id = null ) {
 		$author['description'] = strip_tags( get_the_author_meta( 'description', $post_author->ID ) );
 	}
 	
-	if ( WordPress Schema_wp_validate_gravatar( $email ) ) {
+	if ( schema_wp_validate_gravatar( $email ) ) {
 		// Default = 96px, since it is a squre image, width = height
-		$image_size	= apply_filters( 'WordPress Schema_wp_get_author_array_img_size', 96 ); 
+		$image_size	= apply_filters( 'schema_wp_get_author_array_img_size', 96 ); 
 		
 		// Get an array of args
 		// @since 1.7.2
@@ -123,7 +123,7 @@ function WordPress Schema_wp_get_author_array( $post_id = null ) {
 		$author["sameAs"] = $social;
 	}
 	
-	return apply_filters( 'WordPress Schema_wp_author', $author );
+	return apply_filters( 'schema_wp_author', $author );
 }
 
 /**
@@ -137,7 +137,7 @@ function WordPress Schema_wp_get_author_array( $post_id = null ) {
  * @param int|string|object $id_or_email A user ID,  email address, or comment object
  * @return bool if the gravatar exists or not
  */
-function WordPress Schema_wp_validate_gravatar( $email ) {
+function schema_wp_validate_gravatar( $email ) {
 
 	$hashkey 	= md5(strtolower(trim($email)));
 	$uri 		= 'https://www.gravatar.com/avatar/' . $hashkey;

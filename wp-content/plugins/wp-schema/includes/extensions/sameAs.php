@@ -1,9 +1,9 @@
 <?php
 /**
- * WordPress Schema sameAs
+ * Schema sameAs
  *
- * @package     WordPress Schema
- * @subpackage  WordPress Schema sameAs
+ * @package     Schema
+ * @subpackage  Schema sameAs
  * @copyright   Copyright (c) 2016, Hesham Zebida
  * @license     http://opensource.org/licenses/gpl-2.0.php GNU Public License
  * @since       1.5.9.9
@@ -12,33 +12,33 @@
 // Exit if accessed directly
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-add_action( 'current_screen', 'WordPress Schema_wp_sameAs_post_meta' );
+add_action( 'current_screen', 'schema_wp_sameAs_post_meta' );
 /**
  * Add exclude post meta box
  *
  * @since 1.5.9.9
  */
-function WordPress Schema_wp_sameAs_post_meta() {
+function schema_wp_sameAs_post_meta() {
 	
-	if ( ! class_exists( 'WordPress Schema_WP' ) ) return;
+	if ( ! class_exists( 'Schema_WP' ) ) return;
 	
 	// filter this and return false to disable the function
-	$enabled = apply_filters('WordPress Schema_wp_sameAs_post_meta_enabled', true);
+	$enabled = apply_filters('schema_wp_sameAs_post_meta_enabled', true);
 	if ( ! $enabled)
 		return;
 	
 	global $post;
 	
-	$prefix = '_WordPress Schema_';
+	$prefix = '_schema_';
 
 	/**
 	* Create meta box on active post types edit screens
 	*/
-	$fields = apply_filters( 'WordPress Schema_wp_sameAs', array(
+	$fields = apply_filters( 'schema_wp_sameAs', array(
 		array( // Single checkbox
-			'label'	=> __('URLs', 'WordPress Schema-wp'), // <label>
-			'tip'	=> __("URL of a reference Web page that unambiguously indicates the item's identity. E.g. the URL of the item's Wikipedia page, Freebase page, or official website.", 'WordPress Schema-wp'), // description
-			'desc'	=> __('Enter sameAs URLs, one per line.', 'WordPress Schema-wp'), // description
+			'label'	=> __('URLs', 'schema-wp'), // <label>
+			'tip'	=> __("URL of a reference Web page that unambiguously indicates the item's identity. E.g. the URL of the item's Wikipedia page, Freebase page, or official website.", 'schema-wp'), // description
+			'desc'	=> __('Enter sameAs URLs, one per line.', 'schema-wp'), // description
 			'id'	=> $prefix.'sameAs', // field id and name
 			'type'	=> 'textarea', // type of field
 			'sanitizer'	=> 'no_santitize' // do not santitize field value
@@ -49,61 +49,61 @@ function WordPress Schema_wp_sameAs_post_meta() {
 	/**
 	* Get enabled post types to create a meta box on
 	*/
-	$WordPress Schemas_enabled = array();
+	$schemas_enabled = array();
 	
 	// Get schame enabled array
-	$WordPress Schemas_enabled = WordPress Schema_wp_cpt_get_enabled();
+	$schemas_enabled = schema_wp_cpt_get_enabled();
 	
-	if ( empty($WordPress Schemas_enabled) ) return;
+	if ( empty($schemas_enabled) ) return;
 
 	// Get post type from current screen
 	$current_screen = get_current_screen();
 	$post_type = $current_screen->post_type;
 	
-	foreach( $WordPress Schemas_enabled as $WordPress Schema_enabled ) : 
+	foreach( $schemas_enabled as $schema_enabled ) : 
 		
 		// debug
 		//echo '<pre>'; print_r($current_screen); echo '</pre>'; 
 		
-		// Get WordPress Schema enabled post types array
-		$WordPress Schema_cpt = $WordPress Schema_enabled['post_type'];
+		// Get Schema enabled post types array
+		$schema_cpt = $schema_enabled['post_type'];
 		
-		if ( ! empty($WordPress Schema_cpt) && in_array( $post_type, $WordPress Schema_cpt, true ) ) {
+		if ( ! empty($schema_cpt) && in_array( $post_type, $schema_cpt, true ) ) {
 
 	
-			$WordPress Schema_wp_exclude = new WordPress Schema_Custom_Add_Meta_Box( 'WordPress Schema_sameAs', __('sameAs','WordPress Schema-wp'), $fields, $post_type, 'normal', 'low', true );
+			$schema_wp_exclude = new Schema_Custom_Add_Meta_Box( 'schema_sameAs', __('sameAs','schema-wp'), $fields, $post_type, 'normal', 'low', true );
 
 		}
 		
 		// debug
-		//print_r($WordPress Schema_enabled);
+		//print_r($schema_enabled);
 		
 	endforeach;
 }
 
-add_filter('WordPress Schema_output',					'WordPress Schema_wp_sameAs_output' );
-add_filter('WordPress Schema_about_page_output',		'WordPress Schema_wp_sameAs_output' );
-add_filter('WordPress Schema_contact_page_output',	'WordPress Schema_wp_sameAs_output' );
+add_filter('schema_output',					'schema_wp_sameAs_output' );
+add_filter('schema_about_page_output',		'schema_wp_sameAs_output' );
+add_filter('schema_contact_page_output',	'schema_wp_sameAs_output' );
 /**
- * sameAs WordPress Schema output
+ * sameAs Schema output
  *
  * @since 1.5.9.9
  */
-function WordPress Schema_wp_sameAs_output( $WordPress Schema ) {
+function schema_wp_sameAs_output( $schema ) {
 	
 	// filter this and return false to disable the function
-	$enabled = apply_filters('WordPress Schema_wp_sameAs_output_enabled', true);
+	$enabled = apply_filters('schema_wp_sameAs_output_enabled', true);
 	if ( ! $enabled)
-		return $WordPress Schema;
+		return $schema;
 		
 	global $post;
 	
-	if ( empty($WordPress Schema) ) return;
+	if ( empty($schema) ) return;
 	
-	$sameAs = get_post_meta( $post->ID, '_WordPress Schema_sameAs' , true );
+	$sameAs = get_post_meta( $post->ID, '_schema_sameAs' , true );
 	
 	// make sure is set and it is not empty array
-	if ( !isset($sameAs) || empty($sameAs) ) return $WordPress Schema;
+	if ( !isset($sameAs) || empty($sameAs) ) return $schema;
 	
 	//$sameAs_array = explode("\n", $sameAs);
 	//$sameAs_array = preg_split ('/$\R?^/m', $sameAs);
@@ -112,9 +112,9 @@ function WordPress Schema_wp_sameAs_output( $WordPress Schema ) {
 	// debug
 	//echo '<pre>'; print_r($sameAs_array); echo '</pre>';exit;
 	
-	$WordPress Schema['sameAs'] =  $sameAs_array;
+	$schema['sameAs'] =  $sameAs_array;
 	
-	return $WordPress Schema;
+	return $schema;
 }
 
 /**
@@ -122,14 +122,14 @@ function WordPress Schema_wp_sameAs_output( $WordPress Schema ) {
  *
  * @since 1.6
  */
-function WordPress Schema_wp_get_sameAs( $post_id = null ) {
+function schema_wp_get_sameAs( $post_id = null ) {
 	
 	global $post;
 	
 	// Set post ID
 	If ( ! isset($post_id) ) $post_id = $post->ID;
 	
-	$sameAs = get_post_meta( $post_id, '_WordPress Schema_sameAs' , true );
+	$sameAs = get_post_meta( $post_id, '_schema_sameAs' , true );
 	
 	// make sure is set and it is not empty array
 	if ( !isset($sameAs) || empty($sameAs) ) return;

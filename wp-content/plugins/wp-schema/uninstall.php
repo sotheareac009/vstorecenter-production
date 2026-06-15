@@ -1,8 +1,8 @@
 <?php
 /**
- * Uninstall WordPress Schema
+ * Uninstall Schema
  *
- * @package     WordPress Schema
+ * @package     Schema
  * @subpackage  Uninstall
  * @copyright   Copyright (c) 2016, Hesham Zebida
  * @license     http://opensource.org/licenses/gpl-2.0.php GNU Public License
@@ -16,11 +16,11 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) exit;
 if ( !defined( 'WP_UNINSTALL_PLUGIN' ) ) 
     exit();
 
-// Load WordPress Schema file
-include_once( 'WordPress Schema.php' );
+// Load Schema file
+include_once( 'wp-schema.php' );
 
 // Leave no trail
-$option_name = 'WordPress Schema_wp_settings';
+$option_name = 'schema_wp_settings';
 
 if ( !is_multisite() ) {
 	
@@ -32,24 +32,24 @@ if ( !is_multisite() ) {
 	
 	if ( isset($options['uninstall_on_delete']) && $options['uninstall_on_delete'] == true ) {
 	
-		// Remove the WordPress Schema entries for posts and pages
-		wp_delete_post( $options['WordPress Schema_wp_post'] );
-		wp_delete_post( $options['WordPress Schema_wp_page'] );
+		// Remove the Schema entries for posts and pages
+		wp_delete_post( $options['schema_wp_post'] );
+		wp_delete_post( $options['schema_wp_page'] );
 		
 		// Delete all meta keys 
 		// @since 1.4.4
-		delete_post_meta_by_key( '_WordPress Schema_ref' );
-		delete_post_meta_by_key( '_WordPress Schema_json' );
-		delete_post_meta_by_key( '_WordPress Schema_json_timestamp' );
-		delete_post_meta_by_key( '_WordPress Schema_exclude' );
+		delete_post_meta_by_key( '_schema_ref' );
+		delete_post_meta_by_key( '_schema_json' );
+		delete_post_meta_by_key( '_schema_json_timestamp' );
+		delete_post_meta_by_key( '_schema_exclude' );
 		
 		// Remove all plugin settings
 		delete_option( $option_name );
-		delete_option( 'WordPress Schema_wp_version' );
-		delete_option( 'WordPress Schema_wp_is_installed' );
+		delete_option( 'schema_wp_version' );
+		delete_option( 'schema_wp_is_installed' );
 		
 		// Remove all capabilities and roles
-		$caps = new WordPress Schema_WP_Capabilities;
+		$caps = new Schema_WP_Capabilities;
 		$caps->remove_caps();
 	}
 
@@ -72,24 +72,24 @@ if ( !is_multisite() ) {
 		
 		if ( isset($options['uninstall_on_delete']) && $options['uninstall_on_delete'] == true ) {
 			
-			// Remove the WordPress Schema entries for posts and pages
-			wp_delete_post( $options['WordPress Schema_wp_post'] );
-			wp_delete_post( $options['WordPress Schema_wp_page'] );
+			// Remove the Schema entries for posts and pages
+			wp_delete_post( $options['schema_wp_post'] );
+			wp_delete_post( $options['schema_wp_page'] );
 		
 			// Delete all JSON-LD meta keys
 			// @since 1.5.9.9
-			delete_post_meta_by_key( '_WordPress Schema_ref' );
-			delete_post_meta_by_key( '_WordPress Schema_json' );
-			delete_post_meta_by_key( '_WordPress Schema_json_timestamp' );
-			delete_post_meta_by_key( '_WordPress Schema_exclude' );
+			delete_post_meta_by_key( '_schema_ref' );
+			delete_post_meta_by_key( '_schema_json' );
+			delete_post_meta_by_key( '_schema_json_timestamp' );
+			delete_post_meta_by_key( '_schema_exclude' );
 		
 			// Remove all plugin settings
 			delete_option( $option_name );
-			delete_option( 'WordPress Schema_wp_version' );
-			delete_option( 'WordPress Schema_wp_is_installed' );
+			delete_option( 'schema_wp_version' );
+			delete_option( 'schema_wp_is_installed' );
 			
 			// Remove all capabilities and roles
-			$caps = new WordPress Schema_WP_Capabilities;
+			$caps = new Schema_WP_Capabilities;
 			$caps->remove_caps();
 		}
     }
