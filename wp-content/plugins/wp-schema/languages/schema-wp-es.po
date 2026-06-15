@@ -1,5 +1,5 @@
-# Translation of Plugins - WordPress Schema - Stable (latest release) in Spanish (Spain)
-# This file is distributed under the same license as the Plugins - WordPress Schema - Stable (latest release) package.
+# Translation of Plugins - Schema - Stable (latest release) in Spanish (Spain)
+# This file is distributed under the same license as the Plugins - Schema - Stable (latest release) package.
 msgid ""
 msgstr ""
 "PO-Revision-Date: 2018-07-20 22:49:08+0000\n"
@@ -9,7 +9,7 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
 "X-Generator: GlotPress/2.4.0-alpha\n"
 "Language: es\n"
-"Project-Id-Version: Plugins - WordPress Schema - Stable (latest release)\n"
+"Project-Id-Version: Plugins - Schema - Stable (latest release)\n"
 
 #. Author URI of the plugin/theme
 msgid "http://zebida.com"
@@ -24,14 +24,14 @@ msgid "The next generation of Structured Data."
 msgstr ""
 
 #. Plugin URI of the plugin/theme
-msgid "https://WordPress Schema.press"
+msgid "https://schema.press"
 msgstr ""
 
-#: WordPress Schema.php:143
-msgid "Your version of PHP is below the minimum version of PHP required by WordPress Schema plugin. Please contact your host and request that your version be upgraded to 5.4 or later."
+#: schema.php:143
+msgid "Your version of PHP is below the minimum version of PHP required by Schema plugin. Please contact your host and request that your version be upgraded to 5.4 or later."
 msgstr ""
 
-#: WordPress Schema.php:120 WordPress Schema.php:132
+#: schema.php:120 schema.php:132
 msgid "Cheatin&#8217; huh?"
 msgstr ""
 
@@ -236,7 +236,7 @@ msgid "These are the features that will be disabled:<br /><ol><li>Organization/P
 msgstr ""
 
 #: includes/integrations/yoast-seo.php:81
-msgid "WordPress Schema plugin will override Yoast SEO output to avoid markup duplication."
+msgid "Schema plugin will override Yoast SEO output to avoid markup duplication."
 msgstr ""
 
 #: includes/integrations/yoast-seo.php:78
@@ -371,7 +371,7 @@ msgid "Audio Markups"
 msgstr ""
 
 #: includes/class-capabilities.php:36
-msgid "Manage WordPress Schema Options"
+msgid "Manage Schema Options"
 msgstr ""
 
 #: includes/admin/updater/class-updater.php:402
@@ -391,7 +391,7 @@ msgid "Enter valid license key for automatic updates."
 msgstr ""
 
 #: includes/admin/updater/class-license-handler.php:436
-msgid "You have invalid or expired license keys for WordPress Schema. Please go to the <a href=\"%s\">Licenses page</a> to correct this issue."
+msgid "You have invalid or expired license keys for Schema. Please go to the <a href=\"%s\">Licenses page</a> to correct this issue."
 msgstr ""
 
 #: includes/admin/updater/class-license-handler.php:319
@@ -476,7 +476,7 @@ msgid "Licenses"
 msgstr ""
 
 #: includes/admin/settings/register-settings.php:551
-msgid "Check this box if you would like WordPress Schema to completely remove all of its data when uninstalling via Plugins > Delete."
+msgid "Check this box if you would like Schema to completely remove all of its data when uninstalling via Plugins > Delete."
 msgstr ""
 
 #: includes/admin/settings/register-settings.php:550
@@ -544,7 +544,7 @@ msgid "This screen provides advanced options such as deleting plugin data on uni
 msgstr ""
 
 #: includes/admin/settings/contextual-help.php:57
-msgid "This screen provides access to settings added by most WordPress Schema extensions."
+msgid "This screen provides access to settings added by most Schema extensions."
 msgstr ""
 
 #: includes/admin/settings/contextual-help.php:51
@@ -566,7 +566,7 @@ msgid "Knowledge Graph"
 msgstr ""
 
 #: includes/admin/settings/contextual-help.php:39
-msgid "This screen provides the most basic settings for configuring WordPress Schema plugin on your site. You can set WordPress Schema for About and Contact pages, and turn automatic <em>Feature image</em> on and off...etc"
+msgid "This screen provides the most basic settings for configuring Schema plugin on your site. You can set Schema for About and Contact pages, and turn automatic <em>Feature image</em> on and off...etc"
 msgstr ""
 
 #: includes/admin/settings/contextual-help.php:29
@@ -574,184 +574,184 @@ msgid "<a href=\"%s\">Post an issue</a> on <a href=\"%s\">GitHub</a>. View <a hr
 msgstr ""
 
 #: includes/admin/settings/contextual-help.php:27
-msgid "Visit the <a href=\"%s\">documentation</a> on the WordPress Schema.press website."
+msgid "Visit the <a href=\"%s\">documentation</a> on the schema.press website."
 msgstr ""
 
 #: includes/admin/settings/contextual-help.php:26
 msgid "For more information:"
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-wp-submit.php:111
+#: includes/admin/post-type/schema-wp-submit.php:111
 msgid "Save "
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-wp-submit.php:110
+#: includes/admin/post-type/schema-wp-submit.php:110
 msgid "Update "
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-wp-submit.php:104
+#: includes/admin/post-type/schema-wp-submit.php:104
 msgid "Save"
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-wp-submit.php:103
+#: includes/admin/post-type/schema-wp-submit.php:103
 msgid "Publish"
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-wp-submit.php:92
+#: includes/admin/post-type/schema-wp-submit.php:92
 msgid "Move to Trash"
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-wp-submit.php:90
+#: includes/admin/post-type/schema-wp-submit.php:90
 msgid "Delete Permanently"
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-wp-submit.php:38
+#: includes/admin/post-type/schema-wp-submit.php:38
 msgid "%s"
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-wp-ajax.php:95
+#: includes/admin/post-type/schema-wp-ajax.php:95
 msgid "You must select at leat one post type!"
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-post-type.php:172
-msgid "Create WordPress Schema"
+#: includes/admin/post-type/schema-post-type.php:172
+msgid "Create Schema"
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-post-type.php:118
-msgid "Preview WordPress Schema"
+#: includes/admin/post-type/schema-post-type.php:118
+msgid "Preview schema"
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-post-type.php:111
-msgid "View WordPress Schema"
+#: includes/admin/post-type/schema-post-type.php:111
+msgid "View schema"
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-post-type.php:105
-msgid "WordPress Schema draft updated."
+#: includes/admin/post-type/schema-post-type.php:105
+msgid "Schema draft updated."
 msgstr ""
 
 #. translators: Publish box date format, see http://php.net/date
-#: includes/admin/post-type/WordPress Schema-post-type.php:103
+#: includes/admin/post-type/schema-post-type.php:103
 msgid "M j, Y @ G:i"
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-post-type.php:101
-msgid "WordPress Schema scheduled for: <strong>%1$s</strong>."
+#: includes/admin/post-type/schema-post-type.php:101
+msgid "Schema scheduled for: <strong>%1$s</strong>."
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-post-type.php:99
-msgid "WordPress Schema added."
+#: includes/admin/post-type/schema-post-type.php:99
+msgid "Schema added."
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-post-type.php:97
-msgid "WordPress Schema created."
+#: includes/admin/post-type/schema-post-type.php:97
+msgid "Schema created."
 msgstr ""
 
 #. translators: %s: date and time of the revision
-#: includes/admin/post-type/WordPress Schema-post-type.php:96
-msgid "WordPress Schema restored to revision from %s"
+#: includes/admin/post-type/schema-post-type.php:96
+msgid "Schema restored to revision from %s"
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-post-type.php:94
-#: includes/admin/post-type/WordPress Schema-post-type.php:98
-msgid "WordPress Schema saved."
+#: includes/admin/post-type/schema-post-type.php:94
+#: includes/admin/post-type/schema-post-type.php:98
+msgid "Schema saved."
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-post-type.php:93
+#: includes/admin/post-type/schema-post-type.php:93
 msgid "Custom field deleted."
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-post-type.php:92
+#: includes/admin/post-type/schema-post-type.php:92
 msgid "Custom field updated."
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-post-type.php:91
-msgid "WordPress Schema updated."
+#: includes/admin/post-type/schema-post-type.php:91
+msgid "Schema updated."
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-post-type.php:43
+#: includes/admin/post-type/schema-post-type.php:43
 msgid "Description."
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-post-type.php:38
-msgid "No WordPress Schema found in Trash."
+#: includes/admin/post-type/schema-post-type.php:38
+msgid "No schema found in Trash."
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-post-type.php:37
-msgid "No WordPress Schema found."
+#: includes/admin/post-type/schema-post-type.php:37
+msgid "No schema found."
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-post-type.php:36
-msgid "Parent WordPress Schemas:"
+#: includes/admin/post-type/schema-post-type.php:36
+msgid "Parent Schemas:"
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-post-type.php:35
-msgid "Search WordPress Schemas"
+#: includes/admin/post-type/schema-post-type.php:35
+msgid "Search Schemas"
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-post-type.php:34
-msgid "All WordPress Schemas"
+#: includes/admin/post-type/schema-post-type.php:34
+msgid "All Schemas"
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-post-type.php:33
-msgid "View WordPress Schema"
+#: includes/admin/post-type/schema-post-type.php:33
+msgid "View Schema"
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-post-type.php:32
-msgid "Edit WordPress Schema"
+#: includes/admin/post-type/schema-post-type.php:32
+msgid "Edit Schema"
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-post-type.php:31
-msgid "New WordPress Schema"
+#: includes/admin/post-type/schema-post-type.php:31
+msgid "New Schema"
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-post-type.php:30
-msgid "Add New WordPress Schema"
+#: includes/admin/post-type/schema-post-type.php:30
+msgid "Add New Schema"
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-post-type.php:29
-msgctxt "WordPress Schema"
+#: includes/admin/post-type/schema-post-type.php:29
+msgctxt "schema"
 msgid "Add New"
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-post-type.php:28
+#: includes/admin/post-type/schema-post-type.php:28
 msgctxt "add new on admin bar"
-msgid "WordPress Schema"
+msgid "Schema"
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-post-type.php:27
+#: includes/admin/post-type/schema-post-type.php:27
 msgctxt "admin menu"
-msgid "WordPress Schema"
+msgid "Schema"
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-post-type.php:26
+#: includes/admin/post-type/schema-post-type.php:26
 msgctxt "post type singular name"
-msgid "WordPress Schema"
+msgid "Schema"
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-post-type.php:25
+#: includes/admin/post-type/schema-post-type.php:25
 msgctxt "post type general name"
-msgid "WordPress Schema"
+msgid "Schema"
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-columns.php:51
+#: includes/admin/post-type/schema-columns.php:51
 msgid "Content"
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-columns.php:46
-#: includes/admin/post-type/WordPress Schema-columns.php:58
+#: includes/admin/post-type/schema-columns.php:46
+#: includes/admin/post-type/schema-columns.php:58
 msgid "-"
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-columns.php:39
+#: includes/admin/post-type/schema-columns.php:39
 msgid "Post Type"
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-columns.php:34
+#: includes/admin/post-type/schema-columns.php:34
 msgid "Not set!"
 msgstr ""
 
-#: includes/admin/post-type/WordPress Schema-columns.php:27
-msgid "WordPress Schema Type"
+#: includes/admin/post-type/schema-columns.php:27
+msgid "Schema Type"
 msgstr ""
 
 #: includes/admin/meta.php:274
@@ -853,19 +853,19 @@ msgid "Filter"
 msgstr ""
 
 #: includes/admin/meta.php:155
-msgid "This feature allow you to override the WordPress Schema.org markups output generated by the WordPress Schema plugin."
+msgid "This feature allow you to override the schema.org markups output generated by the Schema plugin."
 msgstr ""
 
 #: includes/admin/meta.php:154
-msgid "This is where you can define a source for WordPress Schema.org markup fields to override its output. Select a filter name, then define post meta key name to pull data from, or tick the check box to automatically create a new custom post meta field to insert values manually when editing posts."
+msgid "This is where you can define a source for schema.org markup fields to override its output. Select a filter name, then define post meta key name to pull data from, or tick the check box to automatically create a new custom post meta field to insert values manually when editing posts."
 msgstr ""
 
 #: includes/admin/meta.php:145
-msgid "This field will allow you to override the WordPress Schema post meta box title, default: WordPress Schema"
+msgid "This field will allow you to override the Schema post meta box title, default: Schema"
 msgstr ""
 
 #: includes/admin/meta.php:144
-msgid "Post meta box title, default: WordPress Schema"
+msgid "Post meta box title, default: Schema"
 msgstr ""
 
 #: includes/admin/meta.php:143 includes/extensions/audio-object.php:100
@@ -902,11 +902,11 @@ msgid "Post meta"
 msgstr ""
 
 #: includes/admin/meta.php:32 includes/admin/meta.php:57
-msgid "Select WordPress Schema type which describes your content best"
+msgid "Select Schema type which describes your content best"
 msgstr ""
 
 #: includes/admin/meta.php:31 includes/admin/meta.php:56
-msgid "WordPress Schema Markup Type"
+msgid "Schema Markup Type"
 msgstr ""
 
 #: includes/admin/meta-tax.php:44 includes/extensions/sameAs.php:40
@@ -990,15 +990,15 @@ msgid "Add"
 msgstr ""
 
 #: includes/admin/meta-exclude.php:69
-msgid "WordPress Schema Exclude"
+msgid "Schema Exclude"
 msgstr ""
 
 #: includes/admin/meta-exclude.php:37
-msgid "Tick this checkbox to turn off WordPress Schema output on this entry."
+msgid "Tick this checkbox to turn off Schema output on this entry."
 msgstr ""
 
 #: includes/admin/meta-exclude.php:36
-msgid "Turn WordPress Schema OFF"
+msgid "Turn Schema OFF"
 msgstr ""
 
 #: includes/admin/meta/class-meta.php:345 includes/admin/meta.php:153
@@ -1032,7 +1032,7 @@ msgid "Pro Extensions are only available with a Professional or Ultimate license
 msgstr ""
 
 #: includes/admin/extensions.php:46
-msgid "These extensions <em><strong>add functionality</strong></em> to your WordPress Schema-powered site."
+msgid "These extensions <em><strong>add functionality</strong></em> to your Schema-powered site."
 msgstr ""
 
 #: includes/admin/extensions.php:43 includes/admin/extensions.php:61
@@ -1040,7 +1040,7 @@ msgid "Browse all extensions"
 msgstr ""
 
 #: includes/admin/extensions.php:41
-msgid "Extensions for WordPress Schema"
+msgid "Extensions for Schema"
 msgstr ""
 
 #: includes/admin/extensions.php:32
@@ -1056,7 +1056,7 @@ msgid "View %s"
 msgstr ""
 
 #: includes/admin/class-welcome.php:394
-msgid "Here, we will be listing some of the faces that have helped build WordPress Schema."
+msgid "Here, we will be listing some of the faces that have helped build Schema."
 msgstr ""
 
 #: includes/admin/class-welcome.php:389
@@ -1064,7 +1064,7 @@ msgid "Thank you for updating to the latest version!"
 msgstr ""
 
 #: includes/admin/class-welcome.php:370
-msgid "We do our best to provide support we can. If you encounter a problem, report it to <a href=\"https://wordpress.org/support/plugin/WordPress Schema\">support</a>."
+msgid "We do our best to provide support we can. If you encounter a problem, report it to <a href=\"https://wordpress.org/support/plugin/schema\">support</a>."
 msgstr ""
 
 #: includes/admin/class-welcome.php:369
@@ -1072,7 +1072,7 @@ msgid "Support"
 msgstr ""
 
 #: includes/admin/class-welcome.php:365
-msgid "Docs are on its way! We will update <a href=\"http://WordPress Schema.press/\">WordPress Schema.press</a> site with plugin documentation soon."
+msgid "Docs are on its way! We will update <a href=\"http://schema.press/\">schema.press</a> site with plugin documentation soon."
 msgstr ""
 
 #: includes/admin/class-welcome.php:364
@@ -1096,11 +1096,11 @@ msgid "Why is Structured Data so Important?"
 msgstr ""
 
 #: includes/admin/class-welcome.php:346
-msgid "WordPress Schema markup is code (semantic vocabulary) that you put on your website to help the search engines return more informative results for users. So, WordPress Schema is not just for SEO reasons, it’s also for the benefit of the searcher."
+msgid "Schema markup is code (semantic vocabulary) that you put on your website to help the search engines return more informative results for users. So, Schema is not just for SEO reasons, it’s also for the benefit of the searcher."
 msgstr ""
 
 #: includes/admin/class-welcome.php:345
-msgid "What is WordPress Schema markup?"
+msgid "What is Schema markup?"
 msgstr ""
 
 #: includes/admin/class-welcome.php:340
@@ -1108,11 +1108,11 @@ msgid "Overview"
 msgstr ""
 
 #: includes/admin/class-welcome.php:337
-msgid "Hang on! We are going to add more WordPress Schema integration and cool features to WordPress Schema plugin."
+msgid "Hang on! We are going to add more schema integration and cool features to Schema plugin."
 msgstr ""
 
 #: includes/admin/class-welcome.php:332
-msgid "Thank you for installing WordPress Schema. The best WordPress Schema.org plugin for WordPress."
+msgid "Thank you for installing Schema. The best schema.org plugin for WordPress."
 msgstr ""
 
 #: includes/admin/class-welcome.php:307
@@ -1120,7 +1120,7 @@ msgid "Supported oEmbed audios: SoundCloud, and Mixcloud."
 msgstr ""
 
 #: includes/admin/class-welcome.php:306
-msgid "WordPress Schema allow you to enable AudioObject markup automatically whenever oEmbed is called on your page."
+msgid "Schema allow you to enable AudioObject markup automatically whenever oEmbed is called on your page."
 msgstr ""
 
 #: includes/admin/class-welcome.php:305
@@ -1132,7 +1132,7 @@ msgid "Supported oEmbed videos: Dailymotion, TED, Vimeo, VideoPress, Vine, YouTu
 msgstr ""
 
 #: includes/admin/class-welcome.php:302
-msgid "WordPress Schema allow you to enable VideoObject markup automatically whenever oEmbed is called on your page."
+msgid "Schema allow you to enable VideoObject markup automatically whenever oEmbed is called on your page."
 msgstr ""
 
 #: includes/admin/class-welcome.php:301
@@ -1140,19 +1140,19 @@ msgid "Automatically add VideoObject to oEmbed"
 msgstr ""
 
 #: includes/admin/class-welcome.php:297
-msgid "Also, you can set WordPress Schema to work on specific post categories."
+msgid "Also, you can set Schema to work on specific post categories."
 msgstr ""
 
 #: includes/admin/class-welcome.php:296
-msgid "Now, you can create new WordPress Schema.org markup types and enable them on post type bases."
+msgid "Now, you can create new schema.org markup types and enable them on post type bases."
 msgstr ""
 
 #: includes/admin/class-welcome.php:295
-msgid "WordPress Schema Post Type"
+msgid "Schema Post Type"
 msgstr ""
 
 #: includes/admin/class-welcome.php:289
-msgid "If Divi theme is active, WordPress Schema plugin will clear shortcodes to be able to output the content description."
+msgid "If Divi theme is active, Schema plugin will clear shortcodes to be able to output the content description."
 msgstr ""
 
 #: includes/admin/class-welcome.php:288
@@ -1160,7 +1160,7 @@ msgid "Is Divi your Theme?"
 msgstr ""
 
 #: includes/admin/class-welcome.php:286
-msgid "No problem! The WordPress Schema plugin will automatically indicate that and show respect for SEO Framework."
+msgid "No problem! The Schema plugin will automatically indicate that and show respect for SEO Framework."
 msgstr ""
 
 #: includes/admin/class-welcome.php:285
@@ -1168,7 +1168,7 @@ msgid "The SEO Framework plugin is active?"
 msgstr ""
 
 #: includes/admin/class-welcome.php:283
-msgid "Using Thesis? The WordPress Schema plugin will automatically indicate and use Thesis Post Image is are presented."
+msgid "Using Thesis? The Schema plugin will automatically indicate and use Thesis Post Image is are presented."
 msgstr ""
 
 #: includes/admin/class-welcome.php:282
@@ -1176,15 +1176,15 @@ msgid "Uses Thesis Theme 2.x Post Image"
 msgstr ""
 
 #: includes/admin/class-welcome.php:281
-msgid "Using Genesis Framework? The WordPress Schema plugin will automatically indicate that and correct Genesis WordPress Schema output."
+msgid "Using Genesis Framework? The Schema plugin will automatically indicate that and correct Genesis Schema output."
 msgstr ""
 
 #: includes/admin/class-welcome.php:280
-msgid "Correct Genesis WordPress Schema Markup"
+msgid "Correct Genesis Schema Markup"
 msgstr ""
 
 #: includes/admin/class-welcome.php:278
-msgid "If you are using the WPRichSnippets plugin, WordPress Schema will behave!"
+msgid "If you are using the WPRichSnippets plugin, Schema will behave!"
 msgstr ""
 
 #: includes/admin/class-welcome.php:277
@@ -1192,7 +1192,7 @@ msgid "WPRichSnippets plugin"
 msgstr ""
 
 #: includes/admin/class-welcome.php:275
-msgid "If you are using the AMP plugin, WordPress Schema got you covered!"
+msgid "If you are using the AMP plugin, Schema got you covered!"
 msgstr ""
 
 #: includes/admin/class-welcome.php:274
@@ -1200,7 +1200,7 @@ msgid "Hello AMP!"
 msgstr ""
 
 #: includes/admin/class-welcome.php:272
-msgid "Now WordPress Schema plugin plays nicely with Yoast SEO plugin, you can have both plugins active with no conflicts."
+msgid "Now Schema plugin plays nicely with Yoast SEO plugin, you can have both plugins active with no conflicts."
 msgstr ""
 
 #: includes/admin/class-welcome.php:271
@@ -1208,7 +1208,7 @@ msgid "Play nicely with Yoast SEO"
 msgstr ""
 
 #: includes/admin/class-welcome.php:269
-msgid "WordPress Schema plays nicely  and support themes mentioned below."
+msgid "Schema plays nicely  and support themes mentioned below."
 msgstr ""
 
 #: includes/admin/class-welcome.php:268
@@ -1216,7 +1216,7 @@ msgid "Integration with Themes and other Plugins"
 msgstr ""
 
 #: includes/admin/class-welcome.php:264 includes/admin/class-welcome.php:353
-msgid "Go To WordPress Schema Settings"
+msgid "Go To Schema Settings"
 msgstr ""
 
 #: includes/admin/class-welcome.php:260
@@ -1224,7 +1224,7 @@ msgid "Maybe coming soon!"
 msgstr ""
 
 #: includes/admin/class-welcome.php:258
-msgid "New WordPress Schema Type?"
+msgid "New Schema Type?"
 msgstr ""
 
 #: includes/admin/class-welcome.php:254
@@ -1323,11 +1323,11 @@ msgid "Article"
 msgstr ""
 
 #: includes/admin/class-welcome.php:208
-msgid "Now, WordPress Schema plugin supports more WordPress Schema.org types."
+msgid "Now, Schema plugin supports more schema.org types."
 msgstr ""
 
 #: includes/admin/class-welcome.php:207
-msgid "Support More WordPress Schema Types"
+msgid "Support More Schema Types"
 msgstr ""
 
 #: includes/admin/class-welcome.php:200
@@ -1340,11 +1340,11 @@ msgid "Plugin Settings"
 msgstr ""
 
 #: includes/admin/class-welcome.php:197
-msgid "Get started quickly with the WordPress Schema configuration wizard!"
+msgid "Get started quickly with the Schema configuration wizard!"
 msgstr ""
 
 #: includes/admin/class-welcome.php:196
-msgid "First-time WordPress Schema configuration!"
+msgid "First-time Schema configuration!"
 msgstr ""
 
 #: includes/admin/class-welcome.php:188 includes/admin/class-welcome.php:333
@@ -1353,12 +1353,12 @@ msgid "Version %s"
 msgstr ""
 
 #: includes/admin/class-welcome.php:185
-msgid "Thank you for installing WordPress Schema. The best WordPress Schema.org plugin for WordPress."
+msgid "Thank you for installing Schema. The best Schema.org plugin for WordPress."
 msgstr ""
 
 #: includes/admin/class-welcome.php:184 includes/admin/class-welcome.php:331
 #: includes/admin/class-welcome.php:388
-msgid "Welcome to WordPress Schema v%s"
+msgid "Welcome to Schema v%s"
 msgstr ""
 
 #: includes/admin/class-welcome.php:167
@@ -1374,15 +1374,15 @@ msgid "What's New"
 msgstr ""
 
 #: includes/admin/class-welcome.php:70 includes/admin/class-welcome.php:71
-msgid "The people that build WordPress Schema"
+msgid "The people that build Schema"
 msgstr ""
 
 #: includes/admin/class-welcome.php:61 includes/admin/class-welcome.php:62
-msgid "Getting started with WordPress Schema"
+msgid "Getting started with Schema"
 msgstr ""
 
 #: includes/admin/class-welcome.php:52 includes/admin/class-welcome.php:53
-msgid "What's new in WordPress Schema"
+msgid "What's new in Schema"
 msgstr ""
 
 #: includes/admin/class-setup-wizard.php:832
@@ -1400,7 +1400,7 @@ msgid "Learn More"
 msgstr "Saber más"
 
 #: includes/admin/class-setup-wizard.php:688
-msgid "Configure Your WordPress Schema Types!"
+msgid "Configure Your Schema Types!"
 msgstr ""
 
 #: includes/admin/class-setup-wizard.php:686
@@ -1416,7 +1416,7 @@ msgid "You can change settings from"
 msgstr ""
 
 #: includes/admin/class-setup-wizard.php:680
-msgid "WordPress Schema will now take care of all the needed technical optimization of your site."
+msgid "Schema will now take care of all the needed technical optimization of your site."
 msgstr ""
 
 #: includes/admin/class-setup-wizard.php:678
@@ -1490,7 +1490,7 @@ msgid "About Page"
 msgstr ""
 
 #: includes/admin/class-setup-wizard.php:580
-msgid "Automatically, add additional WordPress Schema.org markups to your website content."
+msgid "Automatically, add additional schema.org markups to your website content."
 msgstr ""
 
 #: includes/admin/class-setup-wizard.php:578
@@ -1592,7 +1592,7 @@ msgstr ""
 
 #: includes/admin/class-setup-wizard.php:394
 #: includes/admin/class-setup-wizard.php:397
-#: includes/admin/post-type/WordPress Schema-columns.php:19
+#: includes/admin/post-type/schema-columns.php:19
 #: includes/admin/settings/register-settings.php:303
 msgid "Name"
 msgstr ""
@@ -1655,11 +1655,11 @@ msgid "No time right now? If you don’t want to go through the wizard, you can 
 msgstr ""
 
 #: includes/admin/class-setup-wizard.php:307
-msgid "Thank you for choosing WordPress Schema to power your website! This quick setup wizard will help you configure the basic settings. <strong>It’s completely optional and shouldn’t take longer than two minutes.</strong>"
+msgid "Thank you for choosing Schema to power your website! This quick setup wizard will help you configure the basic settings. <strong>It’s completely optional and shouldn’t take longer than two minutes.</strong>"
 msgstr ""
 
 #: includes/admin/class-setup-wizard.php:306
-msgid "Welcome to WordPress Schema!"
+msgid "Welcome to Schema!"
 msgstr ""
 
 #: includes/admin/class-setup-wizard.php:245
@@ -1667,7 +1667,7 @@ msgid "Return to the WordPress Dashboard"
 msgstr ""
 
 #: includes/admin/class-setup-wizard.php:178
-msgid "WordPress Schema &rsaquo; Setup Wizard"
+msgid "Schema &rsaquo; Setup Wizard"
 msgstr ""
 
 #: includes/admin/class-setup-wizard.php:141
@@ -1676,7 +1676,7 @@ msgstr "¡Listo!"
 
 #: includes/admin/class-setup-wizard.php:136
 #: includes/admin/settings/register-settings.php:751
-msgid "WordPress Schemas"
+msgid "Schemas"
 msgstr ""
 
 #: includes/admin/class-setup-wizard.php:131
@@ -1816,16 +1816,16 @@ msgid "Settings"
 msgstr ""
 
 #: includes/admin/class-menu.php:38 includes/admin/meta.php:271
-msgid "WordPress Schema Settings"
+msgid "Schema Settings"
 msgstr ""
 
-#. #-#-#-#-#  WordPress Schema-code.pot (WordPress Schema 1.7)  #-#-#-#-#
+#. #-#-#-#-#  schema-code.pot (Schema 1.7)  #-#-#-#-#
 #. Plugin Name of the plugin/theme
 #: includes/admin/class-feedback.php:289 includes/admin/class-menu.php:29
 #: includes/admin/class-menu.php:30 includes/admin/meta-tax.php:25
 #: includes/admin/meta.php:149 includes/admin/settings/display-settings.php:65
 #: includes/extensions/post-meta-generator.php:160
-msgid "WordPress Schema"
+msgid "Schema"
 msgstr ""
 
 #: includes/admin/class-feedback.php:241
@@ -1849,7 +1849,7 @@ msgid "You have been using the %s plugin for %s now!"
 msgstr ""
 
 #: includes/admin/class-feedback.php:228
-msgid "How do you like WordPress Schema?"
+msgid "How do you like Schema?"
 msgstr ""
 
 #: includes/admin/class-feedback.php:100

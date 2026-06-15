@@ -3,7 +3,7 @@
  * Genesis Theme 
  *
  *
- * Remove Geiesis WordPress Schema output
+ * Remove Geiesis schema output
  *
  * plugin url: https://www.studiopress.com/
  * @since 1.5.4
@@ -12,52 +12,52 @@
 // Exit if accessed directly
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-//add_filter( 'genesis_attr_head',					'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
+//add_filter( 'genesis_attr_head',					'schema_wp_genesis_attributes_removal_function', 20 );
 
-//add_filter( 'genesis_attr_site-header',				'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
-//add_filter( 'genesis_attr_site-title',				'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
-//add_filter( 'genesis_attr_site-description',		'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
+//add_filter( 'genesis_attr_site-header',				'schema_wp_genesis_attributes_removal_function', 20 );
+//add_filter( 'genesis_attr_site-title',				'schema_wp_genesis_attributes_removal_function', 20 );
+//add_filter( 'genesis_attr_site-description',		'schema_wp_genesis_attributes_removal_function', 20 );
 
-add_filter( 'genesis_attr_search-form',				'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
+add_filter( 'genesis_attr_search-form',				'schema_wp_genesis_attributes_removal_function', 20 );
 
-//add_filter( 'genesis_attr_nav-primary',				'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
-//add_filter( 'genesis_attr_nav-secondary',			'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
+//add_filter( 'genesis_attr_nav-primary',				'schema_wp_genesis_attributes_removal_function', 20 );
+//add_filter( 'genesis_attr_nav-secondary',			'schema_wp_genesis_attributes_removal_function', 20 );
 
-add_filter( 'genesis_attr_body',					'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
+add_filter( 'genesis_attr_body',					'schema_wp_genesis_attributes_removal_function', 20 );
 
-add_filter( 'genesis_attr_content',					'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
+add_filter( 'genesis_attr_content',					'schema_wp_genesis_attributes_removal_function', 20 );
 
-add_filter( 'genesis_attr_entry',					'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
-add_filter( 'genesis_attr_entry-author',			'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
-add_filter( 'genesis_attr_entry-author-name',		'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
-add_filter( 'genesis_attr_entry-author-link',		'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
-add_filter( 'genesis_attr_entry-image',				'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
-add_filter( 'genesis_attr_entry-image-widget',		'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
-add_filter( 'genesis_attr_entry-image-grid-loop',	'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
-add_filter( 'genesis_attr_entry-time',				'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
-add_filter( 'genesis_attr_entry-title',				'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
-add_filter( 'genesis_attr_entry-content',			'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
-add_filter( 'genesis_attr_entry-comments',			'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
+add_filter( 'genesis_attr_entry',					'schema_wp_genesis_attributes_removal_function', 20 );
+add_filter( 'genesis_attr_entry-author',			'schema_wp_genesis_attributes_removal_function', 20 );
+add_filter( 'genesis_attr_entry-author-name',		'schema_wp_genesis_attributes_removal_function', 20 );
+add_filter( 'genesis_attr_entry-author-link',		'schema_wp_genesis_attributes_removal_function', 20 );
+add_filter( 'genesis_attr_entry-image',				'schema_wp_genesis_attributes_removal_function', 20 );
+add_filter( 'genesis_attr_entry-image-widget',		'schema_wp_genesis_attributes_removal_function', 20 );
+add_filter( 'genesis_attr_entry-image-grid-loop',	'schema_wp_genesis_attributes_removal_function', 20 );
+add_filter( 'genesis_attr_entry-time',				'schema_wp_genesis_attributes_removal_function', 20 );
+add_filter( 'genesis_attr_entry-title',				'schema_wp_genesis_attributes_removal_function', 20 );
+add_filter( 'genesis_attr_entry-content',			'schema_wp_genesis_attributes_removal_function', 20 );
+add_filter( 'genesis_attr_entry-comments',			'schema_wp_genesis_attributes_removal_function', 20 );
 
-add_filter( 'genesis_attr_author',					'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
-add_filter( 'genesis_attr_author-box',				'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
+add_filter( 'genesis_attr_author',					'schema_wp_genesis_attributes_removal_function', 20 );
+add_filter( 'genesis_attr_author-box',				'schema_wp_genesis_attributes_removal_function', 20 );
 
-add_filter( 'genesis_attr_comment',					'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
-add_filter( 'genesis_attr_comment-content',			'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
-add_filter( 'genesis_attr_comment-author',			'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
-add_filter( 'genesis_attr_comment-time-link',		'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
+add_filter( 'genesis_attr_comment',					'schema_wp_genesis_attributes_removal_function', 20 );
+add_filter( 'genesis_attr_comment-content',			'schema_wp_genesis_attributes_removal_function', 20 );
+add_filter( 'genesis_attr_comment-author',			'schema_wp_genesis_attributes_removal_function', 20 );
+add_filter( 'genesis_attr_comment-time-link',		'schema_wp_genesis_attributes_removal_function', 20 );
 
-//add_filter( 'genesis_attr_sidebar-primary',			'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
-//add_filter( 'genesis_attr_sidebar-secondary',		'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
+//add_filter( 'genesis_attr_sidebar-primary',			'schema_wp_genesis_attributes_removal_function', 20 );
+//add_filter( 'genesis_attr_sidebar-secondary',		'schema_wp_genesis_attributes_removal_function', 20 );
 
-//add_filter( 'genesis_attr_site-footer',				'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
+//add_filter( 'genesis_attr_site-footer',				'schema_wp_genesis_attributes_removal_function', 20 );
 
 /*
-* Remove Genesis WordPress Schema markups
+* Remove Genesis schema markups
 *
 * @since 1.5.4
 */
-function WordPress Schema_wp_genesis_attributes_removal_function( $attributes ) {
+function schema_wp_genesis_attributes_removal_function( $attributes ) {
  	
 	$attributes['role']			= '';
 	$attributes['itemprop']		= '';
@@ -67,13 +67,13 @@ function WordPress Schema_wp_genesis_attributes_removal_function( $attributes ) 
   return $attributes;
 }
 
-add_action( 'init', 'WordPress Schema_wp_wprs_remove_genesis_search_form' );
+add_action( 'init', 'schema_wp_wprs_remove_genesis_search_form' );
 /*
 * Remove Genesis search form filter
 *
 * @since 1.5.4
 */
-function WordPress Schema_wp_wprs_remove_genesis_search_form() {
+function schema_wp_wprs_remove_genesis_search_form() {
 	
 	remove_filter( 'get_search_form', 'genesis_search_form' );	
 }
@@ -83,7 +83,7 @@ function WordPress Schema_wp_wprs_remove_genesis_search_form() {
 *
 * @since 1.5.4
 */
-add_filter( 'get_search_form', 'wp_WordPress Schema_genesis_search_form' );
+add_filter( 'get_search_form', 'wp_schema_genesis_search_form' );
 /**
  * Replace the default search form with a Genesis-specific form.
  *
@@ -98,7 +98,7 @@ add_filter( 'get_search_form', 'wp_WordPress Schema_genesis_search_form' );
  *
  * @return string HTML markup.
  */
-function wp_WordPress Schema_genesis_search_form( $form) {
+function wp_schema_genesis_search_form( $form) {
 	
 	// Added extra checks for older versions of Genesis to prevent errors
 	// @since 1.6.2
@@ -171,33 +171,33 @@ function wp_WordPress Schema_genesis_search_form( $form) {
 	return apply_filters( 'genesis_search_form', $form, $search_text, $button_text, $label );
 }
 
-add_action( 'init', 'WordPress Schema_wp_remove_genesis_breadcrumbs_attr_markup' );
+add_action( 'init', 'schema_wp_remove_genesis_breadcrumbs_attr_markup' );
 /*
 * Remove Genesis Breadcrumbs attributes 
 *
 * @since 1.6.9.4
 */
-function WordPress Schema_wp_remove_genesis_breadcrumbs_attr_markup() {
+function schema_wp_remove_genesis_breadcrumbs_attr_markup() {
     
-	$breadcrumbs_enable = WordPress Schema_wp_get_option( 'breadcrumbs_enable' );
+	$breadcrumbs_enable = schema_wp_get_option( 'breadcrumbs_enable' );
 	
 	if ( $breadcrumbs_enable ) {
 		
-		add_filter( 'genesis_attr_breadcrumb',				'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
-		add_filter( 'genesis_attr_breadcrumb-link-wrap',	'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
+		add_filter( 'genesis_attr_breadcrumb',				'schema_wp_genesis_attributes_removal_function', 20 );
+		add_filter( 'genesis_attr_breadcrumb-link-wrap',	'schema_wp_genesis_attributes_removal_function', 20 );
 
      }
 }
 
-add_action( 'genesis_breadcrumb_link', 'WordPress Schema_wp_remove_genesis_breadcrumbs_link_markup' );
+add_action( 'genesis_breadcrumb_link', 'schema_wp_remove_genesis_breadcrumbs_link_markup' );
 /*
 * Remove Genesis Breadcrumbs itemprop markup
 *
 * @since 1.6.9.4
 */
-function WordPress Schema_wp_remove_genesis_breadcrumbs_link_markup( $output ) {
+function schema_wp_remove_genesis_breadcrumbs_link_markup( $output ) {
 	
-	$breadcrumbs_enable = WordPress Schema_wp_get_option( 'breadcrumbs_enable' );
+	$breadcrumbs_enable = schema_wp_get_option( 'breadcrumbs_enable' );
 	
 	if ( $breadcrumbs_enable ) {
 		

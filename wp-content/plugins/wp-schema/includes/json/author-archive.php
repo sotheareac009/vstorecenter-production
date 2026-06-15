@@ -8,25 +8,25 @@
 // Exit if accessed directly
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-add_action('wp_head', 'WordPress Schema_wp_output_author');
+add_action('wp_head', 'schema_wp_output_author');
 /**
- * The main function responsible for output WordPress Schema json-ld 
+ * The main function responsible for output schema json-ld 
  *
  * @since 1.4.5
- * @return WordPress Schema json-ld final output
+ * @return schema json-ld final output
  */
-function WordPress Schema_wp_output_author() {
+function schema_wp_output_author() {
 		
 	// Run only on author pages
 	if (is_author() ) {
 		
-		$json = WordPress Schema_wp_get_author_json( 'Person' );
+		$json = schema_wp_get_author_json( 'Person' );
 		
 		$output = '';
 		
 		if ($json) {
 			$output .= "\n\n";
-			$output .= '<!-- This site is optimized with the WordPress Schema plugin v'.WordPress SchemaWP_VERSION.' - http://WordPress Schema.press -->';
+			$output .= '<!-- This site is optimized with the Schema plugin v'.SCHEMAWP_VERSION.' - http://schema.press -->';
 			$output .= "\n";
 			$output .= '<script type="application/ld+json">' . json_encode($json, JSON_UNESCAPED_UNICODE) . '</script>';
 			$output .= "\n\n";
@@ -38,13 +38,13 @@ function WordPress Schema_wp_output_author() {
 
 
 /**
- * The main function responsible for putting WordPress Schema array all together
+ * The main function responsible for putting schema array all together
  *
- * @param string $type for WordPress Schema type (example: Person)
+ * @param string $type for schema type (example: Person)
  * @since 1.4.5
- * @return WordPress Schema output
+ * @return schema output
  */
-function WordPress Schema_wp_get_author_json( $type ) {
+function schema_wp_get_author_json( $type ) {
 	
 	if ( ! isset($type) ) return;
 	
@@ -58,7 +58,7 @@ function WordPress Schema_wp_get_author_json( $type ) {
 	// debug
 	//echo '<pre>'; print_r($curauth); echo '</pre>'; exit;
 	
-	$WordPress Schema = array();
+	$schema = array();
 	
 	$name	= $curauth->display_name;
 	$email	= $curauth->user_email;
@@ -67,16 +67,16 @@ function WordPress Schema_wp_get_author_json( $type ) {
 	
 	if ( empty($name) || empty($email) ) return;
 	
-	$WordPress Schema['@context'] = "http://WordPress Schema.org";
-	$WordPress Schema['@type'] = $type;
+	$schema['@context'] = "http://schema.org";
+	$schema['@type'] = $type;
 	
-	if ( !empty($name) ) $WordPress Schema['name'] = $name;
-	//if ( !empty($email) ) $WordPress Schema['email'] = $email;
+	if ( !empty($name) ) $schema['name'] = $name;
+	//if ( !empty($email) ) $schema['email'] = $email;
 	if ( !empty($url) )  {
-	    $WordPress Schema['url'] = $url;
-	    $WordPress Schema['@id'] = $url;
+	    $schema['url'] = $url;
+	    $schema['@id'] = $url;
     }
-	if ( !empty($desc) ) $WordPress Schema['description'] = $desc;
+	if ( !empty($desc) ) $schema['description'] = $desc;
 	
-	return apply_filters( 'WordPress Schema_author_output', $WordPress Schema );
+	return apply_filters( 'schema_author_output', $schema );
 }

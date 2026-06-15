@@ -1,6 +1,6 @@
 /* General */
 @font-face {
-  font-family: "WordPress Schema-wp-dashicons";
+  font-family: "schema-wp-dashicons";
   src:url("../fonts/dashicons.eot");
   src:url("../fonts/dashicons.eot?#iefix") format("embedded-opentype"),
     url("../fonts/dashicons.woff") format("woff"),
@@ -8,16 +8,16 @@
     url("../fonts/dashicons.svg#dashicons") format("svg");
 }
 
-#adminmenu #toplevel_page_WordPress Schema div.wp-menu-image:before {
-	font-family: 'WordPress Schema-wp-dashicons' !important;
+#adminmenu #toplevel_page_schema div.wp-menu-image:before {
+	font-family: 'schema-wp-dashicons' !important;
 	content: "\e900";
 }
 
-.WordPress Schema-wp-ajax-search-wrap {
+.schema-wp-ajax-search-wrap {
 	position: relative;
 }
 
-.WordPress Schema-wp-ajax {
+.schema-wp-ajax {
 	position: absolute;
 	right: 8px;
 	top: 1px;
@@ -58,23 +58,23 @@
     max-width: 100%;
 }
 
-.WordPress Schema-wp-hidden {
+.schema-wp-hidden {
 	display: none;
 }
-.WordPress Schema-wp-clearfix:after {
+.schema-wp-clearfix:after {
 	content: ".";
 	display: block;
 	height: 0;
 	text-indent: -9999px;
 	visibility: hidden;
 }
-.WordPress Schema-wp-wrap a {
+.schema-wp-wrap a {
 	text-decoration: none;
 }
-a.WordPress Schema-wp-delete {
+a.schema-wp-delete {
 	color: #a00;
 }
-a.WordPress Schema-wp-delete:hover {
+a.schema-wp-delete:hover {
 	color: #f00;
 }
 
@@ -94,17 +94,17 @@ a.WordPress Schema-wp-delete:hover {
 }
 
 /* rating scale table */
-table.WordPress Schema-review-rating-scale {
+table.schema-review-rating-scale {
 	background: none;
 	background-color:inherit;
 	max-width: 680px;
 }
 
-.WordPress Schema-review-rating-scale tr th {
+.schema-review-rating-scale tr th {
 	padding: 6px 10px 6px 10px
 }
 
-.WordPress Schema-review-rating-scale td {
+.schema-review-rating-scale td {
 	padding: 6px 5px 6px 10px;
 }
 	
@@ -128,11 +128,11 @@ table.WordPress Schema-review-rating-scale {
 }
 
 /* Tooltips */
-.WordPress Schema-wp-help-tip {
+.schema-wp-help-tip {
 	cursor: help;
 }
 
-.WordPress Schema-wp-ui-tooltip {
+.schema-wp-ui-tooltip {
 	background: #333 !important;
 	border-radius: 3px !important;
 	box-shadow: 1px 1px 2px 1px rgba(214,214,214,0.5);
@@ -145,25 +145,25 @@ table.WordPress Schema-review-rating-scale {
 /* Add Ons Styles
 -------------------------------------------------------------- */
 
-#WordPress Schema-wp-add-ons h2.nav-tab-wrapper {
+#schema-wp-add-ons h2.nav-tab-wrapper {
 	position: relative;
 }
 
-.WordPress Schema-wp-tab-span {
+.schema-wp-tab-span {
 	top: -6px;
 	right: 0;
 	position: absolute;
 }
-.WordPress Schema-wp-add-ons-footer {
+.schema-wp-add-ons-footer {
 	padding-top: 10px;
 }
-#WordPress Schema-wp-add-ons h2 {
+#schema-wp-add-ons h2 {
 	margin: 0 0 15px;
 }
-#WordPress Schema-wp-add-ons h2 .button-primary {
+#schema-wp-add-ons h2 .button-primary {
 	position: absolute;
 }
-#WordPress Schema-wp-add-ons .WordPress Schema-wp-extension {
+#schema-wp-add-ons .schema-wp-extension {
 	background: #fff;
 	border: 1px solid #ccc;
 	float: left;
@@ -173,31 +173,31 @@ table.WordPress Schema-review-rating-scale {
 	width: 320px;
 	height: 315px;
 }
-#WordPress Schema-wp-add-ons .WordPress Schema-wp-extension h3 {
+#schema-wp-add-ons .schema-wp-extension h3 {
 	font-size: 13px;
 	margin: 0 0 8px;
 }
-#WordPress Schema-wp-add-ons .WordPress Schema-wp-extension .button-secondary {
+#schema-wp-add-ons .schema-wp-extension .button-secondary {
 	position: absolute;
 	bottom: 14px;
 	left: 14px;
 }
-#WordPress Schema-wp-add-ons .WordPress Schema-wp-browse-all {
+#schema-wp-add-ons .schema-wp-browse-all {
 	clear:both;
 	width:100%;
 }
-#WordPress Schema-wp-add-ons .WordPress Schema-wp-extension .third-party {
+#schema-wp-add-ons .schema-wp-extension .third-party {
 	display: none;
 }
-#WordPress Schema-wp-add-ons .WordPress Schema-wp-starter-package {
+#schema-wp-add-ons .schema-wp-starter-package {
 	background-color: #85c0e5;
 	border-color: #62a9d7;
 	color: #fff;
 }
-#WordPress Schema-wp-add-ons .WordPress Schema-wp-starter-package h3 {
+#schema-wp-add-ons .schema-wp-starter-package h3 {
 	color: #fff;
 }
-#WordPress Schema-wp-add-ons .WordPress Schema-wp-extension .wp-post-image {
+#schema-wp-add-ons .schema-wp-extension .wp-post-image {
 	width: 100%;
 	height: auto;
 }
@@ -240,7 +240,7 @@ table.WordPress Schema-review-rating-scale {
 	margin: 0 0 8px;
 	width: 100%;
 }
-.wrap-licenses .WordPress Schema-wp-license-data[class*="WordPress Schema-wp-license-"] {
+.wrap-licenses .schema-wp-license-data[class*="schema-wp-license-"] {
 	position: absolute;
 	background: #fafafa;
 	padding: 14px;
@@ -251,40 +251,40 @@ table.WordPress Schema-review-rating-scale {
 	bottom: 14px;
 	box-sizing: border-box;
 }
-.wrap-licenses .WordPress Schema-wp-license-data[class*="WordPress Schema-wp-license-"] a {
+.wrap-licenses .schema-wp-license-data[class*="schema-wp-license-"] a {
 	color: #444;
 }
-.wrap-licenses .WordPress Schema-wp-license-data[class*="WordPress Schema-wp-license-"] a:hover {
+.wrap-licenses .schema-wp-license-data[class*="schema-wp-license-"] a:hover {
 	text-decoration: none;
 }
-.wrap-licenses .WordPress Schema-wp-license-data.license-expires-soon-notice {
+.wrap-licenses .schema-wp-license-data.license-expires-soon-notice {
 	background-color: #00a0d2;
 	color: #fff;
 	border-color: #00a0d2;
 }
-.wrap-licenses .WordPress Schema-wp-license-data.WordPress Schema-wp-license-expired {
+.wrap-licenses .schema-wp-license-data.schema-wp-license-expired {
 	background-color: #e24e4e;
 	color: #fff;
 	border-color: #e24e4e;
 }
-.wrap-licenses .WordPress Schema-wp-license-data.WordPress Schema-wp-license-error,
-.wrap-licenses .WordPress Schema-wp-license-data.WordPress Schema-wp-license-missing,
-.wrap-licenses .WordPress Schema-wp-license-data.WordPress Schema-wp-license-invalid,
-.wrap-licenses .WordPress Schema-wp-license-data.WordPress Schema-wp-license-site_inactive,
-.wrap-licenses .WordPress Schema-wp-license-data.WordPress Schema-wp-license-item_name_mismatch {
+.wrap-licenses .schema-wp-license-data.schema-wp-license-error,
+.wrap-licenses .schema-wp-license-data.schema-wp-license-missing,
+.wrap-licenses .schema-wp-license-data.schema-wp-license-invalid,
+.wrap-licenses .schema-wp-license-data.schema-wp-license-site_inactive,
+.wrap-licenses .schema-wp-license-data.schema-wp-license-item_name_mismatch {
 	background-color: #ffebcd;
 	border-color: #ffebcd;
 }
-.wrap-licenses .WordPress Schema-wp-license-data p {
+.wrap-licenses .schema-wp-license-data p {
 	font-size: 13px;
 	margin-top: 0;
 }
-.wrap-licenses .WordPress Schema-wp-license-data.license-expires-soon-notice a,
-.wrap-licenses .WordPress Schema-wp-license-data.WordPress Schema-wp-license-expired a {
+.wrap-licenses .schema-wp-license-data.license-expires-soon-notice a,
+.wrap-licenses .schema-wp-license-data.schema-wp-license-expired a {
 	color: #fff;
 }
-.wrap-licenses .WordPress Schema-wp-license-data.license-expires-soon-notice a:hover,
-.wrap-licenses .WordPress Schema-wp-license-data.WordPress Schema-wp-license-expired a:hover {
+.wrap-licenses .schema-wp-license-data.license-expires-soon-notice a:hover,
+.wrap-licenses .schema-wp-license-data.schema-wp-license-expired a:hover {
 	text-decoration: none;
 }
 .wrap-licenses p.submit {
@@ -293,11 +293,11 @@ table.WordPress Schema-review-rating-scale {
 
 /* Extensions */
 
-#WordPress Schema-wp-extensions h2 {
+#schema-wp-extensions h2 {
   margin: 0 0 15px;
 }
 
-#WordPress Schema-wp-extensions .WordPress Schema-wp-extension {
+#schema-wp-extensions .schema-wp-extension {
   display: inline-block;
   vertical-align: top;
   margin: 0 11px 14px 0;
@@ -309,34 +309,34 @@ table.WordPress Schema-review-rating-scale {
   position: relative;
 }
 
-#WordPress Schema-wp-extensions .WordPress Schema-wp-extension h3 {
+#schema-wp-extensions .schema-wp-extension h3 {
   margin: 0 0 8px;
   font-size: 13px;
 }
 
-#WordPress Schema-wp-extensions .WordPress Schema-wp-extension .button-secondary {
+#schema-wp-extensions .schema-wp-extension .button-secondary {
   position: absolute;
   bottom: 14px;
   left: 14px;
 }
 
-#WordPress Schema-wp-extensions .WordPress Schema-wp-extension .wp-post-image {
+#schema-wp-extensions .schema-wp-extension .wp-post-image {
   width: 100%;
   height: auto;
   display: block;
 }
 
-.WordPress Schema-wp-extensions-footer {
+.schema-wp-extensions-footer {
   padding-top: 10px;
 }
 
 /* Setup Wizard */
-.WordPress Schema_wiz_btn {
+.schema_wiz_btn {
 	margin: 0px 7px 3px 7px !important;
 }
 
 @media (max-width: 800px) {
-    .WordPress Schema_wiz_btn {
+    .schema_wiz_btn {
 		margin: 10px 7px !important;
 	}
 }

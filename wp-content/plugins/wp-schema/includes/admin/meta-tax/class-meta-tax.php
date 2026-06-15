@@ -28,7 +28,7 @@
  * 
  */
 
-if ( ! class_exists( 'WordPress Schema_Custom_Add_Meta_Tax') ) :
+if ( ! class_exists( 'Schema_Custom_Add_Meta_Tax') ) :
 
 /**
  * All Types Meta Box class.
@@ -38,7 +38,7 @@ if ( ! class_exists( 'WordPress Schema_Custom_Add_Meta_Tax') ) :
  *
  * @todo Nothing.
  */
-class WordPress Schema_Custom_Add_Meta_Tax {
+class Schema_Custom_Add_Meta_Tax {
   
   /**
    * Holds meta box object

@@ -9,18 +9,18 @@
 // Exit if accessed directly
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-add_action('wp_head', 'WordPress Schema_wp_output_web_page_element');
+add_action('wp_head', 'schema_wp_output_web_page_element');
 /**
- * The main function responsible for output WordPress Schema json-ld 
+ * The main function responsible for output schema json-ld 
  *
  * @since 1.6.9.8
- * @return WordPress Schema json-ld final output
+ * @return schema json-ld final output
  */
-function WordPress Schema_wp_output_web_page_element() {
+function schema_wp_output_web_page_element() {
 	
 	global $post;
 	
-	$enable = WordPress Schema_wp_get_option( 'web_page_element_enable' );
+	$enable = schema_wp_get_option( 'web_page_element_enable' );
 
 	if ( $enable != true )
 		return;
@@ -29,12 +29,12 @@ function WordPress Schema_wp_output_web_page_element() {
 	// Remove Genesis site Header and Footer markup
 	if ( function_exists('genesis_attr') ) { 
 		// disable Genesis header markup
-		add_filter( 'genesis_attr_site-header', 'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
+		add_filter( 'genesis_attr_site-header', 'schema_wp_genesis_attributes_removal_function', 20 );
 		// disable Genesis footer markup
-		add_filter( 'genesis_attr_site-footer', 'WordPress Schema_wp_genesis_attributes_removal_function', 20 );
+		add_filter( 'genesis_attr_site-footer', 'schema_wp_genesis_attributes_removal_function', 20 );
 	}
 	
-	$json = WordPress Schema_wp_get_web_page_element_json();
+	$json = schema_wp_get_web_page_element_json();
 		
 	$output = '';
 		
@@ -43,7 +43,7 @@ function WordPress Schema_wp_output_web_page_element() {
 		
 	if ( $json ) {
 		$output .= "\n\n";
-		$output .= '<!-- This site is optimized with the WordPress Schema plugin v'.WordPress SchemaWP_VERSION.' - https://WordPress Schema.press -->';
+		$output .= '<!-- This site is optimized with the Schema plugin v'.SCHEMAWP_VERSION.' - https://schema.press -->';
 		$output .= "\n";
 		$output .= '<script type="application/ld+json">' . json_encode($json, JSON_UNESCAPED_UNICODE) . '</script>';
 		$output .= "\n\n";
@@ -56,9 +56,9 @@ function WordPress Schema_wp_output_web_page_element() {
  * The main function responsible for putting header array all together
  *
  * @since 1.6.9.8
- * @return WordPress Schema output
+ * @return schema output
  */
-function WordPress Schema_wp_get_web_page_element_json() {
+function schema_wp_get_web_page_element_json() {
 	
 	global $wp_query;
 	
@@ -72,8 +72,8 @@ function WordPress Schema_wp_get_web_page_element_json() {
 	
 	if ( is_404() ) {
 		// 404
-        $headline		= __( 'Page not found', 'WordPress Schema-wp' );
-		$description 	= __('It looks like nothing was found at this location!', 'WordPress Schema-wp');
+        $headline		= __( 'Page not found', 'schema-wp' );
+		$description 	= __('It looks like nothing was found at this location!', 'schema-wp');
 		$url			= '';
 	} elseif ( is_front_page() && is_home() ) {
 		// Default homepage
@@ -89,18 +89,18 @@ function WordPress Schema_wp_get_web_page_element_json() {
 		// blog page
 		$headline 		= get_bloginfo( 'name' );
 		$description 	= get_bloginfo( 'description' );
-		$url			= WordPress Schema_wp_get_blog_posts_page_url();
+		$url			= schema_wp_get_blog_posts_page_url();
 	} else {
 		//everything else
 		
 		// get enabled post types
-		$WordPress Schema_enabled = WordPress Schema_wp_cpt_get_enabled_post_types();
+		$schema_enabled = schema_wp_cpt_get_enabled_post_types();
 		
-		if ( in_array( $post_type , $WordPress Schema_enabled ) ) {
+		if ( in_array( $post_type , $schema_enabled ) ) {
 			if ( is_single() || is_singular() ) {
 				// single and singular pages
 				$headline 		= wp_filter_nohtml_kses( get_the_title() );
-				$description 	= WordPress Schema_wp_get_description();
+				$description 	= schema_wp_get_description();
 				$url			= get_permalink();
 			}
 		}
@@ -119,7 +119,7 @@ function WordPress Schema_wp_get_web_page_element_json() {
 		$headline 		= post_type_archive_title( __(''), false );
 		$obj 			= get_post_type_object($post_type);
 		$description 	= isset($obj->description) ? $obj->description : '';
-		$url			= WordPress Schema_wp_get_archive_link($post_type) ? WordPress Schema_wp_get_archive_link($post_type) : get_home_url();
+		$url			= schema_wp_get_archive_link($post_type) ? schema_wp_get_archive_link($post_type) : get_home_url();
 	}
 	
 	if ( is_search() ) {
@@ -134,7 +134,7 @@ function WordPress Schema_wp_get_web_page_element_json() {
 	*	WPHeader
 	*/
 	$header = array(
-		'@context' 		=> 'http://WordPress Schema.org/',
+		'@context' 		=> 'http://schema.org/',
 		'@type'			=> 'WPHeader',
 		'url'			=> $url,
       	'headline'		=> wp_strip_all_tags($headline),
@@ -145,7 +145,7 @@ function WordPress Schema_wp_get_web_page_element_json() {
 	*	WPFooter
 	*/
 	$footer = array(
-		'@context' 			=> 'http://WordPress Schema.org/',
+		'@context' 			=> 'http://schema.org/',
 		'@type'				=> 'WPFooter',
 		'url'				=> $url,
       	'headline'			=> wp_strip_all_tags($headline),
@@ -161,7 +161,7 @@ function WordPress Schema_wp_get_web_page_element_json() {
 	$page_element_output = array($header, $footer);
 	
 	// debug
-	//echo'<pre>';print_r($WordPress Schema);echo'</pre>';exit;
+	//echo'<pre>';print_r($schema);echo'</pre>';exit;
 	
-	return apply_filters( 'WordPress Schema_web_page_element_output', $page_element_output );
+	return apply_filters( 'schema_web_page_element_output', $page_element_output );
 }

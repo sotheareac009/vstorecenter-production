@@ -2,7 +2,7 @@
 /**
  * Roles and Capabilities
  *
- * @package     WordPress Schema
+ * @package     Schema
  * @subpackage  Classes/Roles
  * @copyright   Copyright (c) 2012, Hesham Zebida
  * @license     http://opensource.org/licenses/gpl-2.0.php GNU Public License
@@ -10,13 +10,13 @@
 */
 
 /**
- * WordPress Schema_WP_Capabilities Class
+ * Schema_WP_Capabilities Class
  *
  * This class handles the role creation and assignment of capabilities for those roles.
  *
  * @since 1.0
  */
-class WordPress Schema_WP_Capabilities {
+class Schema_WP_Capabilities {
 
 	/**
 	 * Get things going
@@ -33,7 +33,7 @@ class WordPress Schema_WP_Capabilities {
 	 * @return void
 	 */
 	public function add_roles() {
-		add_role( 'manage_WordPress Schema_options', __( 'Manage WordPress Schema Options', 'WordPress Schema-wp' ), array(
+		add_role( 'manage_schema_options', __( 'Manage Schema Options', 'schema-wp' ), array(
 			'read'                   => true,
 			'edit_posts'             => true,
 			'delete_posts'           => true,
@@ -87,8 +87,8 @@ class WordPress Schema_WP_Capabilities {
 		if ( is_object( $wp_roles ) ) {
 			
 			/** Site Administrator Capabilities */
-			$wp_roles->add_cap( 'administrator', 'manage_WordPress Schema_options' );
-			$wp_roles->add_cap( 'super_admin', 'manage_WordPress Schema_options' );
+			$wp_roles->add_cap( 'administrator', 'manage_schema_options' );
+			$wp_roles->add_cap( 'super_admin', 'manage_schema_options' );
 		
 		}
 	}
@@ -112,8 +112,8 @@ class WordPress Schema_WP_Capabilities {
 		if ( is_object( $wp_roles ) ) {
 
 			/** Site Administrator Capabilities */
-			$wp_roles->remove_cap( 'administrator', 'manage_WordPress Schema_options' );
-			$wp_roles->remove_cap( 'super_admin', 'manage_WordPress Schema_options' );
+			$wp_roles->remove_cap( 'administrator', 'manage_schema_options' );
+			$wp_roles->remove_cap( 'super_admin', 'manage_schema_options' );
 
 		}
 	}

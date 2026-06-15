@@ -516,50 +516,50 @@
 }
 	
 /* Custom */
-#WordPress Schema_article {
+#schema_article {
 	display: none;
 }
-#WordPress Schema_cpt .form-table th {
+#schema_cpt .form-table th {
 	width: 1% !important;
 }
-#WordPress Schema_cpt .description {
+#schema_cpt .description {
 	margin-bottom: 20px;
 	display: block;
 }
-#_WordPress Schema_review_pros-repeatable input,
-#_WordPress Schema_review_cons-repeatable input {
+#_schema_review_pros-repeatable input,
+#_schema_review_cons-repeatable input {
 	float:left;
 }
 .form-table.meta_box .meta_box_repeatable td * {
 	margin:0;
 }
 /* Remove "+ Add New Category" */
-.post-type-WordPress Schema .taxonomy-add-new {
+.post-type-schema .taxonomy-add-new {
 	display:none;
 }
 
 /* Input & Textarea placeholder */
-#WordPress Schema_post_meta_box input::-webkit-input-placeholder {
+#schema_post_meta_box input::-webkit-input-placeholder {
 	color: #ccc;
 }
-#WordPress Schema_post_meta_box input:-moz-placeholder { /* older Firefox*/
+#schema_post_meta_box input:-moz-placeholder { /* older Firefox*/
 	color: #ccc;
 }
-#WordPress Schema_post_meta_box input::-moz-placeholder { /* Firefox 19+ */ 
+#schema_post_meta_box input::-moz-placeholder { /* Firefox 19+ */ 
 	color: #ccc;
 } 
-#WordPress Schema_post_meta_box input:-ms-input-placeholder { 
+#schema_post_meta_box input:-ms-input-placeholder { 
 	color: #ccc;
 }
-#WordPress Schema_post_meta_box textarea::-webkit-input-placeholder {
+#schema_post_meta_box textarea::-webkit-input-placeholder {
 	color: #ccc;
 }
-#WordPress Schema_post_meta_box textarea:-moz-placeholder { /* older Firefox*/
+#schema_post_meta_box textarea:-moz-placeholder { /* older Firefox*/
 	color: #ccc;
 }
-#WordPress Schema_post_meta_box textarea::-moz-placeholder { /* Firefox 19+ */ 
+#schema_post_meta_box textarea::-moz-placeholder { /* Firefox 19+ */ 
 	color: #ccc;
 } 
-#WordPress Schema_post_meta_box textarea:-ms-input-placeholder { 
+#schema_post_meta_box textarea:-ms-input-placeholder { 
 	color: #ccc;
 }

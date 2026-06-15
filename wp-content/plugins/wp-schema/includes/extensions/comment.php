@@ -3,7 +3,7 @@
 /**
  *  Comment extention
  *
- *  Adds WordPress Schema Comment for Article types
+ *  Adds schema Comment for Article types
  *
  *  @since 1.5.3
  */
@@ -11,60 +11,60 @@
 if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
 
-add_filter( 'WordPress Schema_output', 'WordPress Schema_wp_do_comments_number' );
+add_filter( 'schema_output', 'schema_wp_do_comments_number' );
 /**
- * Add comments number for Article types via WordPress Schema_output filter  
+ * Add comments number for Article types via schema_output filter  
  *
  * @since 1.5.3
  * @return array 
  */
-function WordPress Schema_wp_do_comments_number( $WordPress Schema ) {
+function schema_wp_do_comments_number( $schema ) {
 	
-	$comments_enable = WordPress Schema_wp_get_option( 'comments_enable' );
+	$comments_enable = schema_wp_get_option( 'comments_enable' );
 	
 	if ( $comments_enable != true )
-		return $WordPress Schema;
+		return $schema;
 		
 	global $post;
 	
-	$WordPress Schema_type = $WordPress Schema["@type"];
+	$schema_type = $schema["@type"];
 
-	$support_article_types 	= WordPress Schema_wp_get_support_article_types();
+	$support_article_types 	= schema_wp_get_support_article_types();
 	
-	if ( in_array( $WordPress Schema_type, $support_article_types, false) )
-		$WordPress Schema["commentCount"] = get_comments_number($post->ID);
+	if ( in_array( $schema_type, $support_article_types, false) )
+		$schema["commentCount"] = get_comments_number($post->ID);
 	
-	return $WordPress Schema;
+	return $schema;
 }
 
 
-add_filter( 'WordPress Schema_output', 'WordPress Schema_wp_do_comment' );
+add_filter( 'schema_output', 'schema_wp_do_comment' );
 /**
- * Add WordPress Schema Comment for Article types via WordPress Schema_output filter  
+ * Add Schema Comment for Article types via schema_output filter  
  *
  * @since 1.5.3
  * @return array 
  */
-function WordPress Schema_wp_do_comment( $WordPress Schema ) {
+function schema_wp_do_comment( $schema ) {
 	
-	$comments_enable = WordPress Schema_wp_get_option( 'comments_enable' );
+	$comments_enable = schema_wp_get_option( 'comments_enable' );
 	
 	if ( $comments_enable != true )
-		return $WordPress Schema;
+		return $schema;
 		
 	global $post;
 	
-	$WordPress Schema_type 			= $WordPress Schema["@type"];
-	$support_article_types 	= WordPress Schema_wp_get_support_article_types();
-	$number 				= apply_filters( 'WordPress Schema_wp_do_comment_number', '10'); // default = 10
+	$schema_type 			= $schema["@type"];
+	$support_article_types 	= schema_wp_get_support_article_types();
+	$number 				= apply_filters( 'schema_wp_do_comment_number', '10'); // default = 10
 	
-	if ( in_array( $WordPress Schema_type, $support_article_types, true) ) {
-		$Comments = WordPress Schema_wp_get_comments();
+	if ( in_array( $schema_type, $support_article_types, true) ) {
+		$Comments = schema_wp_get_comments();
 		if ( !empty($Comments) )	
-			$WordPress Schema["comment"] = $Comments;
+			$schema["comment"] = $Comments;
 	}
 	
-	return $WordPress Schema;
+	return $schema;
 }
 
 
@@ -74,7 +74,7 @@ function WordPress Schema_wp_do_comment( $WordPress Schema ) {
  * @since 1.5.4
  * @return array 
  */
-function WordPress Schema_wp_get_comments( $post_id = null ) {
+function schema_wp_get_comments( $post_id = null ) {
 		
 	if ( isset($post_id) ) {
 		$post = get_post($post_id);
@@ -89,7 +89,7 @@ function WordPress Schema_wp_get_comments( $post_id = null ) {
 		return array();
 	}
 
-	$number	= apply_filters( 'WordPress Schema_wp_do_comments', '10'); // default = 10
+	$number	= apply_filters( 'schema_wp_do_comments', '10'); // default = 10
 		
 	$Comments = array();
 	
@@ -109,6 +109,6 @@ function WordPress Schema_wp_get_comments( $post_id = null ) {
 			);
 		}
 
-		return apply_filters( 'WordPress Schema_wp_filter_comments', $Comments );
+		return apply_filters( 'schema_wp_filter_comments', $Comments );
 	}
 }

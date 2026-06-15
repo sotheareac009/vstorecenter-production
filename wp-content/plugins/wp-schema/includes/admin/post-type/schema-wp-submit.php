@@ -1,6 +1,6 @@
 <?php
 /**
- * Replace default submit box on WordPress Schema post type
+ * Replace default submit box on Schema post type
  *
  * @since 1.4.7
  */
@@ -20,13 +20,13 @@ if ( ! defined( 'ABSPATH' ) ) exit;
       * @since  1.0
       *
       */      
-      function WordPress Schema_wp_replace_submit_meta_box() 
+      function schema_wp_replace_submit_meta_box() 
       {
          // create a multidimensional array that will hold 
          // each custom post_type as a key, and custom 
          // post_type name will be it's value.
           $items = array( 
-		   'WordPress Schema' => 'WordPress Schema'
+		   'schema' => 'Schema'
           );
           
           // now loop through $items array and remove, then
@@ -35,11 +35,11 @@ if ( ! defined( 'ABSPATH' ) ) exit;
           foreach( $items as $item => $value )
           {
              remove_meta_box('submitdiv', $item, 'core'); // $item represents post_type
-             add_meta_box('submitdiv', sprintf( __('%s'), $value ), 'WordPress Schema_wp_submit_meta_box', $item, 'side', 'low'); // $value will be the output title in the box
+             add_meta_box('submitdiv', sprintf( __('%s'), $value ), 'schema_wp_submit_meta_box', $item, 'side', 'low'); // $value will be the output title in the box
           }
       }
 
-      add_action( 'admin_menu', 'WordPress Schema_wp_replace_submit_meta_box' );
+      add_action( 'admin_menu', 'schema_wp_replace_submit_meta_box' );
 
  
       /**
@@ -53,7 +53,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
       * @since  1.0
       *
       */ 
-      function WordPress Schema_wp_submit_meta_box() {
+      function schema_wp_submit_meta_box() {
         global $action, $post;
        
         $post_type = $post->post_type; // get current post_type
@@ -64,7 +64,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
         // to put it in same order, so that it can
         // follow the right meta box
         $items = array( 
-			'WordPress Schema' => 'WordPress Schema'
+			'schema' => 'Schema'
         );
 
         // now create var $item that will take only right
@@ -116,4 +116,4 @@ if ( ! defined( 'ABSPATH' ) ) exit;
          </div>
          </div>
         <?php
-      } //WordPress Schema_wp_submit_meta_box()
+      } //schema_wp_submit_meta_box()

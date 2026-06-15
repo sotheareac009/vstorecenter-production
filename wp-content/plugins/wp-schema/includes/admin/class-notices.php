@@ -3,12 +3,12 @@
 // Exit if accessed directly
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-class WordPress Schema_WP_Admin_Notices {
+class Schema_WP_Admin_Notices {
 
 	public function __construct() {
 
 		add_action( 'admin_notices', array( $this, 'show_notices' ) );
-		add_action( 'WordPress Schema_wp_dismiss_notices', array( $this, 'dismiss_notices' ) );
+		add_action( 'schema_wp_dismiss_notices', array( $this, 'dismiss_notices' ) );
 	}
 
 
@@ -16,20 +16,20 @@ class WordPress Schema_WP_Admin_Notices {
 
 		$class = 'updated';
 
-		if ( isset( $_GET['settings-updated'] ) && $_GET['settings-updated'] && isset( $_GET['page'] ) && $_GET['page'] == 'WordPress Schema' ) {
-			$message = __( 'Settings updated.', 'WordPress Schema-wp' );
+		if ( isset( $_GET['settings-updated'] ) && $_GET['settings-updated'] && isset( $_GET['page'] ) && $_GET['page'] == 'schema' ) {
+			$message = __( 'Settings updated.', 'schema-wp' );
 			
 			// do action after settings updated
-			do_action( 'WordPress Schema_wp_do_after_settings_updated' );
+			do_action( 'schema_wp_do_after_settings_updated' );
 		}
 
-		if ( isset( $_GET['WordPress Schema_wp_notice'] ) && $_GET['WordPress Schema_wp_notice'] ) {
+		if ( isset( $_GET['schema_wp_notice'] ) && $_GET['schema_wp_notice'] ) {
 
-			switch( $_GET['WordPress Schema_wp_notice'] ) {
+			switch( $_GET['schema_wp_notice'] ) {
 
 				case 'settings-imported' :
 
-					$message = __( 'Settings successfully imported', 'WordPress Schema-wp' );
+					$message = __( 'Settings successfully imported', 'schema-wp' );
 
 					break;
 
@@ -49,15 +49,15 @@ class WordPress Schema_WP_Admin_Notices {
 	 * @return void
 	 */
 	function dismiss_notices() {
-		if( ! isset( $_GET['WordPress Schema_wp_dismiss_notice_nonce'] ) || ! wp_verify_nonce( $_GET['WordPress Schema_wp_dismiss_notice_nonce'], 'WordPress Schema_wp_dismiss_notice') ) {
-			wp_die( __( 'Security check failed', 'WordPress Schema-wp' ), __( 'Error', 'WordPress Schema-wp' ), array( 'response' => 403 ) );
+		if( ! isset( $_GET['schema_wp_dismiss_notice_nonce'] ) || ! wp_verify_nonce( $_GET['schema_wp_dismiss_notice_nonce'], 'schema_wp_dismiss_notice') ) {
+			wp_die( __( 'Security check failed', 'schema-wp' ), __( 'Error', 'schema-wp' ), array( 'response' => 403 ) );
 		}
 
-		if( isset( $_GET['WordPress Schema_wp_notice'] ) ) {
-			update_user_meta( get_current_user_id(), '_WordPress Schema_wp_' . $_GET['WordPress Schema_wp_notice'] . '_dismissed', 1 );
-			wp_redirect( remove_query_arg( array( 'WordPress Schema_wp_action', 'WordPress Schema_wp_notice' ) ) );
+		if( isset( $_GET['schema_wp_notice'] ) ) {
+			update_user_meta( get_current_user_id(), '_schema_wp_' . $_GET['schema_wp_notice'] . '_dismissed', 1 );
+			wp_redirect( remove_query_arg( array( 'schema_wp_action', 'schema_wp_notice' ) ) );
 			exit;
 		}
 	}
 }
-new WordPress Schema_WP_Admin_Notices;
+new Schema_WP_Admin_Notices;

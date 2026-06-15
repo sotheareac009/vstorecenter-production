@@ -8,17 +8,17 @@
 // Exit if accessed directly
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-add_action('wp_head', 'WordPress Schema_wp_output_tag');
+add_action('wp_head', 'schema_wp_output_tag');
 /**
- * The main function responsible for output WordPress Schema json-ld 
+ * The main function responsible for output schema json-ld 
  *
  * @since 1.6.9.5
- * @return WordPress Schema json-ld final output
+ * @return schema json-ld final output
  */
-function WordPress Schema_wp_output_tag() {
+function schema_wp_output_tag() {
 	
 	// filter this and return false to disable the function
-	$enabled = apply_filters('WordPress Schema_wp_output_tag_enabled', true);
+	$enabled = apply_filters('schema_wp_output_tag_enabled', true);
 	if ( ! $enabled)
 		return;
 		
@@ -29,11 +29,11 @@ function WordPress Schema_wp_output_tag() {
 		
 		$output = '';
 		
-		$json = WordPress Schema_wp_get_tag_json();
+		$json = schema_wp_get_tag_json();
 		
 		if ($json) {
 			$output .= "\n\n";
-			$output .= '<!-- This site is optimized with the WordPress Schema plugin v'.WordPress SchemaWP_VERSION.' - https://WordPress Schema.press -->';
+			$output .= '<!-- This site is optimized with the Schema plugin v'.SCHEMAWP_VERSION.' - https://schema.press -->';
 			$output .= "\n";
 			$output .= '<script type="application/ld+json">' . json_encode($json, JSON_UNESCAPED_UNICODE) . '</script>';
 			$output .= "\n\n";
@@ -45,13 +45,13 @@ function WordPress Schema_wp_output_tag() {
 
 
 /**
- * The main function responsible for putting WordPress Schema array all together
+ * The main function responsible for putting schema array all together
  *
- * @param string $type for WordPress Schema type (example: CollectionPage)
+ * @param string $type for schema type (example: CollectionPage)
  * @since 1.6.9.5
  * @return array json 
  */
-function WordPress Schema_wp_get_tag_json() {
+function schema_wp_get_tag_json() {
 		
 	global $post, $query_string;
 	
@@ -67,10 +67,10 @@ function WordPress Schema_wp_get_tag_json() {
 	   
 	   // Get the markup data
 	   if ( ! empty($secondary_loop->posts) ) {
-			foreach ($secondary_loop->posts as $WordPress Schema_post) {
-				$WordPress Schema_json = get_post_meta( $WordPress Schema_post->ID, '_WordPress Schema_json', true );
-				if ( isset($WordPress Schema_json) ) {
-					$blogPost[] = $WordPress Schema_json;
+			foreach ($secondary_loop->posts as $schema_post) {
+				$schema_json = get_post_meta( $schema_post->ID, '_schema_json', true );
+				if ( isset($schema_json) ) {
+					$blogPost[] = $schema_json;
 				}		
 			}
 		}
@@ -81,12 +81,12 @@ function WordPress Schema_wp_get_tag_json() {
 		
 		$tag_id 		= intval($tag[0]->term_id); 
        	$tag_link 		= get_tag_link( $tag_id );
-       	$tag_headline 	= single_tag_title( '', false ) . __(' Tag', 'WordPress Schema-wp');
-		$sameAs 		= get_term_meta( $tag_id, 'WordPress Schema_wp_sameAs' );
+       	$tag_headline 	= single_tag_title( '', false ) . __(' Tag', 'schema-wp');
+		$sameAs 		= get_term_meta( $tag_id, 'schema_wp_sameAs' );
 
 		$json = array
        		(
-				'@context' 		=> 'https://WordPress Schema.org/',
+				'@context' 		=> 'https://schema.org/',
 				'@type' 		=> "CollectionPage",
 				'headline' 		=> $tag_headline,
 				'description' 	=> strip_tags(tag_description()),
@@ -97,5 +97,5 @@ function WordPress Schema_wp_get_tag_json() {
 				
 	endif;
 	
-	return apply_filters( 'WordPress Schema_tag_json', $json );
+	return apply_filters( 'schema_tag_json', $json );
 }

@@ -2,8 +2,8 @@
 /**
  * Generate post meta fields
  *
- * @package     WordPress Schema
- * @subpackage  WordPress Schema Post Meta
+ * @package     Schema
+ * @subpackage  Schema Post Meta
  * @copyright   Copyright (c) 2016, Hesham Zebida
  * @license     http://opensource.org/licenses/gpl-2.0.php GNU Public License
  * @since       1.5.9
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
  *
  * @since 1.5.9
  */
-class WordPress Schema_Post_Meta_Generator {
+class Schema_Post_Meta_Generator {
     
 	public function __construct() {
 		
@@ -25,23 +25,23 @@ class WordPress Schema_Post_Meta_Generator {
 		
 		// check if generator is activated
 		// @since 1.6.9.4
-		$activate = apply_filters('WordPress Schema_wp_post_meta_generator_activate', true);
+		$activate = apply_filters('schema_wp_post_meta_generator_activate', true);
 		if ( ! $activate )
 			return;
 		
-		// get WordPress Schema ref
-		$ref = isset($post->ID) ? get_post_meta( $post->ID, '_WordPress Schema_ref', true ) : false;
+		// get schema ref
+		$ref = isset($post->ID) ? get_post_meta( $post->ID, '_schema_ref', true ) : false;
 		
 		if ( $ref ) {
 			
 			// Check if enabled
-			//$enabled = get_post_meta( $ref, '_WordPress Schema_post_meta_box_enabled' , true );
+			//$enabled = get_post_meta( $ref, '_schema_post_meta_box_enabled' , true );
 			
 			//if ( ! isset($enabled) || $enabled != 1 ) return;
 			
 			// Start working....
 
-			$meta = get_post_meta( $ref, '_WordPress Schema_post_meta_box' , true );
+			$meta = get_post_meta( $ref, '_schema_post_meta_box' , true );
 	
 			if ( ! empty($meta) ) {
 			
@@ -67,7 +67,7 @@ class WordPress Schema_Post_Meta_Generator {
 						
 							if ( isset($post_meta_value) && $post_meta_value != '' ) {
 								
-								// Anonymous function: automatically use filters to add values to WordPress Schema output
+								// Anonymous function: automatically use filters to add values to schema output
 								add_filter( $filter_name, function ($field_value) use ( $meta_key ) { 
 									// Here we can do more conditions
 									// we can modify the output based on complix field types 
@@ -88,31 +88,31 @@ class WordPress Schema_Post_Meta_Generator {
 
 
 
-add_action( 'template_redirect', 'WordPress Schema_wp_post_meta_generator_init' );
+add_action( 'template_redirect', 'schema_wp_post_meta_generator_init' );
 /**
  * init post meta generator class
  *
  * @since 1.5.9
  */
-function WordPress Schema_wp_post_meta_generator_init() {
-    $WordPress Schema_post_meta_generator = new WordPress Schema_Post_Meta_Generator();
+function schema_wp_post_meta_generator_init() {
+    $schema_post_meta_generator = new Schema_Post_Meta_Generator();
 }
 
 
 
-add_action( 'current_screen', 'WordPress Schema_wp_generate_custom_post_meta_box' );
+add_action( 'current_screen', 'schema_wp_generate_custom_post_meta_box' );
 /**
  * Generate custom post meta box
  *
  * @since 1.5.9
  */
-function WordPress Schema_wp_generate_custom_post_meta_box() {
+function schema_wp_generate_custom_post_meta_box() {
 	
-	if ( ! class_exists( 'WordPress Schema_WP' ) ) return;
+	if ( ! class_exists( 'Schema_WP' ) ) return;
 	
 	// check if post meta box generator is activated
 	// @since 1.6.9.4
-	$activate = apply_filters('WordPress Schema_wp_post_meta_box_generator_activate', true);
+	$activate = apply_filters('schema_wp_post_meta_box_generator_activate', true);
 	if ( ! $activate )
 		return;
 	
@@ -121,45 +121,45 @@ function WordPress Schema_wp_generate_custom_post_meta_box() {
 	/**
 	* Get enabled post types to create a meta box on
 	*/
-	$WordPress Schemas_enabled = array();
+	$schemas_enabled = array();
 	
 	// Get schame enabled array
-	$WordPress Schemas_enabled = WordPress Schema_wp_cpt_get_enabled();
+	$schemas_enabled = schema_wp_cpt_get_enabled();
 	
-	if ( empty($WordPress Schemas_enabled) ) return;
+	if ( empty($schemas_enabled) ) return;
 	
 	// debug
-	//echo'<pre>';print_r($WordPress Schemas_enabled);echo'</pre>'; 
+	//echo'<pre>';print_r($schemas_enabled);echo'</pre>'; 
 	
 	// Get post type from current screen
 	$current_screen = get_current_screen();
 	$post_type 		= $current_screen->post_type;
 	$fields 		= array();
 	
-	foreach( $WordPress Schemas_enabled as $WordPress Schema_enabled ) : 
+	foreach( $schemas_enabled as $schema_enabled ) : 
 		
 		// debug
 		//echo '<pre>'; print_r($current_screen); echo '</pre>'; 
 		
-		// Get WordPress Schema enabled post types array
-		$WordPress Schema_cpt = $WordPress Schema_enabled['post_type'];
+		// Get Schema enabled post types array
+		$schema_cpt = $schema_enabled['post_type'];
 		
-		if ( ! empty($WordPress Schema_cpt) && in_array( $post_type, $WordPress Schema_cpt, true ) ) {
+		if ( ! empty($schema_cpt) && in_array( $post_type, $schema_cpt, true ) ) {
 
-			foreach ( $WordPress Schema_cpt as $key => $value) :
+			foreach ( $schema_cpt as $key => $value) :
 			
 			if ( $post_type == $value ) {
 				
-				$ref = $WordPress Schema_enabled['id'];
+				$ref = $schema_enabled['id'];
 				
-				$enabled = get_post_meta( $ref, '_WordPress Schema_post_meta_box_enabled', true );
+				$enabled = get_post_meta( $ref, '_schema_post_meta_box_enabled', true );
 				
 				if ( isset($enabled) && $enabled == 1 ) {
 					
-					$title = get_post_meta( $ref, '_WordPress Schema_post_meta_box_title', true );
-					if ( ! isset($title) || $title == '' ) $title = __('WordPress Schema', 'WordPress Schema-wp');
+					$title = get_post_meta( $ref, '_schema_post_meta_box_title', true );
+					if ( ! isset($title) || $title == '' ) $title = __('Schema', 'schema-wp');
 				
-					$repeated = get_post_meta( $ref, '_WordPress Schema_post_meta_box', true );
+					$repeated = get_post_meta( $ref, '_schema_post_meta_box', true );
 				
 					if ( ! empty($repeated) ) {
 					
@@ -190,7 +190,7 @@ function WordPress Schema_wp_generate_custom_post_meta_box() {
 						
 						if ( empty($fields) ) return;
 						
-						$meta = new WordPress Schema_Custom_Add_Meta_Box( 'WordPress Schema_custom_post_meta', $title, $fields, $post_type, 'normal', 'high', true );
+						$meta = new Schema_Custom_Add_Meta_Box( 'schema_custom_post_meta', $title, $fields, $post_type, 'normal', 'high', true );
 					} // end if
 				} // end if
 				
@@ -200,7 +200,7 @@ function WordPress Schema_wp_generate_custom_post_meta_box() {
 		}
 		
 		// debug
-		//print_r($WordPress Schema_enabled);
+		//print_r($schema_enabled);
 		
 	endforeach;
 }

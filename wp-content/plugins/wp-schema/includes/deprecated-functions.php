@@ -17,7 +17,7 @@
  * @param  $format Type of date format to return, using PHP date standard, default Y-m-d
  * @return Date of first post
  */
-function WordPress Schema_wp_first_post_date( $format = 'Y-m-d' ) {
+function schema_wp_first_post_date( $format = 'Y-m-d' ) {
 	// Setup get_posts arguments
 	$ax_args = array(
 		'numberposts' => -1,
@@ -47,9 +47,9 @@ function WordPress Schema_wp_first_post_date( $format = 'Y-m-d' ) {
  * @since 1.7.1
  * @return string
  */
-function WordPress Schema_wp_get_truncate_to_word_deprecated( $string, $limit = 110, $end = '...' ) {
+function schema_wp_get_truncate_to_word_deprecated( $string, $limit = 110, $end = '...' ) {
 	
-	$limit 	= apply_filters( 'WordPress Schema_wp_truncate_to_word_limit', $limit );
+	$limit 	= apply_filters( 'schema_wp_truncate_to_word_limit', $limit );
 	$limit 	= $limit - strlen($end); // Take into account $end string into the limit
 	$string = substr($string, 0, $limit);
 	$string = substr($string, 0, strrpos($string, ' ')) . $end;

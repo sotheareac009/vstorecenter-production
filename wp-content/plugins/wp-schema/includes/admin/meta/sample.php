@@ -121,7 +121,7 @@ $fields = array(
 		'id'	=> $prefix.'repeatable', // field id and name
 		'type'	=> 'repeatable', // type of field
 		'sanitizer' => array( // array of sanitizers with matching kets to next array
-			'featured' => 'WordPress Schema_wp_meta_box_santitize_boolean',
+			'featured' => 'schema_wp_meta_box_santitize_boolean',
 			'title' => 'sanitize_text_field',
 			'desc' => 'wp_kses_data'
 		),

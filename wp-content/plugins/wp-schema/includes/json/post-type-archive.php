@@ -8,14 +8,14 @@
 // Exit if accessed directly
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-add_action('wp_head', 'WordPress Schema_wp_output_post_type_archive');
+add_action('wp_head', 'schema_wp_output_post_type_archive');
 /**
- * The main function responsible for output WordPress Schema json-ld 
+ * The main function responsible for output schema json-ld 
  *
  * @since 1.6.9.8
- * @return WordPress Schema json-ld final output
+ * @return schema json-ld final output
  */
-function WordPress Schema_wp_output_post_type_archive() {
+function schema_wp_output_post_type_archive() {
 	
 	global $post;
 	
@@ -24,14 +24,14 @@ function WordPress Schema_wp_output_post_type_archive() {
 	
 		$post_type = get_post_type();
 	
-		$enabled = WordPress Schema_wp_is_post_type_enabled( $post_type ) ;
+		$enabled = schema_wp_is_post_type_enabled( $post_type ) ;
 		if ( ! $enabled) return;
 	
-		//add_filter( 'edd_add_WordPress Schema_microdata', '__return_false' );
+		//add_filter( 'edd_add_schema_microdata', '__return_false' );
 		// add action to hook to this function
-		do_action('WordPress Schema_wp_action_post_type_archive');
+		do_action('schema_wp_action_post_type_archive');
 
-		$json = WordPress Schema_wp_get_post_type_archive_json( $post_type );
+		$json = schema_wp_get_post_type_archive_json( $post_type );
 		
 		$output = '';
 		
@@ -40,7 +40,7 @@ function WordPress Schema_wp_output_post_type_archive() {
 		
 		if ( $json ) {
 			$output .= "\n\n";
-			$output .= '<!-- This site is optimized with the WordPress Schema plugin v'.WordPress SchemaWP_VERSION.' - https://WordPress Schema.press -->';
+			$output .= '<!-- This site is optimized with the Schema plugin v'.SCHEMAWP_VERSION.' - https://schema.press -->';
 			$output .= "\n";
 			$output .= '<script type="application/ld+json">' . json_encode($json, JSON_UNESCAPED_UNICODE) . '</script>';
 			$output .= "\n\n";
@@ -53,11 +53,11 @@ function WordPress Schema_wp_output_post_type_archive() {
 /**
  * The main function responsible for putting shema array all together
  *
- * @param string $type for WordPress Schema type (example: Person)
+ * @param string $type for schema type (example: Person)
  * @since 1.6.9.8
- * @return WordPress Schema output
+ * @return schema output
  */
-function WordPress Schema_wp_get_post_type_archive_json( $post_type ) {
+function schema_wp_get_post_type_archive_json( $post_type ) {
 	
 	global $post, $wp_query, $query_string;
 	
@@ -68,8 +68,8 @@ function WordPress Schema_wp_get_post_type_archive_json( $post_type ) {
 	if ( empty($wp_query->query_vars) ) return;
 	
 	$blogPost 	= array();
-	$WordPress Schema 	= array();
-	$url		= WordPress Schema_wp_get_archive_link( $post_type ) ? WordPress Schema_wp_get_archive_link($post_type) : get_home_url();
+	$schema 	= array();
+	$url		= schema_wp_get_archive_link( $post_type ) ? schema_wp_get_archive_link($post_type) : get_home_url();
 	
 	$secondary_loop = new WP_Query( $wp_query->query_vars );
 	
@@ -80,21 +80,21 @@ function WordPress Schema_wp_get_post_type_archive_json( $post_type ) {
 		   
 			$i = 1;
 			
-			foreach ($secondary_loop->posts as $WordPress Schema_post) {
+			foreach ($secondary_loop->posts as $schema_post) {
 				
 				// pull json from post meta
-				$WordPress Schema_json = get_post_meta( $WordPress Schema_post->ID, '_WordPress Schema_json', true );
+				$schema_json = get_post_meta( $schema_post->ID, '_schema_json', true );
 				
-				if ( isset($WordPress Schema_json) && is_array($WordPress Schema_json) ) {
+				if ( isset($schema_json) && is_array($schema_json) ) {
 					
 					// override urls, fix for: All values provided for url must point to the same page.
-					$WordPress Schema_json['url'] = $url.'#'.$WordPress Schema_post->post_name;
+					$schema_json['url'] = $url.'#'.$schema_post->post_name;
 					
 					$blogPost[] = array(
 						'@type'		=> 'ListItem',
 						//'url'		=> '', // ListItem with url and ListItem with item are incompatible.
       					'position'	=> $i,
-      					'item' 		=> $WordPress Schema_json
+      					'item' 		=> $schema_json
 					);
 				}
 				
@@ -110,15 +110,15 @@ function WordPress Schema_wp_get_post_type_archive_json( $post_type ) {
 		
 		if ( ! empty($blogPost)) {
 			// put all together
-			$WordPress Schema = array
+			$schema = array
         	(
-				'@context' 			=> 'http://WordPress Schema.org/',
+				'@context' 			=> 'http://schema.org/',
 				//'@type' 			=> array('ItemList', 'CreativeWork', 'WebPage'),
 				'@type' 			=> array('ItemList', 'CreativeWork'),
 				'name' 				=> isset($post_type_archive_title) ? $post_type_archive_title : get_bloginfo( 'name' ),
 				'description' 		=> isset($obj->description) ? $obj->description : '',
 				'url' 				=> $url,
-				'itemListOrder' 	=> 'http://WordPress Schema.org/ItemListOrderAscending',
+				'itemListOrder' 	=> 'http://schema.org/ItemListOrderAscending',
 				'numberOfItems' 	=> count($blogPost),
 				'itemListElement' 	=> $blogPost,
         	);
@@ -127,7 +127,7 @@ function WordPress Schema_wp_get_post_type_archive_json( $post_type ) {
 	endif;
 	
 	// debug
-	//echo'<pre>';print_r($WordPress Schema);echo'</pre>';exit;
+	//echo'<pre>';print_r($schema);echo'</pre>';exit;
 	
-	return apply_filters( 'WordPress Schema_post_type_archive_output', $WordPress Schema );
+	return apply_filters( 'schema_post_type_archive_output', $schema );
 }
