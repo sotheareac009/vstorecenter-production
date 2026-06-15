@@ -20,7 +20,7 @@ if ( ! is_user_logged_in() ) {
 }
 
 $current_user   = wp_get_current_user();
-$is_site_owner  = ( $current_user->user_login === 'reach' || $current_user->user_email === 'blaxkk.stone.68@gmail.com' );
+$is_site_owner  = current_user_can( 'manage_options' );
 $active_tab     = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'overview';
 // Block non-owners from accessing owner-only tabs via URL
 if ( $active_tab === 'users' && ! $is_site_owner ) $active_tab = 'overview';
