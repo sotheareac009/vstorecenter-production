@@ -25,6 +25,7 @@ $active_tab     = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'overvi
 // Block non-owners from accessing owner-only tabs via URL
 if ( $active_tab === 'users' && ! $is_site_owner ) $active_tab = 'overview';
 if ( $active_tab === 'telegram-users' && ! $is_site_owner ) $active_tab = 'overview';
+if ( $active_tab === 'guest-users' && ! $is_site_owner ) $active_tab = 'overview';
 
 // ── VIP / VVIP toggle handler ─────────────────────────────────────────────────
 if (
@@ -163,6 +164,7 @@ $menu_items = [
     'analytics' => [ 'icon' => 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', 'label' => 'Analytics' ],
     'users'     => [ 'icon' => 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z', 'label' => 'Users', 'owner_only' => true ],
     'telegram-users' => [ 'icon' => 'M21.5 4.5l-3.1 14.6c-.2 1-1 .9-1.6.6l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.9 8.9-8c.4-.4-.1-.6-.6-.3L6.2 12 1.7 10.6c-1-.3-1-1 .2-1.5l17.6-6.8c.8-.3 1.5.2 1.2 1.2z', 'label' => 'Telegram Chatbot Users', 'owner_only' => true ],
+    'guest-users'    => [ 'icon' => 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z', 'label' => 'Guest Chat Users', 'owner_only' => true ],
     'products'  => [ 'icon' => 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4', 'label' => 'Products', 'href' => admin_url( 'edit.php?post_type=product' ) ],
     'orders'    => [ 'icon' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01', 'label' => 'Orders', 'href' => admin_url( 'edit.php?post_type=shop_order' ) ],
     'wp-admin'  => [ 'icon' => 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z', 'label' => 'WP Admin', 'href' => admin_url(), 'owner_only' => true ],
@@ -2641,6 +2643,143 @@ body {
                 <?php if ( $tg_current_pg < $tg_total_pages ) : ?>
                     <a class="ds-tab" href="<?php echo esc_url( add_query_arg( [ 'tab' => 'telegram-users', 'tg_pg' => $tg_current_pg + 1 ], home_url( '/dashboard/' ) ) ); ?>">Next &rsaquo;</a>
                     <a class="ds-tab" href="<?php echo esc_url( add_query_arg( [ 'tab' => 'telegram-users', 'tg_pg' => $tg_total_pages ], home_url( '/dashboard/' ) ) ); ?>">Last &raquo;</a>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
+        </div>
+
+        <!-- ── GUEST CHAT USERS TAB ───────────────────────────────────── -->
+        <div class="ds-panel <?php echo $active_tab === 'guest-users' ? 'active' : ''; ?>" id="panel-guest-users">
+        <?php if ( $active_tab === 'guest-users' ) :
+            global $wpdb;
+
+            if ( function_exists( 'shopys_ai_create_guest_table' ) ) {
+                shopys_ai_create_guest_table();
+            }
+
+            $g_table_name  = $wpdb->prefix . 'chatbot_guest_users';
+            $g_has_table   = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $g_table_name ) ) === $g_table_name;
+            $g_users       = [];
+            $g_total       = 0;
+            $g_messages    = 0;
+            $g_cost        = 0.0;
+            $g_active_today = 0;
+            $g_total_pages = 1;
+            $g_current_pg  = isset( $_GET['g_pg'] ) ? max( 1, (int) $_GET['g_pg'] ) : 1;
+            $g_per_page    = 20;
+            $g_today       = current_time( 'Y-m-d' );
+
+            if ( $g_has_table ) {
+                $g_total        = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$g_table_name}" );
+                $g_messages     = (int) $wpdb->get_var( "SELECT COALESCE(SUM(message_count),0) FROM {$g_table_name}" );
+                $g_cost         = (float) $wpdb->get_var( "SELECT COALESCE(SUM(total_cost),0) FROM {$g_table_name}" );
+                $g_active_today = (int) $wpdb->get_var( $wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$g_table_name} WHERE daily_date = %s", $g_today
+                ) );
+                $g_total_pages  = max( 1, (int) ceil( $g_total / $g_per_page ) );
+                $g_current_pg   = min( $g_current_pg, $g_total_pages );
+                $g_offset       = ( $g_current_pg - 1 ) * $g_per_page;
+                $g_users        = $wpdb->get_results(
+                    $wpdb->prepare(
+                        "SELECT * FROM {$g_table_name} ORDER BY last_active DESC LIMIT %d OFFSET %d",
+                        $g_per_page, $g_offset
+                    ),
+                    ARRAY_A
+                );
+            }
+
+            $g_limit = (int) get_option( 'shopys_ai_daily_limit', 10 );
+        ?>
+
+        <div class="ds-cards" style="margin-bottom:24px;">
+            <div class="ds-card">
+                <div class="ds-card-icon">
+                    <svg viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                </div>
+                <div class="ds-card-label">Guest Users</div>
+                <div class="ds-card-value"><?php echo number_format_i18n( $g_total ); ?></div>
+                <div class="ds-card-sub">Unique visitors (by IP)</div>
+            </div>
+            <div class="ds-card">
+                <div class="ds-card-icon">
+                    <svg viewBox="0 0 24 24"><path d="M12 8c-2.21 0-4 1.79-4 4 0 .74.2 1.43.55 2.03L7 17h3.11c.57.36 1.25.57 1.94.57 2.21 0 4-1.79 4-4s-1.79-3.57-4-3.57zm-7-4h14a2 2 0 012 2v12a2 2 0 01-2 2h-4l-3 3-3-3H5a2 2 0 01-2-2V6a2 2 0 012-2z"/></svg>
+                </div>
+                <div class="ds-card-label">Total Messages</div>
+                <div class="ds-card-value"><?php echo number_format_i18n( $g_messages ); ?></div>
+                <div class="ds-card-sub">All guest messages</div>
+            </div>
+            <div class="ds-card">
+                <div class="ds-card-icon">
+                    <svg viewBox="0 0 24 24"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg>
+                </div>
+                <div class="ds-card-label">Active Today</div>
+                <div class="ds-card-value"><?php echo number_format_i18n( $g_active_today ); ?></div>
+                <div class="ds-card-sub">Guests chatting today</div>
+            </div>
+            <div class="ds-card">
+                <div class="ds-card-icon">
+                    <svg viewBox="0 0 24 24"><path d="M12 1a9 9 0 100 18 9 9 0 000-18zm1 14.93V17h-2v-1.09A4.002 4.002 0 018 12h2a2 2 0 104 0c0-1.1-.9-2-2-2a4 4 0 110-8V1h2v1.07A4.002 4.002 0 0116 6h-2a2 2 0 10-4 0c0 1.1.9 2 2 2a4 4 0 110 8z"/></svg>
+                </div>
+                <div class="ds-card-label">API Total Cost</div>
+                <div class="ds-card-value">$<?php echo esc_html( number_format( $g_cost, 4 ) ); ?></div>
+                <div class="ds-card-sub">All guest messages</div>
+            </div>
+        </div>
+
+        <div class="ds-table-wrap">
+            <div class="ds-table-head" style="display:flex;align-items:center;justify-content:space-between;">
+                <span>Guest Chat Users <span style="color:var(--muted);font-weight:400;font-size:12px;margin-left:6px;"><?php echo number_format_i18n( $g_total ); ?> guests</span></span>
+                <span style="font-size:12px;color:var(--muted);">Daily limit: <?php echo number_format_i18n( $g_limit ); ?>/day</span>
+            </div>
+
+            <?php if ( ! $g_has_table ) : ?>
+                <div style="padding:18px;color:var(--muted);">The guest users table does not exist yet.</div>
+            <?php elseif ( empty( $g_users ) ) : ?>
+                <div style="padding:18px;color:var(--muted);">No guest chat users yet.</div>
+            <?php else : ?>
+            <table class="ds-table">
+                <thead><tr>
+                    <th>IP Address</th>
+                    <th>First Seen</th>
+                    <th>Last Active</th>
+                    <th>Total Messages</th>
+                    <th>Today's Usage</th>
+                    <th>API Cost</th>
+                </tr></thead>
+                <tbody>
+                <?php foreach ( $g_users as $g_user ) :
+                    $g_used_today = ( ( $g_user['daily_date'] ?? '' ) === $g_today ) ? (int) $g_user['daily_count'] : 0;
+                    $g_at_limit   = $g_used_today >= $g_limit;
+                ?>
+                <tr>
+                    <td><code><?php echo esc_html( $g_user['ip'] ); ?></code></td>
+                    <td><?php echo esc_html( $g_user['first_seen'] ?: '—' ); ?></td>
+                    <td><?php echo esc_html( $g_user['last_active'] ?: '—' ); ?></td>
+                    <td><?php echo number_format_i18n( (int) ( $g_user['message_count'] ?? 0 ) ); ?></td>
+                    <td>
+                        <span style="font-weight:600;<?php echo $g_at_limit ? 'color:#dc2626;' : ''; ?>">
+                            <?php echo number_format_i18n( $g_used_today ) . ' / ' . number_format_i18n( $g_limit ); ?>
+                        </span>
+                    </td>
+                    <td><strong>$<?php echo esc_html( number_format( (float) ( $g_user['total_cost'] ?? 0 ), 4 ) ); ?></strong></td>
+                </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+
+            <?php if ( $g_total_pages > 1 ) : ?>
+            <div style="display:flex;justify-content:flex-end;gap:8px;padding:14px 16px;border-top:1px solid var(--border);">
+                <?php if ( $g_current_pg > 1 ) : ?>
+                    <a class="ds-tab" href="<?php echo esc_url( add_query_arg( [ 'tab' => 'guest-users', 'g_pg' => 1 ], home_url( '/dashboard/' ) ) ); ?>">&laquo; First</a>
+                    <a class="ds-tab" href="<?php echo esc_url( add_query_arg( [ 'tab' => 'guest-users', 'g_pg' => $g_current_pg - 1 ], home_url( '/dashboard/' ) ) ); ?>">&lsaquo; Prev</a>
+                <?php endif; ?>
+                <span class="ds-tab active">Page <?php echo esc_html( $g_current_pg ); ?> of <?php echo esc_html( $g_total_pages ); ?></span>
+                <?php if ( $g_current_pg < $g_total_pages ) : ?>
+                    <a class="ds-tab" href="<?php echo esc_url( add_query_arg( [ 'tab' => 'guest-users', 'g_pg' => $g_current_pg + 1 ], home_url( '/dashboard/' ) ) ); ?>">Next &rsaquo;</a>
+                    <a class="ds-tab" href="<?php echo esc_url( add_query_arg( [ 'tab' => 'guest-users', 'g_pg' => $g_total_pages ], home_url( '/dashboard/' ) ) ); ?>">Last &raquo;</a>
                 <?php endif; ?>
             </div>
             <?php endif; ?>

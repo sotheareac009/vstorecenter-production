@@ -69,6 +69,48 @@ function shopys_ai_create_tg_table() {
 }
 
 /**
+ * Create the chatbot_guest_users table (Free Chat / no-login visitors).
+ */
+add_action( 'after_switch_theme', 'shopys_ai_create_guest_table' );
+add_action( 'admin_init', 'shopys_ai_maybe_create_guest_table' );
+
+function shopys_ai_maybe_create_guest_table() {
+    if ( get_option( 'shopys_ai_guest_table_version' ) !== '1.1' ) {
+        shopys_ai_create_guest_table();
+    }
+}
+
+function shopys_ai_create_guest_table() {
+    global $wpdb;
+    $table   = $wpdb->prefix . 'chatbot_guest_users';
+    $charset = $wpdb->get_charset_collate();
+
+    // Use a direct query (not dbDelta) — dbDelta misparses "IF NOT EXISTS".
+    // CREATE TABLE IF NOT EXISTS is natively idempotent and safe to re-run.
+    $wpdb->query( "CREATE TABLE IF NOT EXISTS {$table} (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        ip VARCHAR(45) NOT NULL,
+        first_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+        last_active DATETIME DEFAULT CURRENT_TIMESTAMP,
+        message_count INT UNSIGNED DEFAULT 0,
+        daily_count INT UNSIGNED DEFAULT 0,
+        daily_date DATE DEFAULT NULL,
+        total_cost DECIMAL(10,6) DEFAULT 0.000000,
+        PRIMARY KEY (id),
+        UNIQUE KEY ip (ip),
+        KEY last_active_idx (last_active)
+    ) {$charset}" );
+
+    // Migrate tables created before total_cost existed (v1.0 → v1.1)
+    $current_version = get_option( 'shopys_ai_guest_table_version', '1.0' );
+    if ( version_compare( $current_version, '1.1', '<' ) ) {
+        $wpdb->query( "ALTER TABLE {$table} ADD COLUMN IF NOT EXISTS total_cost DECIMAL(10,6) DEFAULT 0.000000" );
+    }
+
+    update_option( 'shopys_ai_guest_table_version', '1.1' );
+}
+
+/**
  * AJAX: Verify Telegram auth data, log user to DB, set session cookie.
  */
 add_action( 'wp_ajax_shopys_ai_tg_auth',        'shopys_ai_tg_auth_handler' );
@@ -258,7 +300,7 @@ function shopys_ai_check_and_increment_daily( $tg_id ) {
 }
 
 /**
- * Guest (no-login / Free Chat) daily limit, tracked per IP via transient.
+ * Guest (no-login / Free Chat) daily limit.
  * Uses the same "Daily message limit" option as logged-in users (default 10).
  */
 function shopys_ai_get_guest_limit() {
@@ -266,9 +308,9 @@ function shopys_ai_get_guest_limit() {
 }
 
 /**
- * Build a per-IP, per-day transient key for guest message counting.
+ * Resolve the visitor's IP address (honours common proxy/CDN headers).
  */
-function shopys_ai_guest_limit_key() {
+function shopys_ai_get_guest_ip() {
     $ip = '';
     if ( ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
         $ip = $_SERVER['HTTP_CF_CONNECTING_IP'];
@@ -278,34 +320,75 @@ function shopys_ai_guest_limit_key() {
     } elseif ( ! empty( $_SERVER['REMOTE_ADDR'] ) ) {
         $ip = $_SERVER['REMOTE_ADDR'];
     }
-    return 'sai_guest_' . md5( $ip ) . '_' . current_time( 'Y-m-d' );
+    return filter_var( $ip, FILTER_VALIDATE_IP ) ? $ip : '0.0.0.0';
 }
 
 /**
  * Current guest usage without incrementing. Same shape as the TG version.
  */
 function shopys_ai_get_guest_usage() {
+    global $wpdb;
     $limit = shopys_ai_get_guest_limit();
-    $used  = (int) get_transient( shopys_ai_guest_limit_key() );
+    $table = $wpdb->prefix . 'chatbot_guest_users';
+    $ip    = shopys_ai_get_guest_ip();
+    $today = current_time( 'Y-m-d' );
+
+    $row  = $wpdb->get_row( $wpdb->prepare(
+        "SELECT daily_count, daily_date FROM {$table} WHERE ip = %s", $ip
+    ) );
+    $used = ( $row && $row->daily_date === $today ) ? (int) $row->daily_count : 0;
+
     return array( 'used' => $used, 'remaining' => max( 0, $limit - $used ), 'limit' => $limit );
 }
 
 /**
- * Check and increment the guest daily message count.
+ * Check and increment the guest daily message count (persisted per IP).
  * Returns array: ['allowed' => bool, 'remaining' => int, 'limit' => int]
  */
 function shopys_ai_check_and_increment_guest_daily() {
+    global $wpdb;
     $limit = shopys_ai_get_guest_limit();
-    $key   = shopys_ai_guest_limit_key();
-    $used  = (int) get_transient( $key );
+    $table = $wpdb->prefix . 'chatbot_guest_users';
+    $ip    = shopys_ai_get_guest_ip();
+    $today = current_time( 'Y-m-d' );
+    $now   = current_time( 'mysql' );
 
+    $row = $wpdb->get_row( $wpdb->prepare(
+        "SELECT id, daily_count, daily_date FROM {$table} WHERE ip = %s", $ip
+    ) );
+
+    // First time we ever see this guest
+    if ( ! $row ) {
+        $wpdb->insert( $table, array(
+            'ip'            => $ip,
+            'first_seen'    => $now,
+            'last_active'   => $now,
+            'message_count' => 1,
+            'daily_count'   => 1,
+            'daily_date'    => $today,
+        ), array( '%s', '%s', '%s', '%d', '%d', '%s' ) );
+        return array( 'allowed' => true, 'remaining' => max( 0, $limit - 1 ), 'limit' => $limit );
+    }
+
+    // New day → reset the daily counter
+    if ( $row->daily_date !== $today ) {
+        $wpdb->query( $wpdb->prepare(
+            "UPDATE {$table} SET daily_count = 1, daily_date = %s, message_count = message_count + 1, last_active = %s WHERE id = %d",
+            $today, $now, $row->id
+        ) );
+        return array( 'allowed' => true, 'remaining' => max( 0, $limit - 1 ), 'limit' => $limit );
+    }
+
+    $used = (int) $row->daily_count;
     if ( $used >= $limit ) {
         return array( 'allowed' => false, 'remaining' => 0, 'limit' => $limit );
     }
 
-    $used++;
-    set_transient( $key, $used, DAY_IN_SECONDS );
-    return array( 'allowed' => true, 'remaining' => max( 0, $limit - $used ), 'limit' => $limit );
+    $wpdb->query( $wpdb->prepare(
+        "UPDATE {$table} SET daily_count = daily_count + 1, message_count = message_count + 1, last_active = %s WHERE id = %d",
+        $now, $row->id
+    ) );
+    return array( 'allowed' => true, 'remaining' => max( 0, $limit - $used - 1 ), 'limit' => $limit );
 }
 
 /**
@@ -373,6 +456,33 @@ function shopys_ai_tg_add_cost( $tg_id, $cost ) {
         "UPDATE {$table} SET total_cost = total_cost + %f WHERE telegram_id = %d",
         $cost, $tg_id
     ) );
+}
+
+/**
+ * Add API cost to the current Free Chat guest's total (keyed by request IP).
+ */
+function shopys_ai_guest_add_cost( $cost ) {
+    if ( $cost <= 0 ) return;
+    global $wpdb;
+    $table = $wpdb->prefix . 'chatbot_guest_users';
+    $wpdb->query( $wpdb->prepare(
+        "UPDATE {$table} SET total_cost = total_cost + %f WHERE ip = %s",
+        $cost, shopys_ai_get_guest_ip()
+    ) );
+}
+
+/**
+ * Record API cost for whoever is chatting — Telegram user or Free Chat guest.
+ * Re-derives identity from the request so it works regardless of caller scope.
+ */
+function shopys_ai_add_message_cost( $tg_id, $result ) {
+    if ( ! is_array( $result ) ) return;
+    $cost = shopys_ai_calculate_cost( $result['model'], $result['input_tokens'], $result['output_tokens'] );
+    if ( ! empty( $tg_id ) ) {
+        shopys_ai_tg_add_cost( $tg_id, $cost );
+    } elseif ( get_option( 'shopys_ai_free_chat', '1' ) !== '0' ) {
+        shopys_ai_guest_add_cost( $cost );
+    }
 }
 
 /**
@@ -1725,6 +1835,8 @@ function shopys_ai_chat_handler() {
         $ai_remaining = $limit_check['remaining'];
     } elseif ( $is_free_chat ) {
         // Free Chat: no login required, but still cap each guest (by IP) per day.
+        // Ensure the guest table exists even before any admin has loaded wp-admin.
+        shopys_ai_maybe_create_guest_table();
         $guest_check = shopys_ai_check_and_increment_guest_daily();
         if ( ! $guest_check['allowed'] ) {
             $tz        = get_option( 'timezone_string' ) ?: 'UTC';
@@ -2666,10 +2778,7 @@ Outside link comparison is currently DISABLED. If a user pastes product URLs fro
                 }
 
                 // Track cost
-                if ( ! empty( $tg_id ) && is_array( $result ) ) {
-                    $cost = shopys_ai_calculate_cost( $result['model'], $result['input_tokens'], $result['output_tokens'] );
-                    shopys_ai_tg_add_cost( $tg_id, $cost );
-                }
+                shopys_ai_add_message_cost( $tg_id, $result );
                 $result = is_array( $result ) ? $result['text'] : $result;
 
                 $product_ids = array();
@@ -2751,10 +2860,7 @@ Outside link comparison is currently DISABLED. If a user pastes product URLs fro
         }
 
         // Track cost
-        if ( ! empty( $tg_id ) && is_array( $result ) ) {
-            $cost = shopys_ai_calculate_cost( $result['model'], $result['input_tokens'], $result['output_tokens'] );
-            shopys_ai_tg_add_cost( $tg_id, $cost );
-        }
+        shopys_ai_add_message_cost( $tg_id, $result );
         $result = is_array( $result ) ? $result['text'] : $result;
 
         $product_ids = array();
@@ -3100,10 +3206,7 @@ Outside link comparison is currently DISABLED. If a user pastes product URLs fro
     }
 
     // Track cost
-    if ( ! empty( $tg_id ) && is_array( $result ) ) {
-        $cost = shopys_ai_calculate_cost( $result['model'], $result['input_tokens'], $result['output_tokens'] );
-        shopys_ai_tg_add_cost( $tg_id, $cost );
-    }
+    shopys_ai_add_message_cost( $tg_id, $result );
     $result = is_array( $result ) ? $result['text'] : $result;
 
     // Parse [[PRODUCTS:...]] tag out of Claude's plain-text response
