@@ -251,12 +251,15 @@
         headerName.textContent = cfg.bot_name;
 
         // Restore Telegram session from localStorage
-        if (cfg.require_tg_login === '1') {
+        if (cfg.free_chat !== '1' && cfg.require_tg_login === '1') {
             var saved = localStorage.getItem('sai_tg_session');
             if (saved) {
                 try { tgSession = JSON.parse(saved); } catch (e) { tgSession = null; }
             }
             initTelegramGate();
+        } else if (cfg.free_chat === '1') {
+            // Free Chat: everyone chats as a guest — no login gate, just show the limit bar.
+            fetchUserStatus();
         }
 
         // Events
@@ -524,13 +527,16 @@
     }
 
     function fetchUserStatus() {
-        if (!tgSession) return;
+        // Logged-in users send their session; Free Chat guests fetch guest usage.
+        if (!tgSession && cfg.free_chat !== '1') return;
         var fd = new FormData();
         fd.append('action', 'shopys_ai_get_status');
         fd.append('nonce', cfg.nonce);
-        fd.append('tg_id', tgSession.telegram_id);
-        fd.append('tg_auth_date', tgSession.auth_date);
-        fd.append('tg_session', tgSession.session);
+        if (tgSession) {
+            fd.append('tg_id', tgSession.telegram_id);
+            fd.append('tg_auth_date', tgSession.auth_date);
+            fd.append('tg_session', tgSession.session);
+        }
 
         var xhr = new XMLHttpRequest();
         xhr.open('POST', cfg.ajax_url, true);
@@ -693,7 +699,7 @@
 
         if (isOpen && messagesEl.children.length === 0) {
             // If Telegram login required and not logged in, don't show welcome
-            if (cfg.require_tg_login === '1' && !tgSession) {
+            if (cfg.free_chat !== '1' && cfg.require_tg_login === '1' && !tgSession) {
                 // Gate will be shown by initTelegramGate
             } else {
                 // Try to restore previous chat first; only show welcome if there's nothing to restore.
