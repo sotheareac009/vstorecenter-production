@@ -20,6 +20,20 @@ function shopys_marvo_banner_default() {
     return untrailingslashit( home_url() ) . '/wp-content/uploads/2025/12/marvooo.jpg';
 }
 
+/**
+ * Per-category section banner fields (theme_mod key => admin label).
+ * Keys must match the banner_key values used in front-page.php.
+ */
+function shopys_category_banner_fields() {
+    return array(
+        'shopys_cat_banner_laptop'      => __( 'Laptops Banner', 'shopys' ),
+        'shopys_cat_banner_pchardware'  => __( 'PC Hardware Banner', 'shopys' ),
+        'shopys_cat_banner_accessories' => __( 'Accessories Banner', 'shopys' ),
+        'shopys_cat_banner_gaminggear'  => __( 'Gaming Gear Banner', 'shopys' ),
+        'shopys_cat_banner_monitor'     => __( 'Monitors Banner', 'shopys' ),
+    );
+}
+
 // ── Admin menu ───────────────────────────────────────────────────────────────
 add_action( 'admin_menu', 'shopys_hero_slider_menu' );
 function shopys_hero_slider_menu() {
@@ -48,6 +62,13 @@ function shopys_save_hero_slider() {
 
     if ( isset( $_POST['shopys_marvo_banner'] ) ) {
         set_theme_mod( 'shopys_marvo_banner', esc_url_raw( wp_unslash( $_POST['shopys_marvo_banner'] ) ) );
+    }
+
+    // Per-category section banners (optional — gradient fallback when empty)
+    foreach ( shopys_category_banner_fields() as $key => $label ) {
+        if ( isset( $_POST[ $key ] ) ) {
+            set_theme_mod( $key, esc_url_raw( wp_unslash( $_POST[ $key ] ) ) );
+        }
     }
 
     wp_redirect( admin_url( 'admin.php?page=shopys-hero-slider&saved=1' ) );
@@ -128,6 +149,17 @@ function shopys_hero_slider_page() {
             <p style="color:#666;margin:0 0 16px;"><?php esc_html_e( 'Banner image displayed above the Marvo product grid on the home page.', 'shopys' ); ?></p>
             <div style="max-width:320px;">
                 <?php shopys_image_card( 'shopys_marvo_banner', __( 'Marvo Banner', 'shopys' ), $marvo ); ?>
+            </div>
+
+            <!-- ── Category Section Banners ── -->
+            <h2 style="margin:36px 0 6px;font-size:16px;font-weight:700;color:#1a1a2e;border-left:4px solid #13e800;padding-left:10px;">
+                <?php esc_html_e( 'Category Section Banners', 'shopys' ); ?>
+            </h2>
+            <p style="color:#666;margin:0 0 16px;"><?php esc_html_e( 'Optional banner shown above each category block on the home page. Leave empty to use a premium gradient banner.', 'shopys' ); ?></p>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;">
+                <?php foreach ( shopys_category_banner_fields() as $cb_key => $cb_label ) {
+                    shopys_image_card( $cb_key, $cb_label, get_theme_mod( $cb_key, '' ) );
+                } ?>
             </div>
 
             <p style="margin-top:28px;">

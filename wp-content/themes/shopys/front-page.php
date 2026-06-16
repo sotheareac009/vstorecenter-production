@@ -350,7 +350,7 @@ $slide_count = count( $slider_images );
 .fp-cat-section .ppg-card .add_to_cart_button,
 .fp-cat-section .ppg-card .ppg-view-btn {
     background: #13e800 !important;
-    color: #000 !important;
+    color: #fff !important;
     border: none !important;
     font-weight: 700 !important;
     border-radius: 8px !important;
@@ -360,7 +360,7 @@ $slide_count = count( $slider_images );
 .fp-cat-section .ppg-card .add_to_cart_button:hover,
 .fp-cat-section .ppg-card .ppg-view-btn:hover {
     background: #0fb500 !important;
-    color: #000 !important;
+    color: #fff !important;
     transform: translateY(-1px) !important;
 }
 
@@ -1109,6 +1109,7 @@ if ( $trust_enabled ) {
         <img src="<?php echo esc_url( get_theme_mod( 'shopys_marvo_banner', shopys_marvo_banner_default() ) ); ?>" alt="Marvo Gaming Gear" />
         <div class="fp-marvo__banner-overlay">
             <div class="fp-marvo__banner-text">
+                <span class="fp-marvo__eyebrow">Official Partner</span>
                 <h2>MARVO Gaming Gear</h2>
                 <p>Keyboards · Mice · Headsets · Mousepads · Speakers</p>
                 <a href="<?php echo esc_url( get_term_link('marvo','product_cat') ); ?>">
@@ -1118,7 +1119,7 @@ if ( $trust_enabled ) {
             </div>
         </div>
     </div>
-    <?php echo do_shortcode( '[premium_products category="marvo" limit="12" columns="6" filter="false" cart="true" show_description="false" pagination_type="normal"]' ); ?>
+    <?php echo do_shortcode( '[premium_products category="marvo" limit="18" columns="6" filter="false" cart="true" show_description="false" pagination_type="normal"]' ); ?>
 </section>
 
 <!-- ═══════════════════════════ USED PRODUCTS ════════════════════════ -->
@@ -1146,7 +1147,7 @@ if ( $trust_enabled ) {
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </a>
             </div>
-            <?php echo do_shortcode( '[premium_products category="used-product" limit="12" columns="6" filter="false" cart="true" show_description="false" pagination_type="normal"]' ); ?>
+            <?php echo do_shortcode( '[premium_products category="used-product" limit="18" columns="6" filter="false" cart="true" show_description="false" pagination_type="normal"]' ); ?>
         </div>
     </div>
 </section>
@@ -1170,38 +1171,53 @@ if ( $trust_enabled ) {
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </a>
             </div>
-            <?php echo do_shortcode( '[premium_products limit="12" columns="6" filter="false" cart="true" show_description="false" pagination_type="normal" orderby="date" order="DESC"]' ); ?>
+            <?php echo do_shortcode( '[premium_products limit="18" columns="6" filter="false" cart="true" show_description="false" pagination_type="normal" orderby="date" order="DESC"]' ); ?>
         </div>
 
         <?php
         $fp_categories = array(
-            array( 'slug' => 'laptop',           'label' => 'Laptops',      'count' => 93,  'custom_url' => 'laptop-v2' ),
-            array( 'slug' => 'component,desktop', 'label' => 'PC Hardware',  'count' => 249, 'custom_url' => 'pc-harware-v2' ),
-            array( 'slug' => 'accessories',       'label' => 'Accessories',  'count' => 69,  'custom_url' => 'accessories' ),
-            array( 'slug' => 'gaming-gear',       'label' => 'Gaming Gear',  'count' => 80,  'custom_url' => 'gaming-gear' ),
-            array( 'slug' => 'monitor',           'label' => 'Monitors',     'count' => 37,  'custom_url' => '' ),
+            array( 'slug' => 'laptop',            'label' => 'Laptops',     'count' => 93,  'custom_url' => 'laptop-v2',
+                   'sub' => 'Ultrabooks · Gaming · Business — top brands', 'banner_key' => 'shopys_cat_banner_laptop',
+                   'grad' => 'linear-gradient(120deg,#0f2027,#203a43,#2c5364)' ),
+            array( 'slug' => 'component,desktop', 'label' => 'PC Hardware', 'count' => 249, 'custom_url' => 'pc-harware-v2',
+                   'sub' => 'CPUs · GPUs · Motherboards · RAM & more', 'banner_key' => 'shopys_cat_banner_pchardware',
+                   'grad' => 'linear-gradient(120deg,#41295a,#2f0743)' ),
+            array( 'slug' => 'accessories',       'label' => 'Accessories', 'count' => 69,  'custom_url' => 'accessories',
+                   'sub' => 'Cables · Storage · Webcams · Essentials', 'banner_key' => 'shopys_cat_banner_accessories',
+                   'grad' => 'linear-gradient(120deg,#136a8a,#267871)' ),
+            array( 'slug' => 'gaming-gear',       'label' => 'Gaming Gear', 'count' => 80,  'custom_url' => 'gaming-gear',
+                   'sub' => 'Keyboards · Mice · Headsets · Chairs', 'banner_key' => 'shopys_cat_banner_gaminggear',
+                   'grad' => 'linear-gradient(120deg,#870000,#190a05)' ),
+            array( 'slug' => 'monitor',           'label' => 'Monitors',    'count' => 37,  'custom_url' => '',
+                   'sub' => 'Gaming · 4K · Ultrawide displays', 'banner_key' => 'shopys_cat_banner_monitor',
+                   'grad' => 'linear-gradient(120deg,#232526,#414345)' ),
         );
 
         foreach ( $fp_categories as $cat ) :
             $first_slug = trim( explode( ',', $cat['slug'] )[0] );
             $cat_obj    = get_term_by( 'slug', $first_slug, 'product_cat' );
             $cat_link   = ! empty( $cat['custom_url'] ) ? home_url( '/' . $cat['custom_url'] . '/' ) : ( $cat_obj ? get_term_link( $cat_obj ) : wc_get_page_permalink( 'shop' ) );
+            $cat_banner = get_theme_mod( $cat['banner_key'], '' );
         ?>
         <div class="fp-cat-section">
-            <div class="fp-section-head">
-                <div class="fp-section-head__left">
-                    <div class="fp-section-head__bar"></div>
-                    <div>
-                        <h2 class="fp-section-head__title"><?php echo esc_html( $cat['label'] ); ?></h2>
-                        <span class="fp-section-head__count"><?php echo esc_html( $cat['count'] ); ?>+ products available</span>
+            <div class="fp-cat-banner <?php echo $cat_banner ? 'has-img' : 'is-gradient'; ?>"<?php echo $cat_banner ? '' : ' style="background:' . esc_attr( $cat['grad'] ) . ';"'; ?>>
+                <?php if ( $cat_banner ) : ?>
+                    <img class="fp-cat-banner__img" src="<?php echo esc_url( $cat_banner ); ?>" alt="<?php echo esc_attr( $cat['label'] ); ?>" loading="lazy" />
+                <?php endif; ?>
+                <div class="fp-cat-banner__overlay">
+                    <div class="fp-cat-banner__text">
+                        <span class="fp-cat-banner__eyebrow"><?php echo esc_html( $cat['count'] ); ?>+ Products</span>
+                        <h2><?php echo esc_html( $cat['label'] ); ?></h2>
+                        <p><?php echo esc_html( $cat['sub'] ); ?></p>
+                        <a href="<?php echo esc_url( $cat_link ); ?>">
+                            Shop <?php echo esc_html( $cat['label'] ); ?>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                        </a>
                     </div>
+                    <div class="fp-cat-banner__icon" aria-hidden="true"><?php echo shopys_get_category_icon( $first_slug, $cat['label'] ); ?></div>
                 </div>
-                <a href="<?php echo esc_url( $cat_link ); ?>" class="fp-section-head__link">
-                    View All <?php echo esc_html( $cat['label'] ); ?>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                </a>
             </div>
-            <?php echo do_shortcode( '[premium_products category="' . esc_attr( $cat['slug'] ) . '" limit="12" columns="6" filter="false" cart="true" show_description="false" pagination_type="normal"]' ); ?>
+            <?php echo do_shortcode( '[premium_products category="' . esc_attr( $cat['slug'] ) . '" limit="18" columns="6" filter="false" cart="true" show_description="false" pagination_type="normal"]' ); ?>
         </div>
         <?php endforeach; ?>
 
@@ -1402,6 +1418,302 @@ if ( $trust_enabled ) {
 
     function startAuto() { timer = setInterval(function () { goTo(cur + 1); }, 3000); }
     startAuto();
+})();
+</script>
+
+<!-- ═══════════════ PREMIUM HOME ENHANCEMENTS (Marvo → end) ═══════════════ -->
+<style>
+/* Every home section uses a clean solid-white background */
+.home .fp-marvo    { background: #ffffff; padding: 50px 5% 58px; }
+.home .fp-used     { background: #ffffff; }
+.home .fp-products { background: #ffffff; }
+.home .fp-brands   { background: #ffffff; border-top: none; padding-top: 56px; }
+.home .fp-trust    { background: #ffffff; }
+.home .fp-cats     { background: #ffffff; }
+.home .fp-categories { background: #ffffff; }
+body.home          { background: #ffffff; }
+/* Force pure white across every layer of the product-list area (kill any residual tint) */
+.home .fp-products,
+.home .fp-products__inner,
+.home .fp-cat-section,
+.home .fp-slider,
+.home .fp-slider .ppg-grid,
+.home .ppg-grid,
+.home .ppg-card,
+.home .ppg-image-wrapper,
+.home .ppg-no-image { background-color: #ffffff !important; }
+
+/* ── Premium Marvo banner ── */
+.home .fp-marvo__banner {
+    border-radius: 20px;
+    max-height: 290px;
+    box-shadow: 0 22px 54px rgba(13,17,23,.30);
+}
+.home .fp-marvo__banner img { height: 290px; transition: transform 7s ease; }
+.home .fp-marvo__banner:hover img { transform: scale(1.07); }
+.home .fp-marvo__banner-overlay {
+    background: linear-gradient(90deg, rgba(7,10,15,.86) 0%, rgba(7,10,15,.5) 52%, rgba(7,10,15,.05) 100%);
+    padding: 0 54px;
+}
+.home .fp-marvo__banner-text h2 {
+    font-size: clamp(26px, 3.4vw, 44px);
+    text-shadow: 0 2px 24px rgba(0,0,0,.45);
+}
+.home .fp-marvo__eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--accent);
+    background: rgba(19,232,0,.13);
+    border: 1px solid rgba(19,232,0,.32);
+    padding: 5px 13px;
+    border-radius: 50px;
+    margin-bottom: 14px;
+}
+.home .fp-marvo__eyebrow::before {
+    content: ''; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent); animation: fp-pulse 1.6s ease-in-out infinite;
+}
+.home .fp-marvo__banner-text a {
+    padding: 11px 26px;
+    border-radius: 50px;
+    font-size: 13.5px;
+    box-shadow: 0 10px 26px rgba(19,232,0,.42);
+}
+.home .fp-marvo__banner-text a:hover { transform: translateY(-2px); }
+
+/* ── Per-category banners (Marvo-style, image or gradient) ── */
+.home .fp-cat-banner {
+    position: relative;
+    border-radius: 18px;
+    overflow: hidden;
+    margin-bottom: 26px;
+    box-shadow: 0 18px 46px rgba(13,17,23,.24);
+}
+.home .fp-cat-banner__img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    transition: transform 7s ease;
+}
+.home .fp-cat-banner.has-img:hover .fp-cat-banner__img { transform: scale(1.07); }
+.home .fp-cat-banner__overlay {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 40px 48px;
+    min-height: 130px;
+    background: linear-gradient(90deg, rgba(7,10,15,.84) 0%, rgba(7,10,15,.4) 55%, rgba(7,10,15,0) 100%);
+}
+.home .fp-cat-banner.is-gradient .fp-cat-banner__overlay {
+    background: linear-gradient(90deg, rgba(0,0,0,.32) 0%, rgba(0,0,0,.05) 60%, transparent 100%);
+}
+.home .fp-cat-banner__text { color: #fff; max-width: 68%; }
+.home .fp-cat-banner__eyebrow {
+    display: inline-block;
+    font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--accent);
+    background: rgba(19,232,0,.14);
+    border: 1px solid rgba(19,232,0,.34);
+    padding: 4px 12px; border-radius: 50px; margin-bottom: 12px;
+}
+.home .fp-cat-banner__text h2 {
+    font-size: clamp(24px, 3vw, 40px);
+    font-weight: 800; line-height: 1.05; letter-spacing: -.5px;
+    margin: 0 0 6px; color: #fff;
+    text-shadow: 0 2px 22px rgba(0,0,0,.4);
+}
+.home .fp-cat-banner__text p {
+    font-size: 14px; opacity: .82; margin: 0 0 16px;
+}
+.home .fp-cat-banner__text a {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--accent); color: #000;
+    font-weight: 700; font-size: 13.5px;
+    padding: 11px 26px; border-radius: 50px;
+    text-decoration: none;
+    box-shadow: 0 10px 26px rgba(19,232,0,.42);
+    transition: transform .2s ease, background .2s ease;
+}
+.home .fp-cat-banner__text a:hover { transform: translateY(-2px); background: #fff; text-decoration: none; }
+.home .fp-cat-banner__text a svg { transition: transform .2s ease; }
+.home .fp-cat-banner__text a:hover svg { transform: translateX(4px); }
+.home .fp-cat-banner__icon { flex-shrink: 0; z-index: 1; }
+.home .fp-cat-banner__icon svg {
+    width: 120px; height: 120px;
+    color: rgba(255,255,255,.13);
+    stroke-width: 1.2;
+}
+
+/* ── Product list as a 2-row horizontal slider with arrows ── */
+.fp-slider { position: relative; }
+.home .fp-slider .ppg-grid {
+    --vis: 6; --g: 14px;
+    display: grid !important;
+    grid-auto-flow: column !important;
+    grid-template-columns: none !important;
+    grid-template-rows: repeat(2, auto) !important;
+    grid-auto-columns: calc((100% - (var(--vis) - 1) * var(--g)) / var(--vis)) !important;
+    gap: var(--g) !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x proximity;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding: 12px 2px 14px; /* room so hover-lift isn't clipped */
+}
+.home .fp-slider .ppg-grid::-webkit-scrollbar { display: none; }
+.home .fp-slider .ppg-card { scroll-snap-align: start; }
+.home .fp-marvo .ppg-pagination,
+.home .fp-used .ppg-pagination,
+.home .fp-products .ppg-pagination { display: none !important; }
+
+.fp-slider__arrow {
+    position: absolute;
+    top: 50%; transform: translateY(-50%);
+    z-index: 6;
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    background: #fff;
+    border: 1px solid #e8edf3;
+    color: #1a2233;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    /* box-shadow: 0 10px 28px rgba(13,17,23,.18); */
+    opacity: 0;                 /* fades in on hover; lives in the gutter, never on the cards */
+    transition: opacity .25s ease, background .2s ease, color .2s ease, border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+    padding: 0;
+}
+.fp-slider:hover .fp-slider__arrow { opacity: 1; }
+.fp-slider__arrow:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000;
+    transform: translateY(-50%) scale(1.08);
+    box-shadow: 0 14px 32px rgba(19,232,0,.4);
+}
+.fp-slider__arrow--prev { left: -54px; }
+.fp-slider__arrow--next { right: -54px; }
+.fp-slider__arrow[disabled] { opacity: 0 !important; pointer-events: none; }
+
+/* Gutter arrows only where there's whitespace beside the cards; narrower screens swipe. */
+@media (max-width: 1200px) {
+    .home .fp-slider .ppg-grid { --vis: 4; scroll-snap-type: x mandatory; }
+    .fp-slider__arrow { display: none !important; }
+}
+@media (max-width: 992px) { .home .fp-slider .ppg-grid { --vis: 3; } }
+@media (max-width: 768px) { .home .fp-slider .ppg-grid { --vis: 2; } }
+
+/* ── Scroll reveal (gated by .fp-reveal so no-JS shows everything) ── */
+.fp-reveal .fp-marvo__banner,
+.fp-reveal .fp-used .fp-cat-section,
+.fp-reveal .fp-products .fp-cat-section,
+.fp-reveal .fp-brands__slider {
+    opacity: 0;
+    transform: translateY(26px);
+    transition: opacity .7s ease, transform .7s cubic-bezier(.2,.7,.3,1);
+    will-change: opacity, transform;
+}
+.fp-reveal .fp-marvo__banner.is-visible,
+.fp-reveal .fp-used .fp-cat-section.is-visible,
+.fp-reveal .fp-products .fp-cat-section.is-visible,
+.fp-reveal .fp-brands__slider.is-visible {
+    opacity: 1;
+    transform: none;
+}
+
+@media (max-width: 768px) {
+    .home .fp-marvo { padding: 32px 4% 40px; }
+    .home .fp-section-head__title { font-size: 19px; }
+    .home .fp-marvo__banner, .home .fp-marvo__banner img { max-height: 180px; height: 180px; }
+    .home .fp-marvo__banner-overlay { padding: 0 24px; }
+    .home .fp-cat-banner__overlay { padding: 24px; min-height: 0; }
+    .home .fp-cat-banner__text { max-width: 100%; }
+    .home .fp-cat-banner__text h2 { font-size: 22px; }
+    .home .fp-cat-banner__icon { display: none; }
+    .home .fp-cat-banner { margin-bottom: 18px; }
+}
+</style>
+
+<script>
+(function () {
+    if (!('IntersectionObserver' in window)) return; // no-JS / old browsers: content stays visible
+    document.documentElement.classList.add('fp-reveal');
+    var els = document.querySelectorAll(
+        '.fp-marvo__banner, .fp-used .fp-cat-section, .fp-products .fp-cat-section, .fp-brands__slider'
+    );
+    var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+            if (e.isIntersecting) {
+                e.target.classList.add('is-visible');
+                io.unobserve(e.target);
+            }
+        });
+    }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+    els.forEach(function (el) { io.observe(el); });
+
+    // Fail-safe: never leave content hidden if the observer doesn't fire.
+    setTimeout(function () {
+        els.forEach(function (el) { el.classList.add('is-visible'); });
+    }, 1500);
+})();
+</script>
+
+<!-- ── Turn each product list into a 2-row arrow slider ── -->
+<script>
+(function () {
+    function buildSlider(grid) {
+        if (!grid || grid.dataset.fpSlider) return;
+        grid.dataset.fpSlider = '1';
+
+        var wrap = document.createElement('div');
+        wrap.className = 'fp-slider';
+        grid.parentNode.insertBefore(wrap, grid);
+        wrap.appendChild(grid);
+
+        var prev = document.createElement('button');
+        prev.type = 'button';
+        prev.className = 'fp-slider__arrow fp-slider__arrow--prev';
+        prev.setAttribute('aria-label', 'Previous');
+        prev.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>';
+
+        var next = document.createElement('button');
+        next.type = 'button';
+        next.className = 'fp-slider__arrow fp-slider__arrow--next';
+        next.setAttribute('aria-label', 'Next');
+        next.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>';
+
+        wrap.appendChild(prev);
+        wrap.appendChild(next);
+
+        function pageWidth() { return Math.max(grid.clientWidth * 0.9, 200); }
+        function update() {
+            var max = grid.scrollWidth - grid.clientWidth - 2;
+            var noScroll = grid.scrollWidth <= grid.clientWidth + 4;
+            prev.disabled = noScroll || grid.scrollLeft <= 2;
+            next.disabled = noScroll || grid.scrollLeft >= max;
+        }
+        prev.addEventListener('click', function () { grid.scrollBy({ left: -pageWidth(), behavior: 'smooth' }); });
+        next.addEventListener('click', function () { grid.scrollBy({ left: pageWidth(), behavior: 'smooth' }); });
+        grid.addEventListener('scroll', update, { passive: true });
+        window.addEventListener('resize', update);
+        // Re-check after images load (scrollWidth can change)
+        window.addEventListener('load', update);
+        update();
+    }
+
+    function init() {
+        document.querySelectorAll('.fp-marvo .ppg-grid, .fp-used .ppg-grid, .fp-products .ppg-grid')
+            .forEach(buildSlider);
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
 })();
 </script>
 

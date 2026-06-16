@@ -4,10 +4,18 @@
 /**********************/
 function shopys_styles(){
 
+    // Google Fonts: Play (Latin / English) + Battambang (Khmer)
+    wp_enqueue_style(
+        'shopys-google-play',
+        'https://fonts.googleapis.com/css2?family=Battambang:wght@400;700&family=Play:wght@400;700&display=swap',
+        array(),
+        null
+    );
+
     // Enqueue our child style.css with our own version for cache busting
     $childVersion = filemtime( get_stylesheet_directory() . '/style.css' );
 
-    wp_enqueue_style('shopys-styles', get_stylesheet_uri(), array(), $childVersion);
+    wp_enqueue_style('shopys-styles', get_stylesheet_uri(), array( 'shopys-google-play' ), $childVersion);
 
     wp_add_inline_style('shopys-styles', shopys_custom_styles());
 

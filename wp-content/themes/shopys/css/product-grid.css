@@ -66,7 +66,7 @@
     max-width: 1400px;
     margin: 0 auto;
     padding: 15px 10px;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: 'Play', 'Battambang', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     font-size: 14px;
 }
 
@@ -435,7 +435,7 @@ body article .entry-content .ppg-title-link:active,
     border-radius: 8px !important;
     background: linear-gradient(135deg, #13e800, #0fb500) !important;
     color: #fff !important;
-    font-family: 'Inter', sans-serif !important;
+    font-family: 'Play', 'Battambang', sans-serif !important;
     font-size: 13px !important;
     font-weight: 700 !important;
     letter-spacing: 0.5px;
@@ -697,7 +697,7 @@ body article .entry-content .ppg-title-link:active,
 .ppg-list-table {
     width: 100%;
     border-collapse: collapse;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Play', 'Battambang', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 13.5px;
     background: #fff;
     border: 1px solid #e8e8e8;
@@ -873,7 +873,7 @@ body article .entry-content .ppg-title-link:active,
     border-radius: 7px !important;
     background: linear-gradient(135deg, #13e800, #0fb500) !important;
     color: #fff !important;
-    font-family: 'Inter', sans-serif !important;
+    font-family: 'Play', 'Battambang', sans-serif !important;
     font-size: 12px !important;
     font-weight: 700 !important;
     cursor: pointer;
@@ -944,7 +944,7 @@ body article .entry-content .ppg-title-link:active,
     border-radius: 7px;
     background: transparent;
     color: #0a7000;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Play', 'Battambang', sans-serif;
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;

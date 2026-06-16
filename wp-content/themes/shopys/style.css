@@ -26,7 +26,41 @@ Text Domain: shopys
     --radius-md: 10px;
     --radius-lg: 16px;
     --transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
-    --font-sans: 'DM Sans', 'Segoe UI', sans-serif;
+    --font-sans: 'Play', 'Battambang', 'Segoe UI', sans-serif;
+}
+
+/* =============================================
+   PROJECT FONT — Google "Play" for English/Latin text
+   (Khmer & other scripts fall back automatically since
+    Play only ships Latin glyphs.) Icons are left untouched.
+   ============================================= */
+body,
+button, input, select, textarea, optgroup,
+h1, h2, h3, h4, h5, h6,
+.elementor-widget-container,
+.open-shop-menu, .open-shop-menu a, .open-shop-menu > li > a, .open-shop-menu li a,
+.sider .open-shop-menu li a, .thunk-product-cat-list li a, .main-header a,
+.thunk-menu a, .menu a, .woocommerce, .button, .wp-block-button__link,
+.fp-trust, .fp-trust__item, .fp-trust__item strong, .fp-trust__item div {
+    font-family: 'Play', 'Battambang', 'Segoe UI', system-ui, sans-serif !important;
+}
+
+/* ── Add to Cart text: white in light mode, black in dark mode ── */
+.ppg-actions .button,
+.ppg-actions .add_to_cart_button,
+.ppg-actions a.button,
+.ppg-actions .ppg-add-to-cart,
+.fp-cat-section .ppg-card .button,
+.fp-cat-section .ppg-card .add_to_cart_button {
+    color: #fff !important;
+}
+body.open-shop-dark .ppg-actions .button,
+body.open-shop-dark .ppg-actions .add_to_cart_button,
+body.open-shop-dark .ppg-actions a.button,
+body.open-shop-dark .ppg-actions .ppg-add-to-cart,
+body.open-shop-dark .fp-cat-section .ppg-card .button,
+body.open-shop-dark .fp-cat-section .ppg-card .add_to_cart_button {
+    color: #000 !important;
 }
 
 /* =============================================
