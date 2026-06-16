@@ -1563,7 +1563,7 @@ body.home          { background: #ffffff; }
     scroll-behavior: smooth;
     scrollbar-width: none;
     -ms-overflow-style: none;
-    padding: 12px 2px 14px; /* room so hover-lift isn't clipped */
+    padding: 16px 6px 28px; /* room so the card lift + shadow aren't clipped */
 }
 .home .fp-slider .ppg-grid::-webkit-scrollbar { display: none; }
 .home .fp-slider .ppg-card { scroll-snap-align: start; }
