@@ -1119,7 +1119,7 @@ if ( $trust_enabled ) {
             </div>
         </div>
     </div>
-    <?php echo do_shortcode( '[premium_products category="marvo" limit="18" columns="6" filter="false" cart="true" show_description="false" pagination_type="normal"]' ); ?>
+    <?php echo do_shortcode( '[premium_products category="marvo" limit="18" columns="6" filter="false" cart="true" view="true" show_description="false" pagination_type="normal"]' ); ?>
 </section>
 
 <!-- ═══════════════════════════ USED PRODUCTS ════════════════════════ -->
@@ -1147,7 +1147,7 @@ if ( $trust_enabled ) {
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </a>
             </div>
-            <?php echo do_shortcode( '[premium_products category="used-product" limit="18" columns="6" filter="false" cart="true" show_description="false" pagination_type="normal"]' ); ?>
+            <?php echo do_shortcode( '[premium_products category="used-product" limit="18" columns="6" filter="false" cart="true" view="true" show_description="false" pagination_type="normal"]' ); ?>
         </div>
     </div>
 </section>
@@ -1171,7 +1171,7 @@ if ( $trust_enabled ) {
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </a>
             </div>
-            <?php echo do_shortcode( '[premium_products limit="18" columns="6" filter="false" cart="true" show_description="false" pagination_type="normal" orderby="date" order="DESC"]' ); ?>
+            <?php echo do_shortcode( '[premium_products limit="18" columns="6" filter="false" cart="true" view="true" show_description="false" pagination_type="normal" orderby="date" order="DESC"]' ); ?>
         </div>
 
         <?php
@@ -1217,7 +1217,7 @@ if ( $trust_enabled ) {
                     <div class="fp-cat-banner__icon" aria-hidden="true"><?php echo shopys_get_category_icon( $first_slug, $cat['label'] ); ?></div>
                 </div>
             </div>
-            <?php echo do_shortcode( '[premium_products category="' . esc_attr( $cat['slug'] ) . '" limit="18" columns="6" filter="false" cart="true" show_description="false" pagination_type="normal"]' ); ?>
+            <?php echo do_shortcode( '[premium_products category="' . esc_attr( $cat['slug'] ) . '" limit="18" columns="6" filter="false" cart="true" view="true" show_description="false" pagination_type="normal"]' ); ?>
         </div>
         <?php endforeach; ?>
 
