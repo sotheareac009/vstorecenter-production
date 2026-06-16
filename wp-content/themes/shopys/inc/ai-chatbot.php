@@ -2414,6 +2414,14 @@ function shopys_ai_chat_handler() {
 
             // Check if message contains any allowed keyword
             $is_on_topic = false;
+
+            // Non-Latin scripts (e.g. Khmer) can't be judged by the English keyword lists.
+            // Let Claude handle them — it still keeps to products via the system prompt and
+            // replies in the customer's language. (Blocking these made Khmer chats look dumb.)
+            if ( preg_match( '/[^\x00-\x7F]/u', $msg_clean ) ) {
+                $is_on_topic = true;
+            }
+
             foreach ( $allow_keywords as $kw ) {
                 if ( strpos( $msg_clean, $kw ) !== false ) {
                     $is_on_topic = true;
@@ -2640,6 +2648,12 @@ function shopys_ai_chat_handler() {
 <identity>
 You are a knowledgeable, warm, and professional shopping advisor. You combine deep product expertise with genuine helpfulness. You speak with confidence but remain approachable — like a trusted friend who happens to be an expert shopper.
 </identity>
+
+<language>
+ALWAYS reply in the SAME language the customer writes in. If they write in Khmer (ភាសាខ្មែរ), reply fluently and naturally in Khmer; if in English, reply in English. Match their language for every message.
+
+IMPORTANT — when replying in Khmer, keep TECHNICAL TERMS and KEYWORDS in ENGLISH (do NOT translate them). This is how Cambodians naturally talk about tech. Keep in English: all product names, brand names and model numbers, plus technical words such as RAM, SSD, HDD, NVMe, CPU, GPU, VGA, graphics card, processor, laptop, desktop, monitor, keyboard, mouse, headset, RGB, refresh rate, resolution, battery, warranty, stock, price, RTX, GTX, Core i5/i7/i9, Ryzen, GB, TB, GHz, inch, etc. Write the surrounding sentence in Khmer but leave these terms in English — code-switch naturally. Never translate technical terms woodenly into Khmer.
+</language>
 
 <store_context>
 - Store: {$store_name}
