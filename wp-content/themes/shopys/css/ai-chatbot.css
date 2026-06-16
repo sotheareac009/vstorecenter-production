@@ -1078,6 +1078,90 @@
     flex-shrink: 0;
 }
 
+/* Guest name — header icon button + popover (Free Chat) */
+.sai-guest-name { display: none; align-items: center; }
+.sai-guest-name-btn {
+    position: relative;
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    border-radius: 50%;
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: #fff;
+    padding: 0;
+    transition: background 0.2s;
+}
+.sai-guest-name-btn:hover { background: rgba(255, 255, 255, 0.3); }
+.sai-guest-name-btn.sai-has-name::after {
+    content: '';
+    position: absolute;
+    top: 2px; right: 2px;
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: #ffd400;
+    border: 1.5px solid var(--sai-primary);
+}
+.sai-guest-name-pop {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 240px;
+    background: #fff;
+    border: 1px solid var(--sai-border);
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+    padding: 12px;
+    z-index: 60;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px);
+    transition: opacity 0.18s, transform 0.18s, visibility 0.18s;
+}
+.sai-guest-name-pop.sai-open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+.sai-guest-name-pop-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--sai-text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+.sai-guest-name-pop-row { display: flex; gap: 6px; }
+.sai-guest-name-pop input {
+    flex: 1;
+    min-width: 0;
+    border: 1px solid var(--sai-border);
+    border-radius: 8px;
+    padding: 7px 10px;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--sai-text);
+    background: var(--sai-bg);
+    outline: none;
+}
+.sai-guest-name-pop input:focus { border-color: var(--sai-primary); background: #fff; }
+.sai-guest-name-save {
+    flex-shrink: 0;
+    border: none;
+    background: var(--sai-primary);
+    color: #fff;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 7px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.sai-guest-name-save:hover { background: var(--sai-primary-dk); }
+.sai-guest-name-save.sai-saved { background: #16a34a; }
+
 .sai-input {
     flex: 1;
     border: 1px solid var(--sai-border);

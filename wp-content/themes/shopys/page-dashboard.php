@@ -2716,10 +2716,14 @@ body {
             $gm_rows  = $gm_has ? $wpdb->get_results( $wpdb->prepare(
                 "SELECT * FROM {$gm_table} WHERE ip = %s ORDER BY created_at DESC LIMIT 500", $guest_ip
             ), ARRAY_A ) : [];
+            $guest_name = $wpdb->get_var( $wpdb->prepare(
+                "SELECT name FROM {$wpdb->prefix}chatbot_guest_users WHERE ip = %s", $guest_ip
+            ) );
+            $guest_label = ! empty( $guest_name ) ? $guest_name . ' (' . $guest_ip . ')' : $guest_ip;
         ?>
         <div class="ds-table-wrap">
             <div class="ds-table-head" style="display:flex;align-items:center;justify-content:space-between;">
-                <span>Questions from <code><?php echo esc_html( $guest_ip ); ?></code>
+                <span>Questions from <code><?php echo esc_html( $guest_label ); ?></code>
                     <span style="color:var(--muted);font-weight:400;font-size:12px;margin-left:6px;"><?php echo number_format_i18n( count( $gm_rows ) ); ?> messages</span>
                 </span>
                 <a class="ds-tab" href="<?php echo esc_url( add_query_arg( [ 'tab' => 'guest-users' ], home_url( '/dashboard/' ) ) ); ?>">&laquo; Back to guests</a>
@@ -2865,7 +2869,7 @@ body {
             <?php else : ?>
             <table class="ds-table">
                 <thead><tr>
-                    <th>IP Address</th>
+                    <th>Guest</th>
                     <th>First Seen</th>
                     <th>Last Active</th>
                     <th>Total Messages</th>
@@ -2879,7 +2883,16 @@ body {
                     $g_at_limit   = $g_used_today >= $g_limit;
                 ?>
                 <tr>
-                    <td><a href="<?php echo esc_url( add_query_arg( [ 'tab' => 'guest-users', 'guest_ip' => $g_user['ip'] ], home_url( '/dashboard/' ) ) ); ?>" style="color:#0fb500;font-weight:700;text-decoration:none;" title="View questions"><code style="color:inherit;"><?php echo esc_html( $g_user['ip'] ); ?></code> &rsaquo;</a></td>
+                    <td>
+                        <a href="<?php echo esc_url( add_query_arg( [ 'tab' => 'guest-users', 'guest_ip' => $g_user['ip'] ], home_url( '/dashboard/' ) ) ); ?>" style="color:#0fb500;font-weight:700;text-decoration:none;" title="View questions">
+                            <?php if ( ! empty( $g_user['name'] ) ) : ?>
+                                <?php echo esc_html( $g_user['name'] ); ?> &rsaquo;
+                                <span style="display:block;color:var(--muted);font-weight:400;font-size:11px;"><?php echo esc_html( $g_user['ip'] ); ?></span>
+                            <?php else : ?>
+                                <code style="color:inherit;"><?php echo esc_html( $g_user['ip'] ); ?></code> &rsaquo;
+                            <?php endif; ?>
+                        </a>
+                    </td>
                     <td><?php echo esc_html( $g_user['first_seen'] ?: '—' ); ?></td>
                     <td><?php echo esc_html( $g_user['last_active'] ?: '—' ); ?></td>
                     <td><?php echo number_format_i18n( (int) ( $g_user['message_count'] ?? 0 ) ); ?></td>

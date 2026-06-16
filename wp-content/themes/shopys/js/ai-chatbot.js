@@ -260,6 +260,7 @@
         } else if (cfg.free_chat === '1') {
             // Free Chat: everyone chats as a guest — no login gate, just show the limit bar.
             fetchUserStatus();
+            initGuestName();
         }
 
         // Events
@@ -724,6 +725,59 @@
 
     /* ── Send Message ─────────────────────────────────── */
 
+    function getGuestName() {
+        try { return (localStorage.getItem('sai_guest_name') || '').trim().slice(0, 40); } catch (e) { return ''; }
+    }
+    function initGuestName() {
+        var wrap = document.getElementById('sai-guest-name-wrap');
+        var btn = document.getElementById('sai-guest-name-btn');
+        var pop = document.getElementById('sai-guest-name-pop');
+        var input = document.getElementById('sai-guest-name-input');
+        var saveBtn = document.getElementById('sai-guest-name-save');
+        if (!wrap || !btn || !pop || !input) return;
+        wrap.style.display = 'inline-flex';
+        input.value = getGuestName();
+        if (getGuestName()) btn.classList.add('sai-has-name');
+
+        function openPop() {
+            input.value = getGuestName();
+            pop.classList.add('sai-open');
+            setTimeout(function () { input.focus(); }, 30);
+        }
+        function closePop() { pop.classList.remove('sai-open'); }
+        function persist() {
+            var name = input.value.trim().slice(0, 40);
+            try { localStorage.setItem('sai_guest_name', name); } catch (e) {}
+            btn.classList.toggle('sai-has-name', !!name);
+            btn.title = name ? ('Name: ' + name) : 'Set your name';
+        }
+        function saveName() {
+            persist();
+            if (saveBtn) {
+                saveBtn.textContent = 'Saved ✓';
+                saveBtn.classList.add('sai-saved');
+                clearTimeout(saveName._t);
+                saveName._t = setTimeout(function () {
+                    saveBtn.textContent = 'Save';
+                    saveBtn.classList.remove('sai-saved');
+                    closePop();
+                }, 900);
+            } else { closePop(); }
+        }
+
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            pop.classList.contains('sai-open') ? closePop() : openPop();
+        });
+        if (saveBtn) saveBtn.addEventListener('click', function (e) { e.stopPropagation(); saveName(); });
+        pop.addEventListener('click', function (e) { e.stopPropagation(); });
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') { e.preventDefault(); saveName(); }
+        });
+        // Close when clicking outside the popover
+        document.addEventListener('click', function () { if (pop.classList.contains('sai-open')) { persist(); closePop(); } });
+    }
+
     function sendMessage() {
         if (isSending) return;
         var text = inputEl.value.trim();
@@ -759,6 +813,12 @@
         formData.append('history', JSON.stringify(history.slice(-10)));
         // model is assigned server-side based on user tier
         formData.append('page_url', window.location.href);
+
+        // Free Chat guest: send the optional display name they set
+        if (cfg.free_chat === '1' && !tgSession) {
+            var guestName = getGuestName();
+            if (guestName) formData.append('guest_name', guestName);
+        }
 
         // Attach Telegram session if required
         if (cfg.require_tg_login === '1' && tgSession) {

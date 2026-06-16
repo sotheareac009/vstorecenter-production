@@ -75,7 +75,7 @@ add_action( 'after_switch_theme', 'shopys_ai_create_guest_table' );
 add_action( 'admin_init', 'shopys_ai_maybe_create_guest_table' );
 
 function shopys_ai_maybe_create_guest_table() {
-    if ( get_option( 'shopys_ai_guest_table_version' ) !== '1.2' ) {
+    if ( get_option( 'shopys_ai_guest_table_version' ) !== '1.3' ) {
         shopys_ai_create_guest_table();
     }
 }
@@ -90,6 +90,7 @@ function shopys_ai_create_guest_table() {
     $wpdb->query( "CREATE TABLE IF NOT EXISTS {$table} (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
         ip VARCHAR(45) NOT NULL,
+        name VARCHAR(60) DEFAULT '',
         first_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
         last_active DATETIME DEFAULT CURRENT_TIMESTAMP,
         message_count INT UNSIGNED DEFAULT 0,
@@ -114,13 +115,30 @@ function shopys_ai_create_guest_table() {
         KEY created_idx (created_at)
     ) {$charset}" );
 
-    // Migrate tables created before total_cost existed (v1.0 → v1.1)
+    // Migrations for existing tables
     $current_version = get_option( 'shopys_ai_guest_table_version', '1.0' );
     if ( version_compare( $current_version, '1.1', '<' ) ) {
         $wpdb->query( "ALTER TABLE {$table} ADD COLUMN IF NOT EXISTS total_cost DECIMAL(10,6) DEFAULT 0.000000" );
     }
+    if ( version_compare( $current_version, '1.3', '<' ) ) {
+        $wpdb->query( "ALTER TABLE {$table} ADD COLUMN IF NOT EXISTS name VARCHAR(60) DEFAULT ''" );
+    }
 
-    update_option( 'shopys_ai_guest_table_version', '1.2' );
+    update_option( 'shopys_ai_guest_table_version', '1.3' );
+}
+
+/**
+ * Save a guest's chosen display name (by IP).
+ */
+function shopys_ai_guest_set_name( $name ) {
+    $name = trim( (string) $name );
+    if ( $name === '' ) return;
+    global $wpdb;
+    $wpdb->update(
+        $wpdb->prefix . 'chatbot_guest_users',
+        array( 'name' => mb_substr( $name, 0, 60 ) ),
+        array( 'ip' => shopys_ai_get_guest_ip() )
+    );
 }
 
 /**
@@ -1998,6 +2016,10 @@ function shopys_ai_chat_handler() {
     // Log the guest's question (Free Chat = no Telegram login, so tg_id is 0)
     if ( $is_free_chat && ! $tg_id && ! empty( $message ) ) {
         shopys_ai_guest_log_message( $message );
+        // Save the guest's chosen display name, if provided
+        if ( ! empty( $_POST['guest_name'] ) ) {
+            shopys_ai_guest_set_name( sanitize_text_field( wp_unslash( $_POST['guest_name'] ) ) );
+        }
     }
 
     // Get API key from WP options only (no hardcoded fallback)
@@ -3515,6 +3537,18 @@ function shopys_ai_chatbot_widget() {
                     </div>
                 </div>
                 <div id="sai-header-actions" style="display:flex;align-items:center;gap:6px;">
+                    <div class="sai-guest-name" id="sai-guest-name-wrap" style="display:none;position:relative;">
+                        <button type="button" class="sai-guest-name-btn" id="sai-guest-name-btn" aria-label="Set your name" title="Set your name">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        </button>
+                        <div class="sai-guest-name-pop" id="sai-guest-name-pop">
+                            <span class="sai-guest-name-pop-label">Your name</span>
+                            <div class="sai-guest-name-pop-row">
+                                <input type="text" id="sai-guest-name-input" placeholder="e.g. Sambath" maxlength="40" autocomplete="off" />
+                                <button type="button" id="sai-guest-name-save" class="sai-guest-name-save">Save</button>
+                            </div>
+                        </div>
+                    </div>
                     <button class="sai-history-btn" id="sai-history-btn" aria-label="Chat history" title="Chat history">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <circle cx="12" cy="12" r="10"/>
