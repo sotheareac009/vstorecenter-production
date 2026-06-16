@@ -48,6 +48,20 @@ if (
     exit;
 }
 
+// ── Guest daily-limit reset handler (admin only) ──────────────────────────────
+if (
+    $is_site_owner &&
+    isset( $_POST['g_reset_ip'], $_POST['_wpnonce'] ) &&
+    wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'g_reset_limit' )
+) {
+    global $wpdb;
+    $g_reset_table = $wpdb->prefix . 'chatbot_guest_users';
+    $g_reset_ip    = sanitize_text_field( wp_unslash( $_POST['g_reset_ip'] ) );
+    $wpdb->update( $g_reset_table, [ 'daily_count' => 0 ], [ 'ip' => $g_reset_ip ] );
+    wp_safe_redirect( add_query_arg( [ 'tab' => 'guest-users', 'g_pg' => max( 1, (int) ( $_POST['g_pg'] ?? 1 ) ), 'g_reset' => 1 ], home_url( '/dashboard/' ) ) );
+    exit;
+}
+
 // ── Collect Site-View data (safe even if view-counter isn't loaded) ───────────
 $has_vc = function_exists( 'shopys_vc_count_views' );
 
@@ -2727,7 +2741,81 @@ body {
             <?php endif; ?>
         </div>
 
-        <?php else : ?>
+        <?php else :
+            $top_q = get_option( 'shopys_ai_top_questions' );
+        ?>
+
+        <?php if ( isset( $_GET['g_reset'] ) ) : ?>
+        <div style="background:#ecfdf3;border:1px solid #abefc6;color:#067647;padding:10px 16px;border-radius:10px;margin-bottom:16px;font-weight:600;">✓ Guest daily limit reset — they can chat again today.</div>
+        <?php endif; ?>
+
+        <!-- ── Top Questions (semantic analysis) ── -->
+        <div class="ds-table-wrap" style="margin-bottom:24px;">
+            <div class="ds-table-head" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+                <span>🔥 Top Questions <span style="color:var(--muted);font-weight:400;font-size:12px;margin-left:6px;">grouped by meaning</span></span>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <select id="sai-tq-top" style="padding:6px 10px;border:1px solid var(--border,#e2e6ea);border-radius:8px;font:inherit;">
+                        <option value="20">Top 20</option>
+                        <option value="50">Top 50</option>
+                    </select>
+                    <button id="sai-tq-run" type="button" style="background:#13e800;color:#000;border:none;border-radius:8px;padding:7px 16px;font-weight:700;cursor:pointer;">Analyze</button>
+                </div>
+            </div>
+            <div id="sai-tq-meta" style="padding:8px 16px;color:var(--muted);font-size:12px;border-bottom:1px solid var(--border,#eee);">
+                <?php if ( is_array( $top_q ) && ! empty( $top_q['generated_at'] ) ) :
+                    echo 'Last generated ' . esc_html( $top_q['generated_at'] ) . ' · ' . number_format_i18n( (int) ( $top_q['total_messages'] ?? 0 ) ) . ' questions analyzed';
+                else : echo 'Not analyzed yet — click "Analyze" to group guest questions by meaning.'; endif; ?>
+            </div>
+            <div id="sai-tq-body">
+                <?php if ( is_array( $top_q ) && ! empty( $top_q['items'] ) ) : ?>
+                <table class="ds-table">
+                    <thead><tr><th style="width:48px;">#</th><th>Question (intent)</th><th style="width:90px;">Count</th><th>Example asked</th></tr></thead>
+                    <tbody>
+                    <?php foreach ( $top_q['items'] as $i => $it ) : ?>
+                    <tr>
+                        <td><?php echo (int) $i + 1; ?></td>
+                        <td style="font-weight:600;"><?php echo esc_html( $it['question'] ?? '' ); ?></td>
+                        <td><strong><?php echo number_format_i18n( (int) ( $it['count'] ?? 0 ) ); ?></strong></td>
+                        <td style="color:var(--muted);font-size:12px;"><?php echo esc_html( $it['example'] ?? '' ); ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+                <?php endif; ?>
+            </div>
+        </div>
+        <script>
+        (function () {
+            var btn = document.getElementById('sai-tq-run');
+            if (!btn) return;
+            var ajaxUrl = '<?php echo esc_js( admin_url( 'admin-ajax.php' ) ); ?>';
+            var nonce   = '<?php echo esc_js( wp_create_nonce( 'shopys_ai_analyze' ) ); ?>';
+            function esc(s){ var d=document.createElement('div'); d.textContent=s==null?'':s; return d.innerHTML; }
+            btn.addEventListener('click', function () {
+                var top = document.getElementById('sai-tq-top').value;
+                btn.disabled = true; var old = btn.textContent; btn.textContent = 'Analyzing…';
+                var fd = new FormData();
+                fd.append('action', 'shopys_ai_analyze_questions');
+                fd.append('nonce', nonce);
+                fd.append('top', top);
+                fetch(ajaxUrl, { method:'POST', body:fd, credentials:'same-origin' })
+                    .then(function(r){ return r.json(); })
+                    .then(function(res){
+                        btn.disabled = false; btn.textContent = old;
+                        if (!res || !res.success) { alert((res && res.data && res.data.message) || 'Analysis failed.'); return; }
+                        var d = res.data, items = d.items || [];
+                        var h = '<table class="ds-table"><thead><tr><th style="width:48px;">#</th><th>Question (intent)</th><th style="width:90px;">Count</th><th>Example asked</th></tr></thead><tbody>';
+                        items.forEach(function(it,i){
+                            h += '<tr><td>'+(i+1)+'</td><td style="font-weight:600;">'+esc(it.question)+'</td><td><strong>'+(it.count||0)+'</strong></td><td style="color:var(--muted);font-size:12px;">'+esc(it.example)+'</td></tr>';
+                        });
+                        h += '</tbody></table>';
+                        document.getElementById('sai-tq-body').innerHTML = h;
+                        document.getElementById('sai-tq-meta').textContent = 'Last generated ' + (d.generated_at||'') + ' · ' + (d.total_messages||0) + ' questions analyzed';
+                    })
+                    .catch(function(){ btn.disabled = false; btn.textContent = old; alert('Request failed. Please try again.'); });
+            });
+        })();
+        </script>
 
         <div class="ds-cards" style="margin-bottom:24px;">
             <div class="ds-card">
@@ -2783,6 +2871,7 @@ body {
                     <th>Total Messages</th>
                     <th>Today's Usage</th>
                     <th>API Cost</th>
+                    <th>Action</th>
                 </tr></thead>
                 <tbody>
                 <?php foreach ( $g_users as $g_user ) :
@@ -2800,6 +2889,13 @@ body {
                         </span>
                     </td>
                     <td><strong>$<?php echo esc_html( number_format( (float) ( $g_user['total_cost'] ?? 0 ), 4 ) ); ?></strong></td>
+                    <td>
+                        <form method="post" style="margin:0;"><?php wp_nonce_field( 'g_reset_limit' ); ?>
+                            <input type="hidden" name="g_reset_ip" value="<?php echo esc_attr( $g_user['ip'] ); ?>">
+                            <input type="hidden" name="g_pg" value="<?php echo esc_attr( $g_current_pg ); ?>">
+                            <button type="submit" class="tg-vip-btn tg-vip-btn-add" <?php echo $g_used_today === 0 ? 'disabled style="opacity:.45;cursor:default;"' : ''; ?> title="Reset today's message limit for this guest">↺ Reset Limit</button>
+                        </form>
+                    </td>
                 </tr>
                 <?php endforeach; ?>
                 </tbody>

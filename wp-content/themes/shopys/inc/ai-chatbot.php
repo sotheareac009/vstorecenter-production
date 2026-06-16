@@ -143,6 +143,101 @@ function shopys_ai_guest_log_message( $question, $answer = '' ) {
 }
 
 /**
+ * AJAX (admin): cluster guest questions by meaning and return the top N.
+ * Uses Claude so different wordings with the same intent are grouped together.
+ */
+add_action( 'wp_ajax_shopys_ai_analyze_questions', 'shopys_ai_analyze_questions_handler' );
+function shopys_ai_analyze_questions_handler() {
+    if ( ! current_user_can( 'manage_options' ) ) {
+        wp_send_json_error( array( 'message' => 'Unauthorized.' ) );
+    }
+    check_ajax_referer( 'shopys_ai_analyze', 'nonce' );
+
+    $top = isset( $_POST['top'] ) ? max( 5, min( 50, (int) $_POST['top'] ) ) : 20;
+
+    global $wpdb;
+    $mt = $wpdb->prefix . 'chatbot_guest_messages';
+    if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $mt ) ) !== $mt ) {
+        wp_send_json_error( array( 'message' => 'No guest questions recorded yet.' ) );
+    }
+
+    // Collapse exact duplicates first (cheap) and keep the most frequent unique questions.
+    $rows = $wpdb->get_results(
+        "SELECT MIN(question) AS q, COUNT(*) AS cnt
+         FROM {$mt}
+         WHERE question <> ''
+         GROUP BY LOWER(TRIM(question))
+         ORDER BY cnt DESC
+         LIMIT 600",
+        ARRAY_A
+    );
+    if ( empty( $rows ) ) {
+        wp_send_json_error( array( 'message' => 'No guest questions recorded yet.' ) );
+    }
+
+    $total_messages = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$mt} WHERE question <> ''" );
+
+    $lines = array();
+    foreach ( $rows as $r ) {
+        $q = trim( preg_replace( '/\s+/', ' ', $r['q'] ) );
+        if ( $q === '' ) continue;
+        $lines[] = $r['cnt'] . ' | ' . mb_substr( $q, 0, 200 );
+    }
+    $list = implode( "\n", $lines );
+
+    $api_key = get_option( 'shopys_ai_api_key', '' );
+    if ( empty( $api_key ) ) {
+        wp_send_json_error( array( 'message' => 'AI API key is not configured.' ) );
+    }
+
+    $system = "You are a data analyst for an online computer & electronics store chatbot. " .
+        "You receive a list of customer questions, each prefixed by how many times it was asked (format: COUNT | QUESTION). " .
+        "Group questions by SEMANTIC MEANING — different wordings with the same intent belong to the SAME group — and sum their counts. " .
+        "Return ONLY a JSON array (no markdown, no prose) of the top {$top} groups by total count. " .
+        "Each item: {\"question\":\"clearest canonical phrasing of the group's intent\",\"count\":<integer total>,\"example\":\"one real example variant\"}. " .
+        "Order by count descending, at most {$top} items.";
+
+    $messages = array( array( 'role' => 'user', 'content' => "Questions:\n" . $list ) );
+
+    $result = shopys_ai_call_claude( $api_key, $system, $messages, 'claude-haiku-4-5-20251001', 3000 );
+    if ( is_wp_error( $result ) ) {
+        wp_send_json_error( array( 'message' => 'Analysis failed: ' . $result->get_error_message() ) );
+    }
+
+    // Extract JSON array from the response.
+    $text = trim( $result['text'] );
+    $text = preg_replace( '/```(?:json)?/i', '', $text );
+    if ( preg_match( '/\[.*\]/s', $text, $m ) ) {
+        $text = $m[0];
+    }
+    $items = json_decode( $text, true );
+    if ( ! is_array( $items ) ) {
+        wp_send_json_error( array( 'message' => 'Could not parse the analysis. Please try again.' ) );
+    }
+
+    $clean = array();
+    foreach ( $items as $it ) {
+        if ( empty( $it['question'] ) ) continue;
+        $clean[] = array(
+            'question' => sanitize_text_field( $it['question'] ),
+            'count'    => isset( $it['count'] ) ? (int) $it['count'] : 0,
+            'example'  => isset( $it['example'] ) ? sanitize_text_field( $it['example'] ) : '',
+        );
+    }
+
+    $payload = array(
+        'generated_at'   => current_time( 'mysql' ),
+        'top'            => $top,
+        'total_unique'   => count( $rows ),
+        'total_messages' => $total_messages,
+        'items'          => $clean,
+    );
+    update_option( 'shopys_ai_top_questions', $payload, false );
+
+    wp_send_json_success( $payload );
+}
+
+/**
  * AJAX: Verify Telegram auth data, log user to DB, set session cookie.
  */
 add_action( 'wp_ajax_shopys_ai_tg_auth',        'shopys_ai_tg_auth_handler' );
@@ -1676,7 +1771,7 @@ function shopys_ai_extract_product_info( $url, $content ) {
    4. CLAUDE API CALLER
    ═══════════════════════════════════════════════════════════════════ */
 
-function shopys_ai_call_claude( $api_key, $system_prompt, $messages, $model = 'claude-opus-4-6' ) {
+function shopys_ai_call_claude( $api_key, $system_prompt, $messages, $model = 'claude-opus-4-6', $max_tokens = 0 ) {
     // Check if message contains images or PDFs
     $has_media = false;
     $has_pdf = false;
@@ -1696,7 +1791,7 @@ function shopys_ai_call_claude( $api_key, $system_prompt, $messages, $model = 'c
 
     $body = array(
         'model'      => $model,
-        'max_tokens' => $has_media ? 4096 : 1024,
+        'max_tokens' => $max_tokens > 0 ? $max_tokens : ( $has_media ? 4096 : 1024 ),
         'system'     => $system_prompt,
         'messages'   => $messages,
     );
