@@ -75,7 +75,7 @@ add_action( 'after_switch_theme', 'shopys_ai_create_guest_table' );
 add_action( 'admin_init', 'shopys_ai_maybe_create_guest_table' );
 
 function shopys_ai_maybe_create_guest_table() {
-    if ( get_option( 'shopys_ai_guest_table_version' ) !== '1.1' ) {
+    if ( get_option( 'shopys_ai_guest_table_version' ) !== '1.2' ) {
         shopys_ai_create_guest_table();
     }
 }
@@ -101,13 +101,45 @@ function shopys_ai_create_guest_table() {
         KEY last_active_idx (last_active)
     ) {$charset}" );
 
+    // Guest chat messages (questions guests ask, with the bot's answer)
+    $msg_table = $wpdb->prefix . 'chatbot_guest_messages';
+    $wpdb->query( "CREATE TABLE IF NOT EXISTS {$msg_table} (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        ip VARCHAR(45) NOT NULL,
+        question TEXT,
+        answer MEDIUMTEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY ip_idx (ip),
+        KEY created_idx (created_at)
+    ) {$charset}" );
+
     // Migrate tables created before total_cost existed (v1.0 → v1.1)
     $current_version = get_option( 'shopys_ai_guest_table_version', '1.0' );
     if ( version_compare( $current_version, '1.1', '<' ) ) {
         $wpdb->query( "ALTER TABLE {$table} ADD COLUMN IF NOT EXISTS total_cost DECIMAL(10,6) DEFAULT 0.000000" );
     }
 
-    update_option( 'shopys_ai_guest_table_version', '1.1' );
+    update_option( 'shopys_ai_guest_table_version', '1.2' );
+}
+
+/**
+ * Log a guest's chat message (question + optional answer) by IP.
+ */
+function shopys_ai_guest_log_message( $question, $answer = '' ) {
+    $question = trim( (string) $question );
+    if ( $question === '' ) return;
+    global $wpdb;
+    $wpdb->insert(
+        $wpdb->prefix . 'chatbot_guest_messages',
+        array(
+            'ip'         => shopys_ai_get_guest_ip(),
+            'question'   => $question,
+            'answer'     => (string) $answer,
+            'created_at' => current_time( 'mysql' ),
+        ),
+        array( '%s', '%s', '%s', '%s' )
+    );
 }
 
 /**
@@ -1866,6 +1898,11 @@ function shopys_ai_chat_handler() {
 
     if ( empty( $message ) && empty( $file_attachments ) ) {
         wp_send_json_error( array( 'message' => 'Please type a message or attach a file.' ) );
+    }
+
+    // Log the guest's question (Free Chat = no Telegram login, so tg_id is 0)
+    if ( $is_free_chat && ! $tg_id && ! empty( $message ) ) {
+        shopys_ai_guest_log_message( $message );
     }
 
     // Get API key from WP options only (no hardcoded fallback)

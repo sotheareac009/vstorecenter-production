@@ -2692,7 +2692,42 @@ body {
             }
 
             $g_limit = (int) get_option( 'shopys_ai_daily_limit', 10 );
+            $guest_ip = isset( $_GET['guest_ip'] ) ? sanitize_text_field( wp_unslash( $_GET['guest_ip'] ) ) : '';
         ?>
+
+        <?php if ( $guest_ip !== '' ) :
+            // ── Single guest: show all the questions they asked ──
+            $gm_table = $wpdb->prefix . 'chatbot_guest_messages';
+            $gm_has   = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $gm_table ) ) === $gm_table;
+            $gm_rows  = $gm_has ? $wpdb->get_results( $wpdb->prepare(
+                "SELECT * FROM {$gm_table} WHERE ip = %s ORDER BY created_at DESC LIMIT 500", $guest_ip
+            ), ARRAY_A ) : [];
+        ?>
+        <div class="ds-table-wrap">
+            <div class="ds-table-head" style="display:flex;align-items:center;justify-content:space-between;">
+                <span>Questions from <code><?php echo esc_html( $guest_ip ); ?></code>
+                    <span style="color:var(--muted);font-weight:400;font-size:12px;margin-left:6px;"><?php echo number_format_i18n( count( $gm_rows ) ); ?> messages</span>
+                </span>
+                <a class="ds-tab" href="<?php echo esc_url( add_query_arg( [ 'tab' => 'guest-users' ], home_url( '/dashboard/' ) ) ); ?>">&laquo; Back to guests</a>
+            </div>
+            <?php if ( ! $gm_has || empty( $gm_rows ) ) : ?>
+                <div style="padding:18px;color:var(--muted);">No questions recorded for this guest yet.</div>
+            <?php else : ?>
+            <table class="ds-table">
+                <thead><tr><th style="width:170px;">Time</th><th>Question</th></tr></thead>
+                <tbody>
+                <?php foreach ( $gm_rows as $gm ) : ?>
+                <tr>
+                    <td style="white-space:nowrap;color:var(--muted);font-size:12px;"><?php echo esc_html( $gm['created_at'] ); ?></td>
+                    <td style="line-height:1.5;"><?php echo esc_html( $gm['question'] ); ?></td>
+                </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+            <?php endif; ?>
+        </div>
+
+        <?php else : ?>
 
         <div class="ds-cards" style="margin-bottom:24px;">
             <div class="ds-card">
@@ -2755,7 +2790,7 @@ body {
                     $g_at_limit   = $g_used_today >= $g_limit;
                 ?>
                 <tr>
-                    <td><code><?php echo esc_html( $g_user['ip'] ); ?></code></td>
+                    <td><a href="<?php echo esc_url( add_query_arg( [ 'tab' => 'guest-users', 'guest_ip' => $g_user['ip'] ], home_url( '/dashboard/' ) ) ); ?>" style="color:#0fb500;font-weight:700;text-decoration:none;" title="View questions"><code style="color:inherit;"><?php echo esc_html( $g_user['ip'] ); ?></code> &rsaquo;</a></td>
                     <td><?php echo esc_html( $g_user['first_seen'] ?: '—' ); ?></td>
                     <td><?php echo esc_html( $g_user['last_active'] ?: '—' ); ?></td>
                     <td><?php echo number_format_i18n( (int) ( $g_user['message_count'] ?? 0 ) ); ?></td>
@@ -2785,6 +2820,7 @@ body {
             <?php endif; ?>
             <?php endif; ?>
         </div>
+        <?php endif; // guest_ip messages view vs list ?>
         <?php endif; ?>
         </div>
 
