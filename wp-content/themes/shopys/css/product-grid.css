@@ -1153,9 +1153,11 @@ body article .entry-content .ppg-title-link:active,
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-top: 16px;
+    margin-top: auto;       /* always pin the buttons to the bottom */
+    padding-top: 14px;
     flex-wrap: wrap;
 }
+.ppg-qv-add-wrap { position: relative; display: inline-flex; }
 .ppg-qv-actions .ppg-qv-add {
     display: inline-flex;
     align-items: center;
@@ -1175,9 +1177,63 @@ body article .entry-content .ppg-title-link:active,
     transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(19,232,0,.4) !important;
 }
+/* Icon-only Add to Cart — clean square, aligned with View Details */
+.ppg-qv-actions .ppg-qv-add.ppg-qv-add-icon {
+    width: 48px;
+    min-width: 48px;
+    height: 48px;
+    padding: 0 !important;
+    border-radius: 12px !important;
+    flex: 0 0 auto;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 0 !important;
+}
+.ppg-qv-add-icon svg {
+    width: 21px;
+    height: 21px;
+    display: block;
+    margin: 0;
+}
+/* Tooltip on the icon button (on the wrapper, so it never clashes with the WC loading spinner) */
+.ppg-qv-add-wrap[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 9px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a2233;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 9px;
+    border-radius: 6px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .15s ease;
+    z-index: 5;
+}
+.ppg-qv-add-wrap[data-tooltip]::before {
+    content: '';
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #1a2233;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .15s ease;
+}
+.ppg-qv-add-wrap[data-tooltip]:hover::after,
+.ppg-qv-add-wrap[data-tooltip]:hover::before { opacity: 1; }
 /* View Details becomes the secondary button beside Add to Cart */
 .ppg-qv-actions .ppg-qv-link {
     margin-top: 0;
+    height: 48px;
+    padding: 0 22px;
     background: #fff;
     color: #0a7d00;
     border: 1.5px solid #13e800;

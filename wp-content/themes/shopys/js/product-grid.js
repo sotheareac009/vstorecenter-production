@@ -338,9 +338,15 @@
             if (addWrap) {
                 if (d.qvAddable === '1' && d.qvId) {
                     var pid = encodeURIComponent(d.qvId);
+                    addWrap.setAttribute('data-tooltip', 'Add to Cart');
                     addWrap.innerHTML = '<a href="?add-to-cart=' + pid + '" data-quantity="1" data-product_id="' + pid +
-                        '" rel="nofollow" class="button product_type_simple add_to_cart_button ajax_add_to_cart ppg-qv-add">Add to Cart</a>';
+                        '" rel="nofollow" aria-label="Add to Cart" title="Add to Cart" ' +
+                        'class="button product_type_simple add_to_cart_button ajax_add_to_cart ppg-qv-add ppg-qv-add-icon">' +
+                        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+                        '<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>' +
+                        '<path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></a>';
                 } else {
+                    addWrap.removeAttribute('data-tooltip');
                     addWrap.innerHTML = '';
                 }
             }
