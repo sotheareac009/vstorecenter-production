@@ -118,7 +118,7 @@ $query = new WP_Query( array(
     border-radius: 12px;
     background: #fff;
     border: 1px solid #eaedf0;
-    box-shadow: 0 2px 10px rgba(0,0,0,.06);
+    /* box-shadow: 0 2px 10px rgba(0,0,0,.06); */
     transition: box-shadow .25s, transform .25s, border-color .25s;
 }
 .na-content .ppg-card:hover {

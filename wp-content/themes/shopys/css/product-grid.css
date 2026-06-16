@@ -66,7 +66,7 @@
     max-width: 1400px;
     margin: 0 auto;
     padding: 15px 10px;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: 'Play', 'Battambang', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     font-size: 14px;
 }
 
@@ -189,18 +189,19 @@
 .ppg-card {
     position: relative;
     background: #fff;
-    border-radius: 12px;
+    border-radius: 16px;
     overflow: hidden;
-    border: 1px solid #eee;
-    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid #eef0f3;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 6px 18px rgba(16, 24, 40, 0.05);
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.35s ease, border-color 0.35s ease;
     display: flex;
     flex-direction: column;
 }
 
 .ppg-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1), 0 4px 12px rgba(0, 0, 0, 0.05);
-    border-color: transparent;
+    transform: translateY(-7px);
+    box-shadow: 0 24px 50px rgba(16, 24, 40, 0.14), 0 8px 18px rgba(16, 24, 40, 0.06);
+    border-color: rgba(19, 232, 0, 0.45);
 }
 
 /* Hide card on filter */
@@ -420,6 +421,55 @@ body article .entry-content .ppg-title-link:active,
     margin-top: auto;
     /* Always push to bottom of card */
     padding-top: 8px;
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* When View + Add to Cart are both shown, share the row evenly */
+.ppg-actions .button,
+.ppg-actions .add_to_cart_button,
+.ppg-actions a.button,
+.ppg-actions .ppg-add-to-cart {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto !important;
+}
+.ppg-actions .added_to_cart { flex-basis: 100%; text-align: center; }
+
+/* Secondary "View" button — distinct from the green Add to Cart */
+.ppg-actions a.ppg-view-btn {
+    background: #fff !important;
+    color: #13e800 !important;
+    border: 1.5px solid #13e800 !important;
+    box-shadow: none !important;
+}
+.ppg-actions a.ppg-view-btn:hover {
+    background: #13e800 !important;
+    color: #fff !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(19, 232, 0, 0.3) !important;
+}
+
+/* Compact icon Quick View button (grid cards) — keeps Add to Cart full width */
+.ppg-actions .ppg-qv-btn.ppg-qv-grid {
+    flex: 0 0 46px;
+    width: 46px;
+    min-width: 46px;
+    padding: 0 !important;
+    gap: 0;
+    background: #fff;
+    color: #1a2233;
+    border: 1.5px solid #e2e6ea;
+    border-radius: 8px;
+    justify-content: center;
+}
+.ppg-actions .ppg-qv-btn.ppg-qv-grid:hover {
+    background: #13e800;
+    border-color: #13e800;
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(19, 232, 0, 0.28);
 }
 
 .ppg-actions .ppg-add-to-cart,
@@ -435,7 +485,7 @@ body article .entry-content .ppg-title-link:active,
     border-radius: 8px !important;
     background: linear-gradient(135deg, #13e800, #0fb500) !important;
     color: #fff !important;
-    font-family: 'Inter', sans-serif !important;
+    font-family: 'Play', 'Battambang', sans-serif !important;
     font-size: 13px !important;
     font-weight: 700 !important;
     letter-spacing: 0.5px;
@@ -443,6 +493,7 @@ body article .entry-content .ppg-title-link:active,
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     text-transform: uppercase;
     text-decoration: none !important;
+    box-shadow: 0 4px 12px rgba(19, 232, 0, 0.25) !important;
     box-sizing: border-box;
 }
 
@@ -697,7 +748,7 @@ body article .entry-content .ppg-title-link:active,
 .ppg-list-table {
     width: 100%;
     border-collapse: collapse;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Play', 'Battambang', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 13.5px;
     background: #fff;
     border: 1px solid #e8e8e8;
@@ -873,7 +924,7 @@ body article .entry-content .ppg-title-link:active,
     border-radius: 7px !important;
     background: linear-gradient(135deg, #13e800, #0fb500) !important;
     color: #fff !important;
-    font-family: 'Inter', sans-serif !important;
+    font-family: 'Play', 'Battambang', sans-serif !important;
     font-size: 12px !important;
     font-weight: 700 !important;
     cursor: pointer;
@@ -944,7 +995,7 @@ body article .entry-content .ppg-title-link:active,
     border-radius: 7px;
     background: transparent;
     color: #0a7000;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Play', 'Battambang', sans-serif;
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
@@ -1052,7 +1103,91 @@ body article .entry-content .ppg-title-link:active,
 .ppg-qv-price { font-size: 20px; font-weight: 800; color: #e80046; }
 .ppg-qv-price ins  { text-decoration: none; }
 .ppg-qv-price del  { font-size: 14px; color: #bbb; font-weight: 400; margin-right: 6px; }
-.ppg-qv-desc  { font-size: 13px; color: #555; line-height: 1.65; margin: 0; flex: 1; }
+.ppg-qv-desc  { font-size: 13px; color: #555; line-height: 1.65; margin: 0 0 4px; flex: 0 0 auto; }
+
+/* ── Quick View: extra product detail ── */
+.ppg-qv-stock {
+    display: inline-block;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 3px 11px;
+    border-radius: 20px;
+    margin: 2px 0 10px;
+    letter-spacing: .3px;
+}
+.ppg-qv-stock.ppg-qv-instock  { background: rgba(19,232,0,.12); color: #0a7d00; }
+.ppg-qv-stock.ppg-qv-outstock { background: rgba(220,38,38,.10); color: #c81e1e; }
+
+.ppg-qv-specs {
+    list-style: none;
+    margin: 12px 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.ppg-qv-specs li {
+    position: relative;
+    padding-left: 20px;
+    font-size: 13px;
+    color: #374151;
+    line-height: 1.45;
+}
+.ppg-qv-specs li::before {
+    content: '';
+    position: absolute;
+    left: 2px; top: 7px;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #13e800;
+}
+
+.ppg-qv-sku-row {
+    font-size: 12px;
+    color: #9ca3af;
+    margin: 4px 0 16px;
+    font-weight: 600;
+}
+
+.ppg-qv-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+}
+.ppg-qv-actions .ppg-qv-add {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 22px !important;
+    background: linear-gradient(135deg, #13e800, #0fb500) !important;
+    color: #fff !important;
+    font-size: 13px;
+    font-weight: 700;
+    border-radius: 9px !important;
+    border: none !important;
+    text-decoration: none !important;
+    box-shadow: 0 3px 12px rgba(19,232,0,0.28) !important;
+    transition: transform .2s, box-shadow .2s;
+}
+.ppg-qv-actions .ppg-qv-add:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(19,232,0,.4) !important;
+}
+/* View Details becomes the secondary button beside Add to Cart */
+.ppg-qv-actions .ppg-qv-link {
+    margin-top: 0;
+    background: #fff;
+    color: #0a7d00;
+    border: 1.5px solid #13e800;
+    box-shadow: none;
+}
+.ppg-qv-actions .ppg-qv-link:hover {
+    background: #13e800;
+    color: #fff;
+}
+
 .ppg-qv-link {
     display: inline-flex;
     align-items: center;

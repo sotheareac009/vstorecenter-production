@@ -292,16 +292,59 @@
         document.addEventListener('click', function (e) {
             var btn = e.target.closest('.ppg-qv-btn');
             if (!btn) return;
-            var row = btn.closest('.ppg-lt-row');
+            e.preventDefault();
+            var row = btn.closest('.ppg-lt-row, .ppg-card');
             if (!row) return;
             var modal = document.getElementById('ppg-qv-modal');
             if (!modal) return;
-            modal.querySelector('.ppg-qv-image').src        = row.dataset.qvImage || '';
-            modal.querySelector('.ppg-qv-image').alt        = row.dataset.qvName  || '';
-            modal.querySelector('.ppg-qv-name').textContent = row.dataset.qvName  || '';
-            modal.querySelector('.ppg-qv-price').innerHTML  = row.dataset.qvPrice || '';
-            modal.querySelector('.ppg-qv-desc').textContent = row.dataset.qvDesc  || '';
-            modal.querySelector('.ppg-qv-link').href        = row.dataset.qvUrl   || '#';
+            var d = row.dataset;
+            modal.querySelector('.ppg-qv-image').src        = d.qvImage || '';
+            modal.querySelector('.ppg-qv-image').alt        = d.qvName  || '';
+            modal.querySelector('.ppg-qv-name').textContent = d.qvName  || '';
+            modal.querySelector('.ppg-qv-price').innerHTML  = d.qvPrice || '';
+            modal.querySelector('.ppg-qv-desc').textContent = d.qvDesc  || '';
+            modal.querySelector('.ppg-qv-link').href        = d.qvUrl   || '#';
+
+            // Stock status
+            var stockEl = modal.querySelector('.ppg-qv-stock');
+            if (stockEl) {
+                var inStock = (d.qvStock !== 'out');
+                stockEl.textContent = inStock ? 'In Stock' : 'Out of Stock';
+                stockEl.className = 'ppg-qv-stock ' + (inStock ? 'ppg-qv-instock' : 'ppg-qv-outstock');
+            }
+
+            // Key specs
+            var specsEl = modal.querySelector('.ppg-qv-specs');
+            if (specsEl) {
+                specsEl.innerHTML = '';
+                var specs = (d.qvSpecs || '').split('||').filter(function (s) { return s.trim() !== ''; });
+                specs.forEach(function (s) {
+                    var li = document.createElement('li');
+                    li.textContent = s;
+                    specsEl.appendChild(li);
+                });
+                specsEl.style.display = specs.length ? '' : 'none';
+            }
+
+            // SKU / product code
+            var skuEl = modal.querySelector('.ppg-qv-sku-row');
+            if (skuEl) {
+                skuEl.textContent = d.qvSku ? ('Code: ' + d.qvSku) : '';
+                skuEl.style.display = d.qvSku ? '' : 'none';
+            }
+
+            // Add to Cart (simple, purchasable, in-stock products)
+            var addWrap = modal.querySelector('.ppg-qv-add-wrap');
+            if (addWrap) {
+                if (d.qvAddable === '1' && d.qvId) {
+                    var pid = encodeURIComponent(d.qvId);
+                    addWrap.innerHTML = '<a href="?add-to-cart=' + pid + '" data-quantity="1" data-product_id="' + pid +
+                        '" rel="nofollow" class="button product_type_simple add_to_cart_button ajax_add_to_cart ppg-qv-add">Add to Cart</a>';
+                } else {
+                    addWrap.innerHTML = '';
+                }
+            }
+
             modal.hidden = false;
             document.body.style.overflow = 'hidden';
         });

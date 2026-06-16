@@ -16,6 +16,7 @@ function premium_product_grid_shortcode( $atts ) {
         'order'            => 'DESC',
         'filter'           => 'false',
         'cart'             => 'true',
+        'view'             => 'false',
         'pagination_type'  => 'normal',
         'show_description' => 'true',
         'listing_type'                  => 'grid',   // 'grid' | 'table'
@@ -199,28 +200,6 @@ function premium_product_grid_shortcode( $atts ) {
             </table>
         </div>
 
-        <!-- ── Quick View Modal (one shared instance per page) ── -->
-        <div class="ppg-qv-overlay" id="ppg-qv-modal" role="dialog" aria-modal="true" aria-label="Quick View" hidden>
-            <div class="ppg-qv-modal">
-                <button class="ppg-qv-close" aria-label="Close">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                </button>
-                <div class="ppg-qv-body">
-                    <div class="ppg-qv-image-wrap">
-                        <img class="ppg-qv-image" src="" alt="">
-                    </div>
-                    <div class="ppg-qv-info">
-                        <h3 class="ppg-qv-name"></h3>
-                        <div class="ppg-qv-price"></div>
-                        <p class="ppg-qv-desc"></p>
-                        <a class="ppg-qv-link" href="#"><?php esc_html_e( 'View Full Details →', 'shopys' ); ?></a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <?php else : ?>
 
         <!-- ── GRID LISTING ── -->
@@ -252,7 +231,17 @@ function premium_product_grid_shortcode( $atts ) {
                 }
             }
         ?>
-            <div class="ppg-card" data-categories="<?php echo esc_attr( $cat_data ); ?>">
+            <div class="ppg-card" data-categories="<?php echo esc_attr( $cat_data ); ?>"
+                data-qv-image="<?php echo esc_url( wp_get_attachment_image_url( $product->get_image_id(), 'woocommerce_single' ) ?: $thumb_url ); ?>"
+                data-qv-name="<?php echo esc_attr( $product->get_name() ); ?>"
+                data-qv-price="<?php echo esc_attr( $product->get_price_html() ); ?>"
+                data-qv-desc="<?php echo esc_attr( wp_trim_words( $product->get_short_description() ?: $product->get_description(), 55, '…' ) ); ?>"
+                data-qv-sku="<?php echo esc_attr( $sku ); ?>"
+                data-qv-stock="<?php echo $product->is_in_stock() ? 'in' : 'out'; ?>"
+                data-qv-id="<?php echo esc_attr( $product->get_id() ); ?>"
+                data-qv-addable="<?php echo ( $product->is_purchasable() && $product->is_in_stock() && $product->is_type( 'simple' ) ) ? '1' : '0'; ?>"
+                data-qv-specs="<?php echo esc_attr( implode( '||', array_slice( (array) ( $specs ?? array() ), 0, 6 ) ) ); ?>"
+                data-qv-url="<?php echo esc_url( get_permalink() ); ?>">
                 <?php if ( $product->is_on_sale() || ! $product->is_in_stock() ) : ?>
                 <div class="ppg-badges">
                     <?php if ( $product->is_on_sale() ) : ?>
@@ -296,10 +285,19 @@ function premium_product_grid_shortcode( $atts ) {
                     <?php if ( $sku ) : ?>
                     <div class="ppg-sku"><span class="ppg-sku-separator"></span><?php esc_html_e( 'Code', 'shopys' ); ?> : <?php echo esc_html( $sku ); ?></div>
                     <?php endif; ?>
-                    <?php if ( $atts['cart'] === 'true' ) : ?>
-                    <div class="ppg-actions"><?php woocommerce_template_loop_add_to_cart(); ?></div>
-                    <?php else : ?>
-                    <div class="ppg-actions"><a href="<?php echo esc_url( get_permalink() ); ?>" class="button ppg-view-btn"><?php esc_html_e( 'View Product', 'shopys' ); ?></a></div>
+                    <?php if ( $atts['cart'] === 'true' || $atts['view'] === 'true' ) : ?>
+                    <div class="ppg-actions">
+                        <?php if ( $atts['view'] === 'true' ) : ?>
+                            <button type="button" class="ppg-qv-btn ppg-qv-grid" aria-label="<?php esc_attr_e( 'Quick View', 'shopys' ); ?>" title="<?php esc_attr_e( 'Quick View', 'shopys' ); ?>">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            </button>
+                        <?php endif; ?>
+                        <?php if ( $atts['cart'] === 'true' ) : ?>
+                            <?php woocommerce_template_loop_add_to_cart(); ?>
+                        <?php elseif ( $atts['view'] !== 'true' ) : ?>
+                            <a href="<?php echo esc_url( get_permalink() ); ?>" class="button ppg-view-btn"><?php esc_html_e( 'View Product', 'shopys' ); ?></a>
+                        <?php endif; ?>
+                    </div>
                     <?php endif; ?>
                 </div>
             </div>
@@ -307,6 +305,34 @@ function premium_product_grid_shortcode( $atts ) {
         </div>
 
         <?php endif; // listing_type ?>
+
+        <!-- ── Quick View Modal (shared — works for grid + table) ── -->
+        <div class="ppg-qv-overlay" id="ppg-qv-modal" role="dialog" aria-modal="true" aria-label="Quick View" hidden>
+            <div class="ppg-qv-modal">
+                <button class="ppg-qv-close" aria-label="Close">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+                <div class="ppg-qv-body">
+                    <div class="ppg-qv-image-wrap">
+                        <img class="ppg-qv-image" src="" alt="">
+                    </div>
+                    <div class="ppg-qv-info">
+                        <h3 class="ppg-qv-name"></h3>
+                        <div class="ppg-qv-stock"></div>
+                        <div class="ppg-qv-price"></div>
+                        <p class="ppg-qv-desc"></p>
+                        <ul class="ppg-qv-specs"></ul>
+                        <div class="ppg-qv-sku-row"></div>
+                        <div class="ppg-qv-actions">
+                            <span class="ppg-qv-add-wrap"></span>
+                            <a class="ppg-qv-link" href="#"><?php esc_html_e( 'View Full Details →', 'shopys' ); ?></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <?php if ( $query->max_num_pages > 1 ) : ?>
         <div class="ppg-pagination" data-type="<?php echo esc_attr( $atts['pagination_type'] ); ?>">
@@ -364,6 +390,7 @@ function ppg_ajax_paginate_handler() {
         'order'            => sanitize_text_field( $_POST['order']            ?? 'DESC' ),
         'filter'           => sanitize_text_field( $_POST['filter']           ?? 'false' ),
         'cart'             => sanitize_text_field( $_POST['cart']             ?? 'true' ),
+        'view'             => sanitize_text_field( $_POST['view']             ?? 'false' ),
         'show_description' => sanitize_text_field( $_POST['show_description'] ?? 'true' ),
         'pagination_type'  => sanitize_text_field( $_POST['pagination_type']  ?? 'normal' ),
         'listing_type'     => sanitize_text_field( $_POST['listing_type']     ?? 'grid' ),
@@ -497,7 +524,17 @@ function ppg_ajax_paginate_handler() {
                 }
             }
         ?>
-            <div class="ppg-card" data-categories="<?php echo esc_attr( $cat_data ); ?>">
+            <div class="ppg-card" data-categories="<?php echo esc_attr( $cat_data ); ?>"
+                data-qv-image="<?php echo esc_url( wp_get_attachment_image_url( $product->get_image_id(), 'woocommerce_single' ) ?: $thumb_url ); ?>"
+                data-qv-name="<?php echo esc_attr( $product->get_name() ); ?>"
+                data-qv-price="<?php echo esc_attr( $product->get_price_html() ); ?>"
+                data-qv-desc="<?php echo esc_attr( wp_trim_words( $product->get_short_description() ?: $product->get_description(), 55, '…' ) ); ?>"
+                data-qv-sku="<?php echo esc_attr( $sku ); ?>"
+                data-qv-stock="<?php echo $product->is_in_stock() ? 'in' : 'out'; ?>"
+                data-qv-id="<?php echo esc_attr( $product->get_id() ); ?>"
+                data-qv-addable="<?php echo ( $product->is_purchasable() && $product->is_in_stock() && $product->is_type( 'simple' ) ) ? '1' : '0'; ?>"
+                data-qv-specs="<?php echo esc_attr( implode( '||', array_slice( (array) ( $specs ?? array() ), 0, 6 ) ) ); ?>"
+                data-qv-url="<?php echo esc_url( get_permalink() ); ?>">
                 <?php if ( $product->is_on_sale() || ! $product->is_in_stock() ) : ?>
                 <div class="ppg-badges">
                     <?php if ( $product->is_on_sale() ) : ?>
@@ -537,10 +574,19 @@ function ppg_ajax_paginate_handler() {
                     <?php if ( $sku ) : ?>
                     <div class="ppg-sku"><span class="ppg-sku-separator"></span><?php esc_html_e( 'Code', 'shopys' ); ?> : <?php echo esc_html( $sku ); ?></div>
                     <?php endif; ?>
-                    <?php if ( $atts['cart'] === 'true' ) : ?>
-                    <div class="ppg-actions"><?php woocommerce_template_loop_add_to_cart(); ?></div>
-                    <?php else : ?>
-                    <div class="ppg-actions"><a href="<?php echo esc_url( get_permalink() ); ?>" class="button ppg-view-btn"><?php esc_html_e( 'View Product', 'shopys' ); ?></a></div>
+                    <?php if ( $atts['cart'] === 'true' || $atts['view'] === 'true' ) : ?>
+                    <div class="ppg-actions">
+                        <?php if ( $atts['view'] === 'true' ) : ?>
+                            <button type="button" class="ppg-qv-btn ppg-qv-grid" aria-label="<?php esc_attr_e( 'Quick View', 'shopys' ); ?>" title="<?php esc_attr_e( 'Quick View', 'shopys' ); ?>">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            </button>
+                        <?php endif; ?>
+                        <?php if ( $atts['cart'] === 'true' ) : ?>
+                            <?php woocommerce_template_loop_add_to_cart(); ?>
+                        <?php elseif ( $atts['view'] !== 'true' ) : ?>
+                            <a href="<?php echo esc_url( get_permalink() ); ?>" class="button ppg-view-btn"><?php esc_html_e( 'View Product', 'shopys' ); ?></a>
+                        <?php endif; ?>
+                    </div>
                     <?php endif; ?>
                 </div>
             </div>
