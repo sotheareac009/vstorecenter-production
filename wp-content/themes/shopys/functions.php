@@ -1206,3 +1206,85 @@ function shopys_track_user_login( $user_login, $user ) {
     update_user_meta( $user->ID, 'shopys_last_login',    $now );
     update_user_meta( $user->ID, 'shopys_last_login_ip', $ip  );
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   ADD-TO-CART LOGIN GATE
+   Guests must log in before adding to cart. Logged-in users add normally.
+   ═══════════════════════════════════════════════════════════════════ */
+
+// Server-side safety net — blocks guests even if JS is bypassed.
+add_filter( 'woocommerce_add_to_cart_validation', 'shopys_require_login_to_add_cart', 10, 2 );
+function shopys_require_login_to_add_cart( $passed, $product_id ) {
+    if ( ! is_user_logged_in() ) {
+        wc_add_notice( __( 'Please log in or create an account to add products to your cart.', 'shopys' ), 'error' );
+        return false;
+    }
+    return $passed;
+}
+
+// Premium login dialog + click interception (only output for guests).
+add_action( 'wp_footer', 'shopys_add_to_cart_login_dialog', 60 );
+function shopys_add_to_cart_login_dialog() {
+    if ( is_user_logged_in() || ! function_exists( 'WC' ) ) return;
+
+    $account_url  = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : home_url( '/my-account/' );
+    if ( ! $account_url ) $account_url = home_url( '/my-account/' );
+    $login_url    = add_query_arg( 'action', 'login', $account_url ) . '#customer_login';
+    $register_url = add_query_arg( 'action', 'register', $account_url ) . '#register';
+    ?>
+    <style>
+    .satc-overlay{position:fixed;inset:0;z-index:2147483600;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(13,17,23,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);opacity:0;visibility:hidden;transition:opacity .22s ease,visibility .22s ease;}
+    .satc-overlay.satc-open{opacity:1;visibility:visible;}
+    .satc-modal{position:relative;width:100%;max-width:380px;background:#fff;border-radius:20px;padding:30px 26px 26px;box-shadow:0 30px 70px rgba(0,0,0,.3);text-align:center;transform:translateY(14px) scale(.97);transition:transform .25s cubic-bezier(.2,.7,.3,1);font-family:'Play','Battambang',-apple-system,sans-serif;}
+    .satc-overlay.satc-open .satc-modal{transform:none;}
+    .satc-close{position:absolute;top:14px;right:14px;width:30px;height:30px;border:none;background:#f1f5f9;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#64748b;transition:background .2s;}
+    .satc-close:hover{background:#e2e8f0;color:#1a1a2e;}
+    .satc-badge{width:64px;height:64px;margin:0 auto 16px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#13e800,#0fb500);box-shadow:0 10px 26px rgba(19,232,0,.4);}
+    .satc-title{font-size:20px;font-weight:800;color:#0d1117;margin:0 0 8px;letter-spacing:-.3px;}
+    .satc-text{font-size:14px;color:#64748b;line-height:1.6;margin:0 0 22px;}
+    .satc-actions{display:flex;flex-direction:column;gap:10px;}
+    .satc-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 20px;border-radius:11px;font-size:14px;font-weight:700;text-decoration:none;cursor:pointer;transition:transform .15s ease,box-shadow .2s ease,background .2s ease;}
+    .satc-btn-primary{background:linear-gradient(135deg,#13e800,#0fb500);color:#000;box-shadow:0 8px 22px rgba(19,232,0,.35);}
+    .satc-btn-primary:hover{transform:translateY(-2px);color:#000;box-shadow:0 12px 28px rgba(19,232,0,.45);}
+    .satc-btn-ghost{background:#fff;color:#0d1117;border:1.5px solid #e2e8f0;}
+    .satc-btn-ghost:hover{border-color:#13e800;color:#0a7d00;}
+    </style>
+
+    <div class="satc-overlay" id="satc-login-gate" role="dialog" aria-modal="true" aria-label="<?php esc_attr_e( 'Login required', 'shopys' ); ?>" hidden>
+        <div class="satc-modal">
+            <button class="satc-close" type="button" aria-label="<?php esc_attr_e( 'Close', 'shopys' ); ?>">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <div class="satc-badge">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+            </div>
+            <h3 class="satc-title"><?php esc_html_e( 'Log in to add to cart', 'shopys' ); ?></h3>
+            <p class="satc-text"><?php esc_html_e( 'Please log in or create an account to add products to your cart and build your PC.', 'shopys' ); ?></p>
+            <div class="satc-actions">
+                <a class="satc-btn satc-btn-primary" href="<?php echo esc_url( $login_url ); ?>"><?php esc_html_e( 'Log In', 'shopys' ); ?></a>
+                <a class="satc-btn satc-btn-ghost" href="<?php echo esc_url( $register_url ); ?>"><?php esc_html_e( 'Create Account', 'shopys' ); ?></a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function () {
+        var gate = document.getElementById('satc-login-gate');
+        if (!gate) return;
+        var SEL = '.add_to_cart_button, .single_add_to_cart_button, .ajax_add_to_cart, .ppg-qv-add, button[name="add-to-cart"]';
+        function openGate() { gate.hidden = false; requestAnimationFrame(function(){ gate.classList.add('satc-open'); }); document.body.style.overflow = 'hidden'; }
+        function closeGate() { gate.classList.remove('satc-open'); document.body.style.overflow = ''; setTimeout(function(){ gate.hidden = true; }, 220); }
+        // Intercept add-to-cart clicks in the capture phase so WooCommerce's own handler never runs.
+        document.addEventListener('click', function (e) {
+            if (e.target.closest(SEL)) { e.preventDefault(); e.stopImmediatePropagation(); openGate(); return; }
+            if (e.target.closest('.satc-close') || e.target === gate) { closeGate(); }
+        }, true);
+        // Block add-to-cart form submits (single product page, Enter key)
+        document.addEventListener('submit', function (e) {
+            if (e.target.closest && e.target.closest('form.cart')) { e.preventDefault(); e.stopImmediatePropagation(); openGate(); }
+        }, true);
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && gate.classList.contains('satc-open')) closeGate(); });
+    })();
+    </script>
+    <?php
+}
