@@ -2755,15 +2755,17 @@ body {
 
         <!-- ── Top Questions (semantic analysis) ── -->
         <div class="ds-table-wrap" style="margin-bottom:24px;">
-            <div class="ds-table-head" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+            <div class="ds-table-head" id="sai-tq-toggle" style="display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;user-select:none;">
                 <span>🔥 Top Questions <span style="color:var(--muted);font-weight:400;font-size:12px;margin-left:6px;">grouped by meaning</span></span>
-                <div style="display:flex;align-items:center;gap:8px;">
-                    <select id="sai-tq-top" style="padding:6px 10px;border:1px solid var(--border,#e2e6ea);border-radius:8px;font:inherit;">
-                        <option value="20">Top 20</option>
-                        <option value="50">Top 50</option>
-                    </select>
-                    <button id="sai-tq-run" type="button" style="background:#13e800;color:#000;border:none;border-radius:8px;padding:7px 16px;font-weight:700;cursor:pointer;">Analyze</button>
-                </div>
+                <svg id="sai-tq-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .2s;flex-shrink:0;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <div id="sai-tq-collapse" style="display:none;">
+            <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border,#eee);">
+                <select id="sai-tq-top" style="padding:6px 10px;border:1px solid var(--border,#e2e6ea);border-radius:8px;font:inherit;">
+                    <option value="20">Top 20</option>
+                    <option value="50">Top 50</option>
+                </select>
+                <button id="sai-tq-run" type="button" style="background:#13e800;color:#000;border:none;border-radius:8px;padding:7px 16px;font-weight:700;cursor:pointer;">Analyze</button>
             </div>
             <div id="sai-tq-meta" style="padding:8px 16px;color:var(--muted);font-size:12px;border-bottom:1px solid var(--border,#eee);">
                 <?php if ( is_array( $top_q ) && ! empty( $top_q['generated_at'] ) ) :
@@ -2787,9 +2789,22 @@ body {
                 </table>
                 <?php endif; ?>
             </div>
+            </div>
         </div>
         <script>
         (function () {
+            // Collapsible toggle (default collapsed)
+            var tg = document.getElementById('sai-tq-toggle');
+            var col = document.getElementById('sai-tq-collapse');
+            var chev = document.getElementById('sai-tq-chevron');
+            if (tg && col) {
+                tg.addEventListener('click', function () {
+                    var open = col.style.display !== 'none';
+                    col.style.display = open ? 'none' : '';
+                    if (chev) chev.style.transform = open ? '' : 'rotate(180deg)';
+                });
+            }
+
             var btn = document.getElementById('sai-tq-run');
             if (!btn) return;
             var ajaxUrl = '<?php echo esc_js( admin_url( 'admin-ajax.php' ) ); ?>';
