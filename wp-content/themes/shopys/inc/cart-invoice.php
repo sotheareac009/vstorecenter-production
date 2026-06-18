@@ -386,11 +386,9 @@ function shopys_render_cart_invoice() {
         <div class="inv-info-row">
             <div>
                 <div class="inv-to-label">To:</div>
-                <!-- <div class="inv-customer-name"><?php echo esc_html( $customer ); ?></div>
-                <?php if ( $customer_email ) : ?>
-                    <div class="inv-customer-sub"><?php echo esc_html( $customer_email ); ?></div>
-                <?php endif; ?>
-                <div class="inv-customer-sub"><?php echo esc_html( $shop_address ); ?></div> -->
+                <div class="inv-customer-name" id="display-cust-name"><?php esc_html_e( 'Customer', 'shopys' ); ?></div>
+                <div class="inv-customer-sub" id="display-cust-number" style="display:none;"></div>
+                <div class="inv-customer-sub" id="display-cust-location" style="display:none;"></div>
             </div>
             <div class="inv-payment-block">
                 <div class="inv-payment-label">From:</div>
@@ -519,6 +517,11 @@ function shopys_render_cart_invoice() {
 
         <!-- Print Button -->
         <div class="inv-print-wrap">
+            <div class="inv-cust-fields" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;">
+                <input type="text" id="cust-name-input" placeholder="<?php esc_attr_e( 'Customer name', 'shopys' ); ?>" style="padding:12px 14px;border:1px solid #ccc;border-radius:8px;font-family:inherit;font-size:13px;outline:none;" oninput="shopysSyncTo()">
+                <input type="text" id="cust-number-input" placeholder="<?php esc_attr_e( 'Customer number', 'shopys' ); ?>" style="padding:12px 14px;border:1px solid #ccc;border-radius:8px;font-family:inherit;font-size:13px;outline:none;" oninput="shopysSyncTo()">
+                <input type="text" id="cust-location-input" placeholder="<?php esc_attr_e( 'Customer location', 'shopys' ); ?>" style="padding:12px 14px;border:1px solid #ccc;border-radius:8px;font-family:inherit;font-size:13px;outline:none;" oninput="shopysSyncTo()">
+            </div>
             <div style="margin-bottom: 12px;">
                 <input type="text" id="booking-input" placeholder="<?php esc_attr_e( 'Customer Booking...', 'shopys' ); ?>" style="width: 100%; padding: 12px 14px; border: 1px solid #ccc; border-radius: 8px; font-family: inherit; font-size: 13px; outline: none;" oninput="
                     var row = document.getElementById('booking-summary-row');
@@ -540,12 +543,31 @@ function shopys_render_cart_invoice() {
 
     </div>
     <script>
-        // Removed the auto-print so you have time to paste the booking ID.
-        // window.addEventListener('load', function () { setTimeout(function () { window.print(); }, 700); });
-        
-        // Auto-focus the booking input so you can paste immediately when the window opens.
+        // Mirror the customer fields into the "To:" block of the invoice.
+        function shopysSyncTo() {
+            var map = [
+                ['cust-name-input',     'display-cust-name',     ''],
+                ['cust-number-input',   'display-cust-number',   '<?php echo esc_js( __( 'Phone', 'shopys' ) ); ?> : '],
+                ['cust-location-input', 'display-cust-location', '<?php echo esc_js( __( 'Location', 'shopys' ) ); ?> : ']
+            ];
+            map.forEach(function (m) {
+                var input = document.getElementById(m[0]);
+                var out   = document.getElementById(m[1]);
+                if (!input || !out) return;
+                var val = input.value.trim();
+                if (m[0] === 'cust-name-input') {
+                    out.textContent = val || '<?php echo esc_js( __( 'Customer', 'shopys' ) ); ?>';   // always shows
+                } else {
+                    out.textContent = val ? (m[2] + val) : '';   // "Phone : ..." / "Location : ..."
+                    out.style.display = val ? '' : 'none';
+                }
+            });
+        }
+
+        // Auto-focus the customer name field when the window opens.
         window.addEventListener('load', function () {
-            document.getElementById('booking-input').focus();
+            var n = document.getElementById('cust-name-input');
+            if (n) n.focus();
         });
     </script>
     </body>

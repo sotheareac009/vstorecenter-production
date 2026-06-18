@@ -23,6 +23,10 @@ function shopys_cart_summary_shortcode( $atts ) {
 
     if ( ! function_exists( 'WC' ) ) return '';
 
+    // This widget shows the current user's live cart — never serve the page from
+    // full-page cache (LiteSpeed), or a stale/empty cart appears after navigation.
+    do_action( 'litespeed_control_set_nocache', 'shopys cart summary is per-user dynamic content' );
+
     WC()->cart->calculate_totals();
     $cart  = WC()->cart;
     $items = $cart->get_cart();

@@ -95,6 +95,13 @@
         }, 300);
     }
 
+    /* ── Refresh when the page is restored from back/forward cache ─ */
+    // Navigating away and back can restore a stale (empty) cart from bfcache —
+    // re-fetch the live cart so the products show without needing add-to-cart again.
+    window.addEventListener('pageshow', function (e) {
+        if (e.persisted) refreshAll();
+    });
+
     /* ── Listen: Remove button click ────────────────────────────── */
     document.addEventListener('click', function (e) {
         var btn = e.target.closest('.shopys-cs__remove-btn');
