@@ -1484,6 +1484,13 @@
         padding-right: calc(14px + env(safe-area-inset-right));
     }
 
+    /* Prevent iOS Safari from auto-zooming when focusing inputs:
+       it only zooms when font-size is below 16px. */
+    .sai-input,
+    .sai-guest-name-pop input {
+        font-size: 16px;
+    }
+
     /* Larger touch targets for the header action buttons */
     .sai-close,
     .sai-fullscreen,
