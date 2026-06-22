@@ -537,6 +537,52 @@ function shopys_ai_check_and_increment_guest_daily() {
 }
 
 /**
+ * Logged-in WEBSITE ACCOUNT limit = free limit + the same again as a bonus
+ * (e.g. 10 free + 10 more = 20/day). Tracked per WP user via user meta.
+ */
+function shopys_ai_get_user_limit() {
+    $base = (int) get_option( 'shopys_ai_daily_limit', 10 );
+    return $base + $base; // free + bonus
+}
+
+function shopys_ai_check_and_increment_user_daily( $user_id ) {
+    $limit = shopys_ai_get_user_limit();
+    $today = current_time( 'Y-m-d' );
+    $date  = get_user_meta( $user_id, 'shopys_ai_daily_date', true );
+    $count = ( $date === $today ) ? (int) get_user_meta( $user_id, 'shopys_ai_daily_count', true ) : 0;
+
+    if ( $count >= $limit ) {
+        return array( 'allowed' => false, 'remaining' => 0, 'limit' => $limit );
+    }
+    $count++;
+    update_user_meta( $user_id, 'shopys_ai_daily_count', $count );
+    update_user_meta( $user_id, 'shopys_ai_daily_date', $today );
+    // Lifetime tracking for the dashboard "Chatbot Users" list
+    update_user_meta( $user_id, 'shopys_ai_total_messages', (int) get_user_meta( $user_id, 'shopys_ai_total_messages', true ) + 1 );
+    update_user_meta( $user_id, 'shopys_ai_last_active', current_time( 'mysql' ) );
+    return array( 'allowed' => true, 'remaining' => max( 0, $limit - $count ), 'limit' => $limit );
+}
+
+function shopys_ai_get_user_usage( $user_id ) {
+    $limit = shopys_ai_get_user_limit();
+    $today = current_time( 'Y-m-d' );
+    $date  = get_user_meta( $user_id, 'shopys_ai_daily_date', true );
+    $count = ( $date === $today ) ? (int) get_user_meta( $user_id, 'shopys_ai_daily_count', true ) : 0;
+    return array( 'used' => $count, 'remaining' => max( 0, $limit - $count ), 'limit' => $limit );
+}
+
+/**
+ * Human-readable "limit resets at" label (midnight tonight, site timezone).
+ */
+function shopys_ai_limit_reset_label() {
+    $tz       = get_option( 'timezone_string' ) ?: 'UTC';
+    $reset_ts = strtotime( 'tomorrow midnight', current_time( 'timestamp' ) );
+    $reset_dt = new DateTime( '@' . $reset_ts );
+    $reset_dt->setTimezone( new DateTimeZone( $tz ) );
+    return $reset_dt->format( 'D, d M Y \a\t h:i A' );
+}
+
+/**
  * Get model for user — all tiers use Haiku. Tiers differ only in daily limit.
  */
 function shopys_ai_get_user_model( $tg_id ) {
@@ -546,8 +592,10 @@ function shopys_ai_get_user_model( $tg_id ) {
 /**
  * Auto-inject chatbot session into localStorage when user is WP-logged-in via Telegram.
  * This bridges the header Telegram login → chatbot session so no second login is needed.
+ *
+ * DISABLED: Telegram login was removed — the chatbot now uses the website account.
  */
-add_action( 'wp_footer', 'shopys_ai_inject_tg_session', 5 );
+// add_action( 'wp_footer', 'shopys_ai_inject_tg_session', 5 );
 function shopys_ai_inject_tg_session() {
     if ( ! is_user_logged_in() ) return;
 
@@ -1870,58 +1918,25 @@ add_action( 'wp_ajax_nopriv_shopys_ai_get_status', 'shopys_ai_get_status_handler
 function shopys_ai_get_status_handler() {
     check_ajax_referer( 'shopys_ai_nonce', 'nonce' );
 
-    $tg_id      = isset( $_POST['tg_id'] ) ? intval( $_POST['tg_id'] ) : 0;
-    $tg_auth    = isset( $_POST['tg_auth_date'] ) ? intval( $_POST['tg_auth_date'] ) : 0;
-    $tg_session = isset( $_POST['tg_session'] ) ? sanitize_text_field( wp_unslash( $_POST['tg_session'] ) ) : '';
-
-    $has_session = ! empty( $tg_id ) && ! empty( $tg_session ) && shopys_ai_verify_tg_session( $tg_id, $tg_auth, $tg_session );
-
-    if ( ! $has_session ) {
-        // No valid Telegram session — return guest usage when Free Chat is on.
-        if ( get_option( 'shopys_ai_free_chat', '1' ) !== '0' ) {
-            $guest = shopys_ai_get_guest_usage();
-            wp_send_json_success( array(
-                'limit'     => $guest['limit'],
-                'used'      => $guest['used'],
-                'remaining' => $guest['remaining'],
-                'model'     => 'claude-haiku-4-5-20251001',
-            ) );
-        }
-        wp_send_json_error( array( 'message' => 'Invalid session.' ) );
-    }
-
-    global $wpdb;
-    $table = $wpdb->prefix . 'chatbot_telegram_users';
-    $today = current_time( 'Y-m-d' );
-
-    $limit     = shopys_ai_get_daily_limit( $tg_id );
-    $model     = shopys_ai_get_user_model( $tg_id );
-
-    if ( $limit === -1 ) {
-        // Admin/unlimited
+    // Logged-in website-account users get the higher (base + bonus) limit; guests get the base.
+    if ( is_user_logged_in() ) {
+        $u = shopys_ai_get_user_usage( get_current_user_id() );
         wp_send_json_success( array(
-            'limit'     => -1,
-            'used'      => 0,
-            'remaining' => -1,
-            'model'     => $model,
+            'limit'     => $u['limit'],
+            'used'      => $u['used'],
+            'remaining' => $u['remaining'],
+            'logged_in' => true,
+            'model'     => 'claude-haiku-4-5-20251001',
         ) );
     }
 
-    $row = $wpdb->get_row( $wpdb->prepare(
-        "SELECT daily_count, daily_date FROM {$table} WHERE telegram_id = %d",
-        $tg_id
-    ) );
-
-    $used = 0;
-    if ( $row && $row->daily_date === $today ) {
-        $used = (int) $row->daily_count;
-    }
-
+    $guest = shopys_ai_get_guest_usage();
     wp_send_json_success( array(
-        'limit'     => $limit,
-        'used'      => $used,
-        'remaining' => max( 0, $limit - $used ),
-        'model'     => $model,
+        'limit'     => $guest['limit'],
+        'used'      => $guest['used'],
+        'remaining' => $guest['remaining'],
+        'logged_in' => false,
+        'model'     => 'claude-haiku-4-5-20251001',
     ) );
 }
 
@@ -1930,70 +1945,34 @@ function shopys_ai_chat_handler() {
 
     $tg_id        = 0;
     $ai_remaining = -1; // -1 = unlimited
-    $is_free_chat = get_option( 'shopys_ai_free_chat', '1' ) !== '0';
-
-    // Enforce Telegram login if required (skip when free chat is on)
-    if ( ! $is_free_chat && get_option( 'shopys_ai_require_tg_login', '1' ) !== '0' ) {
-        $tg_id       = isset( $_POST['tg_id'] ) ? intval( $_POST['tg_id'] ) : 0;
-        $tg_auth     = isset( $_POST['tg_auth_date'] ) ? intval( $_POST['tg_auth_date'] ) : 0;
-        $tg_session  = isset( $_POST['tg_session'] ) ? sanitize_text_field( wp_unslash( $_POST['tg_session'] ) ) : '';
-
-        if ( empty( $tg_id ) || empty( $tg_session ) || ! shopys_ai_verify_tg_session( $tg_id, $tg_auth, $tg_session ) ) {
-            wp_send_json_error( array( 'message' => 'Please login with Telegram to use the chatbot.', 'require_login' => true ) );
-        }
-
-        // Check group membership if required
-        $require_group = get_option( 'shopys_ai_require_group_member', '0' ) !== '0';
-        $tg_group      = get_option( 'shopys_ai_tg_group', '' );
-        if ( $require_group && ! empty( $tg_group ) ) {
-            // Check user meta first (set when user confirms joining)
-            $wp_user = get_users( array( 'meta_key' => 'telegram_id', 'meta_value' => $tg_id, 'number' => 1 ) );
-            $verified = ! empty( $wp_user ) && get_user_meta( $wp_user[0]->ID, 'shopys_tg_group_verified', true ) === '1';
-            if ( ! $verified ) {
-                wp_send_json_error( array(
-                    'message'    => 'You must join our Telegram group to use the chatbot.',
-                    'not_member' => true,
-                    'tg_group'   => $tg_group,
-                ) );
-            }
-        }
-
-        // Check daily message limit and increment
-        $limit_check = shopys_ai_check_and_increment_daily( $tg_id );
-        if ( ! $limit_check['allowed'] ) {
-            // Calculate exact reset time: midnight tonight (start of tomorrow) in WordPress timezone
-            $tz          = get_option( 'timezone_string' ) ?: 'UTC';
-            $reset_ts    = strtotime( 'tomorrow midnight', current_time( 'timestamp' ) );
-            $reset_dt    = new DateTime( '@' . $reset_ts );
-            $reset_dt->setTimezone( new DateTimeZone( $tz ) );
-            $reset_str   = $reset_dt->format( 'D, d M Y \a\t h:i A' ); // e.g. "Mon, 21 Apr 2026 at 12:00 AM"
+    // ── Daily message limits (Telegram login removed — uses WEBSITE account) ──
+    // Guests get the base free limit (by IP). Logged-in website-account users
+    // get the base limit PLUS a bonus (e.g. 10 free + 10 more = 20/day).
+    if ( is_user_logged_in() ) {
+        $user_check = shopys_ai_check_and_increment_user_daily( get_current_user_id() );
+        if ( ! $user_check['allowed'] ) {
+            $reset_str = shopys_ai_limit_reset_label();
             wp_send_json_error( array(
-                'message'   => '⚠️ You have reached your daily limit of ' . $limit_check['limit'] . ' messages. Your limit will reset on **' . $reset_str . '**. See you then!',
+                'message'   => '⚠️ You have reached your daily limit of ' . $user_check['limit'] . ' messages. Your limit will reset on **' . $reset_str . '**. See you then!',
                 'limit_hit' => true,
                 'remaining' => 0,
-                'limit'     => $limit_check['limit'],
+                'limit'     => $user_check['limit'],
             ) );
         }
-
-        // Track total message count
-        shopys_ai_tg_increment_messages( $tg_id );
-        $ai_remaining = $limit_check['remaining'];
-    } elseif ( $is_free_chat ) {
-        // Free Chat: no login required, but still cap each guest (by IP) per day.
-        // Ensure the guest table exists even before any admin has loaded wp-admin.
+        $ai_remaining = $user_check['remaining'];
+    } else {
+        // Guest — base limit per IP. Encourage logging in for more messages.
         shopys_ai_maybe_create_guest_table();
         $guest_check = shopys_ai_check_and_increment_guest_daily();
         if ( ! $guest_check['allowed'] ) {
-            $tz        = get_option( 'timezone_string' ) ?: 'UTC';
-            $reset_ts  = strtotime( 'tomorrow midnight', current_time( 'timestamp' ) );
-            $reset_dt  = new DateTime( '@' . $reset_ts );
-            $reset_dt->setTimezone( new DateTimeZone( $tz ) );
-            $reset_str = $reset_dt->format( 'D, d M Y \a\t h:i A' );
+            $reset_str = shopys_ai_limit_reset_label();
+            $more      = (int) get_option( 'shopys_ai_daily_limit', 10 );
             wp_send_json_error( array(
-                'message'   => '⚠️ You have reached your daily limit of ' . $guest_check['limit'] . ' messages. Your limit will reset on **' . $reset_str . '**. See you then!',
-                'limit_hit' => true,
-                'remaining' => 0,
-                'limit'     => $guest_check['limit'],
+                'message'     => '⚠️ You have used your ' . $guest_check['limit'] . ' free messages for today. **Log in to your account** to chat ' . $more . ' more — or come back after the reset on **' . $reset_str . '**.',
+                'limit_hit'   => true,
+                'guest_limit' => true,
+                'remaining'   => 0,
+                'limit'       => $guest_check['limit'],
             ) );
         }
         $ai_remaining = $guest_check['remaining'];
@@ -2013,8 +1992,8 @@ function shopys_ai_chat_handler() {
         wp_send_json_error( array( 'message' => 'Please type a message or attach a file.' ) );
     }
 
-    // Log the guest's question (Free Chat = no Telegram login, so tg_id is 0)
-    if ( $is_free_chat && ! $tg_id && ! empty( $message ) ) {
+    // Log the question for guests only (logged-in users aren't tracked as guests)
+    if ( ! is_user_logged_in() && ! empty( $message ) ) {
         shopys_ai_guest_log_message( $message );
         // Save the guest's chosen display name, if provided
         if ( ! empty( $_POST['guest_name'] ) ) {
@@ -3506,9 +3485,11 @@ function shopys_ai_chatbot_assets() {
         'feat_pdf_reading'     => get_option( 'shopys_ai_pdf_reading', '1' ),
         'feat_link_comparison' => get_option( 'shopys_ai_link_comparison', '1' ),
         'feat_attachments'     => get_option( 'shopys_ai_attachments', '1' ),
-        'require_tg_login'    => $require_tg,
+        'require_tg_login'    => '0', // Telegram login removed — login is via website account
         'free_chat'           => get_option( 'shopys_ai_free_chat', '1' ),
         'tg_bot_username'     => $tg_bot,
+        'is_logged_in'        => is_user_logged_in() ? '1' : '0',
+        'login_url'           => function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : home_url( '/my-account/' ),
     ) );
 }
 

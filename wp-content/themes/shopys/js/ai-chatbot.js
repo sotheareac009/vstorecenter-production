@@ -258,9 +258,10 @@
             }
             initTelegramGate();
         } else if (cfg.free_chat === '1') {
-            // Free Chat: everyone chats as a guest — no login gate, just show the limit bar.
+            // Free Chat: everyone can chat — show the limit bar. Logged-in website
+            // users get more messages; guests can set a display name.
             fetchUserStatus();
-            initGuestName();
+            if (cfg.is_logged_in !== '1') initGuestName();
         }
 
         // Events

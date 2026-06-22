@@ -177,8 +177,7 @@ $menu_items = [
     'siteview'  => [ 'icon' => 'M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z', 'label' => 'Site View' ],
     'analytics' => [ 'icon' => 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', 'label' => 'Analytics' ],
     'users'     => [ 'icon' => 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z', 'label' => 'Users', 'owner_only' => true ],
-    'telegram-users' => [ 'icon' => 'M21.5 4.5l-3.1 14.6c-.2 1-1 .9-1.6.6l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.9 8.9-8c.4-.4-.1-.6-.6-.3L6.2 12 1.7 10.6c-1-.3-1-1 .2-1.5l17.6-6.8c.8-.3 1.5.2 1.2 1.2z', 'label' => 'Telegram Chatbot Users', 'owner_only' => true ],
-    'guest-users'    => [ 'icon' => 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z', 'label' => 'Guest Chat Users', 'owner_only' => true ],
+    'guest-users'    => [ 'icon' => 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z', 'label' => 'Chatbot Users', 'owner_only' => true ],
     'products'  => [ 'icon' => 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4', 'label' => 'Products', 'href' => admin_url( 'edit.php?post_type=product' ) ],
     'orders'    => [ 'icon' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01', 'label' => 'Orders', 'href' => admin_url( 'edit.php?post_type=shop_order' ) ],
     'wp-admin'  => [ 'icon' => 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z', 'label' => 'WP Admin', 'href' => admin_url(), 'owner_only' => true ],
@@ -2747,7 +2746,77 @@ body {
 
         <?php else :
             $top_q = get_option( 'shopys_ai_top_questions' );
+            $guser = ( isset( $_GET['guser'] ) && $_GET['guser'] === 'member' ) ? 'member' : 'guest';
+            $g_base_limit = (int) get_option( 'shopys_ai_daily_limit', 10 );
+            $g_member_total = count( get_users( array( 'meta_key' => 'shopys_ai_last_active', 'meta_compare' => 'EXISTS', 'fields' => 'ID', 'number' => -1 ) ) );
         ?>
+
+        <style>
+            .cu-filter{display:inline-flex;background:#eef1f5;border:1px solid var(--border,#e6eaf0);border-radius:14px;padding:5px;gap:4px;margin-bottom:22px;}
+            .cu-filter__btn{display:inline-flex;align-items:center;gap:9px;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:700;color:#697586;text-decoration:none;transition:background .2s ease,color .2s ease,box-shadow .2s ease;white-space:nowrap;}
+            .cu-filter__btn:hover{color:#0d1117;}
+            .cu-filter__btn svg{width:16px;height:16px;color:#9aa6b6;transition:color .2s ease;}
+            .cu-filter__btn.active{background:#fff;color:#0d1117;box-shadow:0 3px 10px rgba(16,24,40,.12);}
+            .cu-filter__btn.active svg{color:#13e800;}
+            .cu-filter__count{font-size:11px;font-weight:800;line-height:1;padding:3px 8px;border-radius:20px;background:#dde3ea;color:#5b6675;}
+            .cu-filter__btn.active .cu-filter__count{background:rgba(19,232,0,.14);color:#0a7d00;}
+        </style>
+
+        <!-- Filter: Guests vs Members (logged in with website account) -->
+        <div class="cu-filter">
+            <a class="cu-filter__btn <?php echo $guser === 'guest' ? 'active' : ''; ?>" href="<?php echo esc_url( add_query_arg( [ 'tab' => 'guest-users' ], home_url( '/dashboard/' ) ) ); ?>">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                Guests <span class="cu-filter__count"><?php echo number_format_i18n( $g_total ); ?></span>
+            </a>
+            <a class="cu-filter__btn <?php echo $guser === 'member' ? 'active' : ''; ?>" href="<?php echo esc_url( add_query_arg( [ 'tab' => 'guest-users', 'guser' => 'member' ], home_url( '/dashboard/' ) ) ); ?>">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Members <span class="cu-filter__count"><?php echo number_format_i18n( $g_member_total ); ?></span>
+            </a>
+        </div>
+
+        <?php if ( $guser === 'member' ) :
+            $today   = current_time( 'Y-m-d' );
+            $m_limit = $g_base_limit * 2;
+            $members = get_users( array(
+                'meta_key'     => 'shopys_ai_last_active',
+                'meta_compare' => 'EXISTS',
+                'orderby'      => 'meta_value',
+                'order'        => 'DESC',
+                'number'       => 300,
+            ) );
+        ?>
+        <div class="ds-table-wrap">
+            <div class="ds-table-head" style="display:flex;align-items:center;justify-content:space-between;">
+                <span>Members <span style="color:var(--muted);font-weight:400;font-size:12px;margin-left:6px;"><?php echo number_format_i18n( count( $members ) ); ?> users · logged in with website account</span></span>
+                <span style="font-size:12px;color:var(--muted);">Daily limit: <?php echo number_format_i18n( $m_limit ); ?>/day</span>
+            </div>
+            <?php if ( empty( $members ) ) : ?>
+                <div style="padding:18px;color:var(--muted);">No logged-in users have used the chatbot yet.</div>
+            <?php else : ?>
+            <table class="ds-table">
+                <thead><tr><th>Name</th><th>Email</th><th>Total Messages</th><th>Today's Usage</th><th>Last Active</th></tr></thead>
+                <tbody>
+                <?php foreach ( $members as $m ) :
+                    $m_total = (int) get_user_meta( $m->ID, 'shopys_ai_total_messages', true );
+                    $m_date  = get_user_meta( $m->ID, 'shopys_ai_daily_date', true );
+                    $m_today = ( $m_date === $today ) ? (int) get_user_meta( $m->ID, 'shopys_ai_daily_count', true ) : 0;
+                    $m_last  = get_user_meta( $m->ID, 'shopys_ai_last_active', true );
+                    $m_at    = $m_today >= $m_limit;
+                ?>
+                <tr>
+                    <td style="font-weight:600;"><?php echo esc_html( $m->display_name ); ?></td>
+                    <td><?php echo esc_html( $m->user_email ); ?></td>
+                    <td><?php echo number_format_i18n( $m_total ); ?></td>
+                    <td><span style="font-weight:600;<?php echo $m_at ? 'color:#dc2626;' : ''; ?>"><?php echo number_format_i18n( $m_today ) . ' / ' . number_format_i18n( $m_limit ); ?></span></td>
+                    <td style="color:var(--muted);font-size:12px;"><?php echo esc_html( $m_last ?: '—' ); ?></td>
+                </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+            <?php endif; ?>
+        </div>
+
+        <?php else : ?>
 
         <?php if ( isset( $_GET['g_reset'] ) ) : ?>
         <div style="background:#ecfdf3;border:1px solid #abefc6;color:#067647;padding:10px 16px;border-radius:10px;margin-bottom:16px;font-weight:600;">✓ Guest daily limit reset — they can chat again today.</div>
@@ -2944,6 +3013,7 @@ body {
             <?php endif; ?>
             <?php endif; ?>
         </div>
+        <?php endif; // members vs guests filter ?>
         <?php endif; // guest_ip messages view vs list ?>
         <?php endif; ?>
         </div>
