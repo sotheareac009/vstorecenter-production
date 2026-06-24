@@ -192,18 +192,30 @@ function khqrpay_build_qr( WC_Order $order ) {
     );
 }
 
-/** Call the Bakong Open API to check a transaction by md5. Returns array|WP_Error. */
+/** Call the Bakong Open API to check a transaction by md5. Returns array|WP_Error.
+ *  Bakong's CDN geo-blocks non-Cambodian server IPs, so if KHQR_CHECK_URL is set we
+ *  POST {md5} to that relay (hosted on a Cambodian IP) which forwards to Bakong. */
 function khqrpay_bakong_check( $md5 ) {
     $token = khqrpay_cfg( 'bakong_token' );
     if ( $token === '' ) return new WP_Error( 'khqrpay_no_token', 'Missing BAKONG_TOKEN.' );
 
-    $resp = wp_remote_post( khqrpay_api_base() . '/check_transaction_by_md5', array(
+    $headers = array(
+        'Authorization' => 'Bearer ' . $token,
+        'Content-Type'  => 'application/json',
+        'Accept'        => 'application/json',
+    );
+    $relay = khqrpay_cfg( 'khqr_check_url' );
+    if ( $relay !== '' ) {
+        $url    = $relay;
+        $secret = khqrpay_cfg( 'khqr_relay_secret' );
+        if ( $secret !== '' ) $headers['X-Relay-Secret'] = $secret;
+    } else {
+        $url = khqrpay_api_base() . '/check_transaction_by_md5';
+    }
+
+    $resp = wp_remote_post( $url, array(
         'timeout' => 20,
-        'headers' => array(
-            'Authorization' => 'Bearer ' . $token,
-            'Content-Type'  => 'application/json',
-            'Accept'        => 'application/json',
-        ),
+        'headers' => $headers,
         'body'    => wp_json_encode( array( 'md5' => $md5 ) ),
     ) );
     if ( is_wp_error( $resp ) ) return $resp;
@@ -482,6 +494,8 @@ add_action( 'init', function () {
     header( 'Content-Type: text/plain; charset=utf-8' );
     echo "KHQR self-test\n==============\n";
     echo 'API base   : ' . khqrpay_api_base() . "\n";
+    $relay = khqrpay_cfg( 'khqr_check_url' );
+    echo 'Check via  : ' . ( $relay !== '' ? 'RELAY ' . $relay : 'direct to Bakong' ) . "\n";
     echo 'BAKONG_ID  : ' . ( khqrpay_cfg( 'bakong_id' ) ?: '(empty)' ) . "\n";
     echo 'token set  : ' . ( khqrpay_cfg( 'bakong_token' ) ? 'yes' : 'NO' ) . "\n";
     echo 'currency   : ' . khqrpay_qr_currency() . "\n\n";
