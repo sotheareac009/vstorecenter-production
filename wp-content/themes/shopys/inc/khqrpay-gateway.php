@@ -545,3 +545,21 @@ add_action( 'khqrpay_check_pending', function () {
         khqrpay_confirm_order_if_paid( $order );
     }
 } );
+
+/* ── Show the receiving Bakong account on the payment method (order detail + invoice) ── */
+add_filter( 'woocommerce_order_get_payment_method_title', 'khqrpay_payment_method_title_with_account', 10, 2 );
+function khqrpay_payment_method_title_with_account( $title, $order ) {
+    if ( ! is_a( $order, 'WC_Abstract_Order' ) || $order->get_payment_method() !== 'khqrpay' ) {
+        return $title;
+    }
+    // Prefer a human account number (KHQR_ACCOUNT_NUMBER) if set; fall back to the Bakong ID.
+    $acct = khqrpay_cfg( 'khqr_account_number' );
+    if ( $acct === '' ) $acct = khqrpay_cfg( 'account_number' );
+    if ( $acct === '' ) $acct = khqrpay_cfg( 'bakong_id' );
+    $name = khqrpay_merchant_name();
+    if ( ( $name === '' && $acct === '' ) || ( $acct !== '' && strpos( (string) $title, $acct ) !== false ) ) {
+        return $title; // nothing to add, or already appended
+    }
+    $extra = trim( $name . ( $acct !== '' ? ' · ' . $acct : '' ) );
+    return $extra ? $title . ' — ' . $extra : $title;
+}

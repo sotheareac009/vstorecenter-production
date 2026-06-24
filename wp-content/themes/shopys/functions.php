@@ -794,6 +794,115 @@ function shopys_force_shipping_form_visible() {
     echo '<style>#ship-to-different-address-checkbox{display:none !important;}#ship-to-different-address label{cursor:default;font-weight:700;}.woocommerce-shipping-fields .shipping_address{display:block !important;}</style>';
 }
 
+// Align the Print / Download Invoice buttons into a premium row on the order page.
+add_action( 'wp_head', 'shopys_invoice_buttons_style' );
+function shopys_invoice_buttons_style() {
+    if ( ! function_exists( 'is_account_page' ) ) return;
+    if ( ! is_account_page() && ! ( function_exists( 'is_wc_endpoint_url' ) && is_wc_endpoint_url( 'order-received' ) ) ) return;
+    ?>
+    <style>
+    /* Print / Download Invoice buttons (print-invoices plugin) → one premium row */
+    a[class*="wt_pklist_"]{
+        display:inline-flex !important; align-items:center; gap:8px; vertical-align:middle;
+        width:auto !important; min-height:0 !important;
+        margin:16px 10px 0 0 !important; padding:11px 22px !important;
+        border-radius:10px !important; font-weight:700 !important; font-size:13px !important;
+        line-height:1.2 !important; text-decoration:none !important;
+        background:#00c44f !important; color:#fff !important; border:1.5px solid #00c44f !important;
+        box-shadow:0 6px 18px rgba(0,196,79,.28); transition:transform .2s ease,box-shadow .2s ease,background .2s ease;
+    }
+    a[class*="wt_pklist_"]:hover{ background:#00a341 !important; border-color:#00a341 !important; transform:translateY(-2px); box-shadow:0 10px 26px rgba(0,196,79,.38); color:#fff !important; }
+    /* Remove the <br><br> the plugin prints after each button so they stay on one row */
+    a[class*="wt_pklist_"] + br,
+    a[class*="wt_pklist_"] + br + br{ display:none !important; }
+    /* Download = outline pill at rest, but fills green on hover just like Print */
+    a[class*="_download"]{ background:#fff !important; color:#0a7d00 !important; box-shadow:none !important; }
+    a[class*="_download"]:hover{ background:#00a341 !important; border-color:#00a341 !important; color:#fff !important; transform:translateY(-2px); box-shadow:0 10px 26px rgba(0,196,79,.38) !important; }
+    </style>
+    <?php
+}
+
+/* ── Telegram: push order details to the shop channel when an order is paid ──── */
+function shopys_tg_order_chat_id() {
+    if ( defined( 'SHOPYS_TG_ORDER_CHAT_ID' ) ) return (string) SHOPYS_TG_ORDER_CHAT_ID;
+    $v = getenv( 'SHOPYS_TG_ORDER_CHAT_ID' );
+    return $v !== false ? (string) $v : '';
+}
+
+add_action( 'woocommerce_payment_complete', 'shopys_notify_telegram_paid_order', 20 );
+function shopys_notify_telegram_paid_order( $order_id ) {
+    $order = wc_get_order( $order_id );
+    if ( ! $order || $order->get_meta( '_shopys_tg_notified' ) === 'yes' ) return;
+
+    $token = defined( 'SHOPYS_TG_BOT_TOKEN' ) ? SHOPYS_TG_BOT_TOKEN : '';
+    $chat  = shopys_tg_order_chat_id();
+    if ( ! $token || ! $chat ) return;
+
+    $name  = trim( $order->get_formatted_billing_full_name() );
+    if ( $name === '' ) $name = trim( $order->get_shipping_first_name() . ' ' . $order->get_shipping_last_name() );
+    $phone = $order->get_billing_phone();
+    $addr  = $order->get_shipping_address_1() ? $order->get_formatted_shipping_address() : $order->get_formatted_billing_address();
+    $addr  = trim( html_entity_decode( wp_strip_all_tags( str_replace( array( '<br/>', '<br>', '<br />' ), ', ', (string) $addr ) ) ) );
+
+    // Clean, locale-proof money formatter ($ for USD, ៛ for KHR).
+    $cur   = $order->get_currency();
+    $money = function ( $v ) use ( $cur ) {
+        $v = (float) $v;
+        return $cur === 'KHR' ? number_format( $v, 0 ) . ' ៛' : '$' . number_format( $v, 2 );
+    };
+
+    $lines = array();
+    foreach ( $order->get_items() as $item ) {
+        $lines[] = '   • ' . esc_html( $item->get_name() ) . '  <b>×' . $item->get_quantity() . '</b>  —  ' . esc_html( $money( $item->get_total() ) );
+    }
+
+    // Split payment method + receiver cleanly for KHQR; generic title otherwise.
+    if ( $order->get_payment_method() === 'khqrpay' ) {
+        $pay_method = 'KHQR (Bakong)';
+        $recv_name  = function_exists( 'khqrpay_merchant_name' ) ? khqrpay_merchant_name() : '';
+        $recv_acct  = function_exists( 'khqrpay_cfg' ) ? ( khqrpay_cfg( 'khqr_account_number' ) ?: khqrpay_cfg( 'bakong_id' ) ) : '';
+    } else {
+        $pay_method = $order->get_payment_method_title();
+        $recv_name  = '';
+        $recv_acct  = '';
+    }
+    $when = $order->get_date_created() ? $order->get_date_created()->date_i18n( 'd M Y · g:i A' ) : date_i18n( 'd M Y · g:i A' );
+    $div  = "━━━━━━━━━━━━━━━";
+
+    $msg  = "🛍️  <b>NEW PAID ORDER</b>\n";
+    $msg .= "<i>" . esc_html( get_bloginfo( 'name' ) ) . "</i>\n";
+    $msg .= $div . "\n";
+    $msg .= "🧾  <b>Invoice</b>\n      <code>#" . esc_html( $order->get_order_number() ) . "</code>\n\n";
+    $msg .= "👤  <b>Customer</b>\n      " . esc_html( $name !== '' ? $name : '-' ) . "\n";
+    $msg .= "📞  " . esc_html( $phone !== '' ? $phone : '-' ) . "\n";
+    $msg .= "📍  " . esc_html( $addr !== '' ? $addr : '-' ) . "\n";
+    $msg .= $div . "\n";
+    $msg .= "📦  <b>Order Items</b>\n" . implode( "\n", $lines ) . "\n";
+    $msg .= $div . "\n";
+    $msg .= "💳  <b>Payment:</b> " . esc_html( $pay_method ) . "\n";
+    if ( $recv_name !== '' || $recv_acct !== '' ) {
+        $msg .= "🏦  <b>Received by:</b> " . esc_html( trim( $recv_name . ( $recv_acct !== '' ? ' · ' . $recv_acct : '' ) ) ) . "\n";
+    }
+    $msg .= "💰  <b>TOTAL:</b>  <b>" . esc_html( $money( $order->get_total() ) ) . "</b>\n";
+    $msg .= $div . "\n";
+    $msg .= "🕒  <i>" . esc_html( $when ) . "</i>";
+
+    $resp = wp_remote_post( "https://api.telegram.org/bot{$token}/sendMessage", array(
+        'timeout' => 15,
+        'body'    => array(
+            'chat_id'                  => $chat,
+            'text'                     => $msg,
+            'parse_mode'               => 'HTML',
+            'disable_web_page_preview' => true,
+        ),
+    ) );
+    if ( ! is_wp_error( $resp ) && (int) wp_remote_retrieve_response_code( $resp ) === 200 ) {
+        $order->update_meta_data( '_shopys_tg_notified', 'yes' );
+        $order->save();
+    } else {
+        error_log( 'shopys TG order notify failed: ' . ( is_wp_error( $resp ) ? $resp->get_error_message() : wp_remote_retrieve_body( $resp ) ) );
+    }
+}
 
 function shopys_product_grid_assets() {
     if ( class_exists( 'WooCommerce' ) ) {
