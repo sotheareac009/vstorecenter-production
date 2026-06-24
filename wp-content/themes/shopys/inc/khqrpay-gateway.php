@@ -208,8 +208,12 @@ function khqrpay_bakong_check( $md5 ) {
     ) );
     if ( is_wp_error( $resp ) ) return $resp;
 
-    $data = json_decode( wp_remote_retrieve_body( $resp ), true );
-    if ( ! is_array( $data ) ) return new WP_Error( 'khqrpay_badjson', 'Bad Bakong response' );
+    $code = (int) wp_remote_retrieve_response_code( $resp );
+    $body = wp_remote_retrieve_body( $resp );
+    $data = json_decode( $body, true );
+    if ( ! is_array( $data ) ) {
+        return new WP_Error( 'khqrpay_badjson', 'Bad Bakong response', 'HTTP ' . $code . ' | ' . substr( trim( wp_strip_all_tags( $body ) ), 0, 300 ) );
+    }
     return $data;
 }
 
