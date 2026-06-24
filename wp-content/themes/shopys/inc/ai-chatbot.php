@@ -3490,6 +3490,10 @@ function shopys_ai_chatbot_assets() {
         'tg_bot_username'     => $tg_bot,
         'is_logged_in'        => is_user_logged_in() ? '1' : '0',
         'login_url'           => function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : home_url( '/my-account/' ),
+        // Shop contact shown under the welcome message
+        'contact_phone'       => get_option( 'shopys_ai_contact_phone', '+855 92 77 55 49 | +855 98 86 86 89' ),
+        'contact_address'     => get_option( 'shopys_ai_contact_address', trim( get_option( 'woocommerce_store_address', '' ) . ' ' . get_option( 'woocommerce_store_city', '' ) ) ?: 'Street 271, Front of Psa Hengly' ),
+        'contact_maps'        => get_option( 'shopys_ai_contact_maps', 'https://maps.app.goo.gl/yi2XxfuSaB5YwQTn6' ),
     ) );
 }
 
