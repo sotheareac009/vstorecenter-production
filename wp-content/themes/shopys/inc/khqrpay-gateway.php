@@ -423,7 +423,7 @@ function khqrpay_load_gateway() {
 
                 function poll(){
                     if (done) return;
-                    fetch(pollUrl, {credentials:'same-origin'})
+                    fetch(pollUrl + '&_=' + Date.now(), {credentials:'same-origin', cache:'no-store'})
                       .then(function(r){ return r.json(); })
                       .then(function(d){
                           if (done) return;
@@ -449,6 +449,8 @@ function khqrpay_load_gateway() {
 
 /** Browser poll endpoint — registered at file scope so it always runs on admin-ajax. */
 function khqrpay_ajax_poll() {
+    nocache_headers(); // never let a CDN / LiteSpeed cache the poll response
+    do_action( 'litespeed_control_set_nocache', 'khqrpay poll' );
     $order_id = isset( $_GET['order_id'] ) ? absint( $_GET['order_id'] ) : 0;
     $key      = isset( $_GET['key'] ) ? sanitize_text_field( wp_unslash( $_GET['key'] ) ) : '';
     $order    = $order_id ? wc_get_order( $order_id ) : false;
@@ -464,6 +466,40 @@ function khqrpay_ajax_poll() {
 }
 add_action( 'wp_ajax_khqrpay_poll',        'khqrpay_ajax_poll' );
 add_action( 'wp_ajax_nopriv_khqrpay_poll', 'khqrpay_ajax_poll' );
+
+/**
+ * Admin diagnostic: visit  /?khqr_selftest=1  while logged in as admin.
+ * Confirms whether THIS server can reach + authenticate with the Bakong API
+ * (the #1 cause of "paid but not confirmed" on non-Cambodian hosting).
+ */
+add_action( 'init', function () {
+    if ( empty( $_GET['khqr_selftest'] ) || ! current_user_can( 'manage_options' ) ) return;
+    nocache_headers();
+    header( 'Content-Type: text/plain; charset=utf-8' );
+    echo "KHQR self-test\n==============\n";
+    echo 'API base   : ' . khqrpay_api_base() . "\n";
+    echo 'BAKONG_ID  : ' . ( khqrpay_cfg( 'bakong_id' ) ?: '(empty)' ) . "\n";
+    echo 'token set  : ' . ( khqrpay_cfg( 'bakong_token' ) ? 'yes' : 'NO' ) . "\n";
+    echo 'currency   : ' . khqrpay_qr_currency() . "\n\n";
+    $t0 = microtime( true );
+    $r  = khqrpay_bakong_check( '0123456789abcdef0123456789abcdef' );
+    $ms = round( ( microtime( true ) - $t0 ) * 1000 );
+    if ( is_wp_error( $r ) ) {
+        echo "REACHABILITY: FAILED ({$ms}ms)\n";
+        echo '  error: ' . $r->get_error_message() . "\n";
+        echo '  data : ' . ( is_scalar( $r->get_error_data() ) ? $r->get_error_data() : wp_json_encode( $r->get_error_data() ) ) . "\n";
+        echo "\n=> If this is a timeout/connection error, the Bakong API is blocking this server's IP (needs a Cambodian IP / relay).\n";
+    } else {
+        echo "REACHABILITY: OK ({$ms}ms) — server can reach Bakong & token works.\n";
+        echo '  response: ' . wp_json_encode( $r ) . "\n";
+        echo "\n=> If this says 'transaction could not be found', the API is fine; the issue is elsewhere (check log below).\n";
+    }
+    echo "\n--- recent KHQR log ---\n";
+    foreach ( array_slice( (array) get_option( 'khqrpay_debug_log', array() ), 0, 15 ) as $e ) {
+        echo '[' . $e['at'] . '] ' . $e['msg'] . "\n";
+    }
+    exit;
+} );
 
 khqrpay_load_gateway();
 
