@@ -749,6 +749,7 @@ add_action( 'wp_enqueue_scripts', function() {
 
 // AI Chatbot — always loads so the Settings page is always available
 require_once get_stylesheet_directory() . '/inc/ai-chatbot.php';
+require_once get_stylesheet_directory() . '/inc/khqrpay-gateway.php';
 
 // Site view counter — pageviews dashboard inside WP Admin.
 // Wrapped in file_exists so a half-finished FTP deploy can't crash the site.
@@ -770,6 +771,27 @@ function shopys_force_flat_2_shipping( $rates, $package ) {
         'shopys_flat'                 // method ID
     );
     return array( 'shopys_flat_2' => $fixed_rate );
+}
+
+// ── Checkout: show a Shipping address form below Billing ──────────────────────
+// Keep "Billing details", and always display a "Shipping Address" form below it.
+add_filter( 'woocommerce_cart_needs_shipping_address', '__return_true' );
+add_filter( 'woocommerce_ship_to_different_address_checked', '__return_true' );
+
+// Relabel the shipping toggle heading to "Shipping Address".
+add_filter( 'gettext', 'shopys_shipping_heading_label', 20, 3 );
+function shopys_shipping_heading_label( $translated, $text, $domain ) {
+    if ( 'woocommerce' === $domain && 'Ship to a different address?' === $text ) {
+        return 'Shipping Address';
+    }
+    return $translated;
+}
+
+// Keep the shipping form permanently visible (hide the collapse checkbox).
+add_action( 'wp_head', 'shopys_force_shipping_form_visible' );
+function shopys_force_shipping_form_visible() {
+    if ( ! ( function_exists( 'is_checkout' ) && is_checkout() ) ) return;
+    echo '<style>#ship-to-different-address-checkbox{display:none !important;}#ship-to-different-address label{cursor:default;font-weight:700;}.woocommerce-shipping-fields .shipping_address{display:block !important;}</style>';
 }
 
 
@@ -1223,6 +1245,120 @@ function shopys_require_login_to_add_cart( $passed, $product_id ) {
 }
 
 // Premium login dialog + click interception (only output for guests).
+/* ── Premium floating cart button (links to the [cart_summary] page) ─────── */
+// Ensure the dedicated Cart page exists (auto-creates on any environment, e.g. prod
+// where the DB isn't deployed). Idempotent + keeps it out of nav menus.
+add_action( 'init', 'shopys_ensure_cart_page' );
+function shopys_ensure_cart_page() {
+    $pid = (int) get_option( 'shopys_cart_page_id' );
+    if ( $pid && get_post_status( $pid ) === 'publish' ) return;
+
+    // Reuse an existing cart_summary page if one already exists.
+    foreach ( array( 'my-cart', 'cart' ) as $slug ) {
+        $p = get_page_by_path( $slug );
+        if ( $p && has_shortcode( (string) $p->post_content, 'cart_summary' ) ) {
+            update_option( 'shopys_cart_page_id', (int) $p->ID );
+            delete_transient( 'shopys_cart_page_url' );
+            return;
+        }
+    }
+
+    $slug = get_page_by_path( 'cart' ) ? 'my-cart' : 'cart';
+    $new  = wp_insert_post( array(
+        'post_title'     => 'Cart',
+        'post_name'      => $slug,
+        'post_status'    => 'publish',
+        'post_type'      => 'page',
+        'post_content'   => '[cart_summary title="Your Cart"]',
+        'comment_status' => 'closed',
+    ) );
+    if ( $new && ! is_wp_error( $new ) ) {
+        update_option( 'shopys_cart_page_id', (int) $new );
+        delete_transient( 'shopys_cart_page_url' );
+        // Keep it out of any auto-add nav menus.
+        foreach ( wp_get_nav_menus() as $m ) {
+            foreach ( (array) wp_get_nav_menu_items( $m->term_id ) as $it ) {
+                if ( (int) $it->object_id === (int) $new && $it->object === 'page' ) {
+                    wp_delete_post( $it->ID, true );
+                }
+            }
+        }
+    }
+}
+
+function shopys_cart_summary_page_url() {
+    $cached = get_transient( 'shopys_cart_page_url' );
+    if ( $cached ) return $cached;
+
+    // Prefer the dedicated cart page created for the floating button.
+    $pid = (int) get_option( 'shopys_cart_page_id' );
+    if ( $pid && get_post_status( $pid ) === 'publish' ) {
+        $url = get_permalink( $pid );
+    } else {
+        $url = function_exists( 'wc_get_cart_url' ) ? wc_get_cart_url() : home_url( '/' );
+    }
+    set_transient( 'shopys_cart_page_url', $url, DAY_IN_SECONDS );
+    return $url;
+}
+
+add_action( 'wp_ajax_shopys_cart_count', 'shopys_cart_count_ajax' );
+add_action( 'wp_ajax_nopriv_shopys_cart_count', 'shopys_cart_count_ajax' );
+function shopys_cart_count_ajax() {
+    $count = ( function_exists( 'WC' ) && WC()->cart ) ? WC()->cart->get_cart_contents_count() : 0;
+    wp_send_json( array( 'count' => (int) $count ) );
+}
+
+add_action( 'wp_footer', 'shopys_floating_cart_button', 55 );
+function shopys_floating_cart_button() {
+    if ( is_admin() || ! function_exists( 'WC' ) ) return;
+    $url   = esc_url( shopys_cart_summary_page_url() );
+    $count = ( WC()->cart ) ? (int) WC()->cart->get_cart_contents_count() : 0;
+    $ajax  = esc_url( admin_url( 'admin-ajax.php' ) );
+    ?>
+    <a id="shopys-cart-fab" href="<?php echo $url; ?>" aria-label="<?php esc_attr_e( 'View cart', 'shopys' ); ?>">
+        <span class="scf-ic">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M6 7h12l-1 12.2a2 2 0 0 1-2 1.8H9a2 2 0 0 1-2-1.8L6 7Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+                <path d="M9 7V6a3 3 0 0 1 6 0v1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+            </svg>
+        </span>
+        <span class="scf-badge"<?php echo $count > 0 ? '' : ' hidden'; ?>><?php echo $count; ?></span>
+        <span class="scf-tip"><?php esc_html_e( 'View Cart', 'shopys' ); ?></span>
+    </a>
+    <style>
+    #shopys-cart-fab{position:fixed;left:22px;bottom:24px;z-index:99990;width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#00c44f;color:#fff;text-decoration:none;box-shadow:0 4px 20px rgba(0,196,79,.4);border:none;transition:transform .25s ease,box-shadow .25s ease,background .25s ease;}
+    #shopys-cart-fab:hover{transform:scale(1.08);background:#00a341;box-shadow:0 6px 28px rgba(0,196,79,.5);}
+    #shopys-cart-fab:active{transform:translateY(-1px);}
+    #shopys-cart-fab .scf-ic{display:flex;}
+    #shopys-cart-fab svg{width:26px;height:26px;display:block;}
+    #shopys-cart-fab .scf-badge{position:absolute;top:-5px;right:-5px;min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:linear-gradient(135deg,#ff4d4d,#d80019);color:#fff;font:700 12px/22px 'Play','Battambang',sans-serif;text-align:center;border:2px solid #fff;box-shadow:0 4px 10px rgba(216,0,25,.5);}
+    #shopys-cart-fab .scf-badge[hidden]{display:none;}
+    #shopys-cart-fab.scf-has .scf-ic{animation:scfpop .35s ease;}
+    @keyframes scfpop{0%{transform:scale(1)}40%{transform:scale(1.22)}100%{transform:scale(1)}}
+    #shopys-cart-fab .scf-tip{position:absolute;left:70px;white-space:nowrap;background:#0d1117;color:#fff;font:600 12.5px/1 'Play','Battambang',sans-serif;padding:9px 13px;border-radius:9px;opacity:0;pointer-events:none;transform:translateX(-6px);transition:opacity .2s ease,transform .2s ease;}
+    #shopys-cart-fab:hover .scf-tip{opacity:1;transform:none;}
+    #shopys-cart-fab .scf-tip:before{content:'';position:absolute;left:-5px;top:50%;transform:translateY(-50%);border:5px solid transparent;border-right-color:#0d1117;}
+    @media(max-width:600px){#shopys-cart-fab{width:52px;height:52px;left:16px;bottom:20px;}#shopys-cart-fab svg{width:24px;height:24px;}#shopys-cart-fab .scf-tip{display:none;}}
+    </style>
+    <script>
+    (function(){
+        var fab = document.getElementById('shopys-cart-fab'); if(!fab) return;
+        var badge = fab.querySelector('.scf-badge');
+        function set(n){ n=parseInt(n||0,10);
+            if(n>0){ badge.textContent=n; badge.hidden=false; fab.classList.add('scf-has'); setTimeout(function(){fab.classList.remove('scf-has');},400); }
+            else { badge.hidden=true; }
+        }
+        function refresh(){ fetch('<?php echo $ajax; ?>?action=shopys_cart_count',{credentials:'same-origin'})
+            .then(function(r){return r.json();}).then(function(d){ set(d.count); }).catch(function(){}); }
+        refresh();
+        if(window.jQuery){ jQuery(document.body).on('added_to_cart removed_from_cart updated_cart_totals wc_fragments_refreshed', refresh); }
+        document.body.addEventListener('added_to_cart', refresh);
+        window.addEventListener('pageshow', function(e){ if(e.persisted) refresh(); });
+    })();
+    </script>
+    <?php
+}
+
 add_action( 'wp_footer', 'shopys_add_to_cart_login_dialog', 60 );
 function shopys_add_to_cart_login_dialog() {
     if ( is_user_logged_in() || ! function_exists( 'WC' ) ) return;
