@@ -785,14 +785,41 @@ function shopys_billing_to_delivery_label( $translated, $text, $domain ) {
     if ( $text === 'Billing details' || $text === 'Billing &amp; Shipping' || $text === 'Billing Details' ) {
         return 'Delivery Address';
     }
+    if ( $text === 'Street address' ) {
+        return 'Receiver Address';
+    }
+    if ( $text === 'Phone' ) {
+        return 'Phone (Number that have Telegram)';
+    }
     return $translated;
 }
 
 /* ── Checkout: Delivery Location (map link) — easy for customer + delivery man ── */
 add_filter( 'woocommerce_checkout_fields', 'shopys_add_delivery_map_field' );
 function shopys_add_delivery_map_field( $fields ) {
-    // Remove the Company name field.
+    // Remove Company name, "Apartment, suite, unit, etc.", Postcode/ZIP, State/County and Country fields.
     unset( $fields['billing']['billing_company'] );
+    unset( $fields['billing']['billing_address_2'] );
+    unset( $fields['billing']['billing_postcode'] );
+    unset( $fields['billing']['billing_state'] );
+    unset( $fields['billing']['billing_country'] );
+
+    // Rename "Street address" to "Receiver Address".
+    if ( isset( $fields['billing']['billing_address_1'] ) ) {
+        $fields['billing']['billing_address_1']['label']       = __( 'Receiver Address', 'shopys' );
+        $fields['billing']['billing_address_1']['placeholder'] = __( 'Receiver Address', 'shopys' );
+    }
+
+    // Make Email address optional.
+    if ( isset( $fields['billing']['billing_email'] ) ) {
+        $fields['billing']['billing_email']['required'] = false;
+    }
+
+    // Move Phone above the Delivery Location (Map) field (map = 45) and relabel it.
+    if ( isset( $fields['billing']['billing_phone'] ) ) {
+        $fields['billing']['billing_phone']['priority'] = 30;
+        $fields['billing']['billing_phone']['label']    = __( 'Phone (Number that have Telegram)', 'shopys' );
+    }
 
     // Delivery Location map field, placed just above Street address (billing_address_1 = 50).
     $fields['billing']['delivery_map'] = array(
@@ -811,6 +838,15 @@ function shopys_save_delivery_map( $order, $data ) {
     if ( ! empty( $_POST['delivery_map'] ) ) {
         $order->update_meta_data( '_delivery_map', esc_url_raw( wp_unslash( $_POST['delivery_map'] ) ) );
     }
+    // Country & State fields are removed from checkout — default them to Cambodia.
+    $order->set_billing_country( 'KH' );
+    $order->set_billing_state( 'Cambodia' );
+}
+
+// Default the customer's billing country to Cambodia (used for shipping/tax calc).
+add_filter( 'default_checkout_billing_country', 'shopys_default_country_kh' );
+function shopys_default_country_kh() {
+    return 'KH';
 }
 
 add_action( 'woocommerce_admin_order_data_after_billing_address', 'shopys_admin_show_delivery_map' );
@@ -1157,18 +1193,17 @@ function shopys_shop_field_style() {
     #billing_shop_branch_field > label{ display:block !important; font-weight:700 !important; color:#0d1117 !important; margin-bottom:7px !important; }
     #billing_shop_branch_field .required{ color:#e21c25 !important; text-decoration:none; }
     #billing_shop_branch{
-        width:100% !important; height:auto !important; line-height:1.5 !important; min-height:0 !important;
-        padding:13px 42px 13px 15px !important; margin:0 !important;
-        border:1.6px solid #e7e9ee !important; border-radius:12px !important;
-        background-color:#fff !important; color:#0d1117 !important; font-weight:600 !important;
-        font-family:"Play","Battambang",-apple-system,sans-serif !important;
+        width:100% !important; height:46px !important; line-height:1.4 !important; min-height:0 !important;
+        padding:0 40px 0 14px !important; margin:0 !important;
+        border:1.5px solid #e5e7eb !important; border-radius:10px !important;
+        background-color:#f9fafb !important; color:#111827 !important; font-size:15px !important; font-weight:400 !important;
+        font-family:inherit !important;
         -webkit-appearance:none !important; -moz-appearance:none !important; appearance:none !important; cursor:pointer;
         background-image:url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2716%27 height=%2716%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%235b6472%27 stroke-width=%272.5%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpolyline points=%276 9 12 15 18 9%27/%3E%3C/svg%3E") !important;
-        background-repeat:no-repeat !important; background-position:right 15px center !important; background-size:16px !important;
-        box-shadow:0 2px 8px rgba(15,23,42,.04) !important; transition:border-color .2s ease, box-shadow .2s ease !important;
+        background-repeat:no-repeat !important; background-position:right 12px center !important; background-size:16px !important;
+        box-shadow:none !important; box-sizing:border-box !important; transition:border-color .15s, background .15s, box-shadow .15s !important;
     }
-    #billing_shop_branch:hover{ border-color:#bdeccd !important; }
-    #billing_shop_branch:focus{ border-color:#00c44f !important; box-shadow:0 0 0 3px rgba(0,196,79,.14) !important; outline:none !important; }
+    #billing_shop_branch:focus{ border-color:#00c44f !important; background-color:#fff !important; box-shadow:0 0 0 4px rgba(0,196,79,.15) !important; outline:none !important; }
     </style>';
 }
 
@@ -1179,6 +1214,17 @@ function shopys_checkout_stepper_css() {
     if ( function_exists( 'is_wc_endpoint_url' ) && ( is_wc_endpoint_url( 'order-pay' ) || is_wc_endpoint_url( 'order-received' ) ) ) return;
     ?>
     <style>
+    /* Hide search blocks/widgets on the checkout page */
+    body.woocommerce-checkout .widget_search,
+    body.woocommerce-checkout .widget_product_search,
+    body.woocommerce-checkout .wp-block-search,
+    body.woocommerce-checkout .woocommerce-product-search,
+    body.woocommerce-checkout .search-form,
+    body.woocommerce-checkout #searchform,
+    body.woocommerce-checkout form[role="search"]{ display:none !important; }
+    /* Anti-flash: render single-column with Step 2 hidden on first paint (before JS) */
+    body.woocommerce-checkout form.checkout{ display:block !important; max-width:760px !important; margin-left:auto !important; margin-right:auto !important; }
+    body.woocommerce-checkout form.checkout > #order_review{ display:none; }
     .shopys-steps{ display:flex; align-items:center; gap:12px; margin:0 auto 22px; max-width:760px; font-family:"Play","Battambang",sans-serif; }
     .shopys-step{ display:flex; align-items:center; gap:8px; font-weight:800; color:#9aa3b0; font-size:12px; cursor:pointer; white-space:nowrap; }
     .shopys-step span{ width:26px; height:26px; border-radius:50%; background:#e7e9ee; color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; transition:background .2s; }
@@ -1198,6 +1244,12 @@ function shopys_checkout_stepper_css() {
     body.woocommerce-checkout .woocommerce-billing-fields::before{ content:"STEP 1  \00b7  DELIVERY ADDRESS"; display:block; font-size:12px; font-weight:800; letter-spacing:1px; color:#00a341; margin:0 0 16px; padding-bottom:12px; border-bottom:1px solid #eef0f4; font-family:"Play","Battambang",sans-serif; }
     body.woocommerce-checkout #order_review::before{ content:"STEP 2  \00b7  YOUR ORDER" !important; color:#00a341 !important; letter-spacing:1px !important; font-size:12px !important; font-weight:800 !important; }
     </style>
+    <noscript><style>
+    /* No-JS fallback: show the full single-page checkout so an order can still be placed */
+    body.woocommerce-checkout form.checkout > #order_review{ display:block !important; }
+    body.woocommerce-checkout #order_review #payment .form-row.place-order{ display:block !important; }
+    body.woocommerce-checkout .shopys-steps{ display:none !important; }
+    </style></noscript>
     <?php
 }
 
@@ -1433,8 +1485,13 @@ function shopys_notify_telegram_paid_order( $order_id ) {
     $name  = trim( $order->get_formatted_billing_full_name() );
     if ( $name === '' ) $name = trim( $order->get_shipping_first_name() . ' ' . $order->get_shipping_last_name() );
     $phone = $order->get_billing_phone();
-    $addr  = $order->get_shipping_address_1() ? $order->get_formatted_shipping_address() : $order->get_formatted_billing_address();
-    $addr  = trim( html_entity_decode( wp_strip_all_tags( str_replace( array( '<br/>', '<br>', '<br />' ), ', ', (string) $addr ) ) ) );
+    // Build the receiver address from the simplified checkout fields (Receiver Address, City, Cambodia).
+    $addr_parts = array_filter( array(
+        trim( (string) $order->get_billing_address_1() ),
+        trim( (string) $order->get_billing_city() ),
+        'Cambodia',
+    ) );
+    $addr = implode( ', ', $addr_parts );
 
     // Clean, locale-proof money formatter ($ for USD, ៛ for KHR).
     $cur   = $order->get_currency();
@@ -1474,7 +1531,7 @@ function shopys_notify_telegram_paid_order( $order_id ) {
     }
     $msg .= "👤  <b>Customer Name :</b> " . esc_html( $name !== '' ? $name : '-' ) . "\n";
     $msg .= "📞  <b>Customer Phone :</b> " . esc_html( $phone !== '' ? $phone : '-' ) . "\n";
-    $msg .= "📍  <b>Customer Address :</b> " . esc_html( $addr !== '' ? $addr : '-' ) . "\n";
+    $msg .= "📍  <b>Receiver Address :</b> " . esc_html( $addr !== '' ? $addr : '-' ) . "\n";
     $map = $order->get_meta( '_delivery_map' );
     if ( $map ) {
         $msg .= "🗺️  <b>Delivery Map :</b> <a href=\"" . esc_url( $map ) . "\">" . esc_html__( 'Open in Google Maps', 'shopys' ) . "</a>\n";
