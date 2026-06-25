@@ -155,11 +155,11 @@ function shopys_render_cart_invoice() {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title><?php echo esc_html( $shop_name ); ?> — <?php esc_html_e( 'Invoice', 'shopys' ); ?></title>
         <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&family=Battambang:wght@400;700;900&display=swap" rel="stylesheet">
         <style>
             *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
             body {
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+                font-family: 'Play', 'Battambang', -apple-system, BlinkMacSystemFont, sans-serif;
                 font-size: 13px;
                 color: #1a1a1a;
                 background: #eef0f3;
@@ -197,7 +197,7 @@ function shopys_render_cart_invoice() {
                 font-size: 11px;
                 font-weight: 600;
                 color: #fff;
-                background: #13e800;
+                background: #00c44f;
                 border-radius: 50px;
                 padding: 5px 14px;
             }
@@ -228,7 +228,7 @@ function shopys_render_cart_invoice() {
                 font-weight: 700;
                 text-transform: uppercase;
                 letter-spacing: 1px;
-                color: #13e800;
+                color: #00c44f;
                 margin-bottom: 4px;
             }
             .inv-customer-name { font-size: 14px; font-weight: 700; color: #111; }
@@ -241,7 +241,7 @@ function shopys_render_cart_invoice() {
             }
             /* Table */
             .inv-table { width: 100%; border-collapse: collapse; }
-            .inv-table thead tr { background: #13e800; }
+            .inv-table thead tr { background: #00c44f; }
             .inv-table thead th {
                 font-size: 11px; font-weight: 700; text-transform: uppercase;
                 letter-spacing: 0.8px; color: #fff; padding: 12px 20px; text-align: left;
@@ -259,7 +259,7 @@ function shopys_render_cart_invoice() {
             }
             .inv-table tbody td:first-child {
                 text-align: center; font-size: 11px;
-                font-weight: 700; color: #13e800;
+                font-weight: 700; color: #00c44f;
             }
             .inv-table tbody td:nth-child(3),
             .inv-table tbody td:nth-child(4),
@@ -291,7 +291,7 @@ function shopys_render_cart_invoice() {
             .inv-footer-right { width: 260px; padding: 28px 36px; }
             .inv-footer-section-label {
                 font-size: 10px; font-weight: 700; text-transform: uppercase;
-                letter-spacing: 1px; color: #13e800; margin-bottom: 8px;
+                letter-spacing: 1px; color: #00c44f; margin-bottom: 8px;
             }
             .inv-terms-text {
                 font-size: 11px; color: rgba(255,255,255,0.5);
@@ -311,10 +311,10 @@ function shopys_render_cart_invoice() {
             .inv-total-final {
                 display: flex; justify-content: space-between; align-items: center;
                 margin-top: 12px; padding-top: 12px;
-                border-top: 1px solid rgba(19,232,0,0.3);
+                border-top: 1px solid rgba(0,196,79,0.3);
             }
             .inv-total-final-label {
-                font-size: 12px; font-weight: 700; color: #13e800;
+                font-size: 12px; font-weight: 700; color: #00c44f;
                 text-transform: uppercase; letter-spacing: 0.5px;
             }
             .inv-total-final-value { font-size: 22px; font-weight: 800; color: #fff; }
@@ -326,21 +326,21 @@ function shopys_render_cart_invoice() {
             }
             .inv-generated { font-size: 10px; color: rgba(255,255,255,0.28); }
             .inv-note-pill {
-                font-size: 10px; color: rgba(19,232,0,0.65);
-                background: rgba(19,232,0,0.07);
-                border: 1px solid rgba(19,232,0,0.18);
+                font-size: 10px; color: rgba(0,196,79,0.65);
+                background: rgba(0,196,79,0.07);
+                border: 1px solid rgba(0,196,79,0.18);
                 border-radius: 50px; padding: 3px 12px;
             }
             /* Print button */
             .inv-print-wrap { padding: 20px 36px; background: #fff; }
             .inv-print-btn {
                 display: flex; align-items: center; justify-content: center; gap: 8px;
-                width: 100%; padding: 13px; background: #13e800; color: #0a2200;
+                width: 100%; padding: 13px; background: #00c44f; color: #0a2200;
                 font-family: inherit; font-size: 13px; font-weight: 700;
                 letter-spacing: 0.3px; border: none; border-radius: 8px;
                 cursor: pointer; transition: background 0.2s;
             }
-            .inv-print-btn:hover { background: #0fcc00; }
+            .inv-print-btn:hover { background: #00a341; }
             @media print {
                 @page {
                     margin: 0; /* removes browser URL header + page-number footer */

@@ -773,25 +773,93 @@ function shopys_force_flat_2_shipping( $rates, $package ) {
     return array( 'shopys_flat_2' => $fixed_rate );
 }
 
-// ── Checkout: show a Shipping address form below Billing ──────────────────────
-// Keep "Billing details", and always display a "Shipping Address" form below it.
-add_filter( 'woocommerce_cart_needs_shipping_address', '__return_true' );
-add_filter( 'woocommerce_ship_to_different_address_checked', '__return_true' );
+// ── Checkout: single "Delivery Address" (no separate shipping address) ────────
+// Cambodia uses one delivery address — drop the shipping-address section entirely…
+add_filter( 'woocommerce_cart_needs_shipping_address', '__return_false' );
 
-// Relabel the shipping toggle heading to "Shipping Address".
-add_filter( 'gettext', 'shopys_shipping_heading_label', 20, 3 );
-function shopys_shipping_heading_label( $translated, $text, $domain ) {
-    if ( 'woocommerce' === $domain && 'Ship to a different address?' === $text ) {
-        return 'Shipping Address';
+// …and rename "Billing details" → "Delivery Address" at checkout.
+add_filter( 'gettext', 'shopys_billing_to_delivery_label', 20, 3 );
+function shopys_billing_to_delivery_label( $translated, $text, $domain ) {
+    if ( 'woocommerce' !== $domain ) return $translated;
+    if ( ! ( function_exists( 'is_checkout' ) && is_checkout() ) ) return $translated;
+    if ( $text === 'Billing details' || $text === 'Billing &amp; Shipping' || $text === 'Billing Details' ) {
+        return 'Delivery Address';
     }
     return $translated;
 }
 
-// Keep the shipping form permanently visible (hide the collapse checkbox).
-add_action( 'wp_head', 'shopys_force_shipping_form_visible' );
-function shopys_force_shipping_form_visible() {
-    if ( ! ( function_exists( 'is_checkout' ) && is_checkout() ) ) return;
-    echo '<style>#ship-to-different-address-checkbox{display:none !important;}#ship-to-different-address label{cursor:default;font-weight:700;}.woocommerce-shipping-fields .shipping_address{display:block !important;}</style>';
+/* ── Checkout: Delivery Location (map link) — easy for customer + delivery man ── */
+add_filter( 'woocommerce_checkout_fields', 'shopys_add_delivery_map_field' );
+function shopys_add_delivery_map_field( $fields ) {
+    // Remove the Company name field.
+    unset( $fields['billing']['billing_company'] );
+
+    // Delivery Location map field, placed just above Street address (billing_address_1 = 50).
+    $fields['billing']['delivery_map'] = array(
+        'type'        => 'text',
+        'label'       => __( 'Delivery Location (Map)', 'shopys' ),
+        'placeholder' => __( 'Tap "Use my current location" or paste a Google Maps link', 'shopys' ),
+        'required'    => false,
+        'class'       => array( 'form-row-wide', 'shopys-map-field' ),
+        'priority'    => 45,
+    );
+    return $fields;
+}
+
+add_action( 'woocommerce_checkout_create_order', 'shopys_save_delivery_map', 10, 2 );
+function shopys_save_delivery_map( $order, $data ) {
+    if ( ! empty( $_POST['delivery_map'] ) ) {
+        $order->update_meta_data( '_delivery_map', esc_url_raw( wp_unslash( $_POST['delivery_map'] ) ) );
+    }
+}
+
+add_action( 'woocommerce_admin_order_data_after_billing_address', 'shopys_admin_show_delivery_map' );
+function shopys_admin_show_delivery_map( $order ) {
+    $map = $order->get_meta( '_delivery_map' );
+    if ( $map ) {
+        echo '<p><strong>' . esc_html__( 'Delivery Map', 'shopys' ) . ':</strong> <a href="' . esc_url( $map ) . '" target="_blank" rel="noopener">' . esc_html( $map ) . '</a></p>';
+    }
+}
+
+// "Use my current location" button + browser geolocation (no API key needed).
+add_action( 'wp_footer', 'shopys_delivery_map_button' );
+function shopys_delivery_map_button() {
+    if ( ! function_exists( 'is_checkout' ) || ! is_checkout() ) return;
+    if ( function_exists( 'is_wc_endpoint_url' ) && is_wc_endpoint_url( 'order-received' ) ) return;
+    ?>
+    <style>
+    .shopys-geo-btn{ margin-top:8px; display:inline-flex; align-items:center; gap:7px; padding:10px 16px; border:1.5px solid #00c44f; background:#fff; color:#0a7d00; font-weight:700; font-size:13px; border-radius:10px; cursor:pointer; font-family:'Play','Battambang',-apple-system,sans-serif; transition:background .2s; }
+    .shopys-geo-btn:hover{ background:#f0fff4; }
+    .shopys-geo-btn svg{ width:15px; height:15px; }
+    .shopys-geo-msg{ font-size:12px; margin-top:7px; font-weight:600; line-height:1.5; }
+    .shopys-geo-msg a{ color:#00a341; font-weight:700; }
+    </style>
+    <script>
+    (function(){ if(!window.jQuery) return; var $=window.jQuery;
+        function ensureBtn(){
+            var $wrap = $('#billing_delivery_map_field');
+            if(!$wrap.length || $wrap.find('.shopys-geo-btn').length) return;
+            var btn = $('<button type="button" class="shopys-geo-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> <?php echo esc_js( __( 'Use my current location', 'shopys' ) ); ?></button>');
+            var msg = $('<div class="shopys-geo-msg"></div>');
+            $wrap.append(btn).append(msg);
+            btn.on('click', function(){
+                if(!navigator.geolocation){ msg.css('color','#d80019').text('<?php echo esc_js( __( 'Geolocation not supported on this device.', 'shopys' ) ); ?>'); return; }
+                msg.css('color','#5b6472').text('<?php echo esc_js( __( 'Getting your location…', 'shopys' ) ); ?>');
+                navigator.geolocation.getCurrentPosition(function(p){
+                    var lat=p.coords.latitude.toFixed(6), lng=p.coords.longitude.toFixed(6);
+                    var link='https://maps.google.com/?q='+lat+','+lng;
+                    $('#billing_delivery_map').val(link).trigger('change');
+                    msg.css('color','#0a7d00').html('✓ <?php echo esc_js( __( 'Location captured', 'shopys' ) ); ?> — <a href="'+link+'" target="_blank" rel="noopener">'+lat+', '+lng+'</a>');
+                }, function(){
+                    msg.css('color','#d80019').text('<?php echo esc_js( __( 'Could not get location. Please allow location access or paste a Google Maps link.', 'shopys' ) ); ?>');
+                }, { enableHighAccuracy:true, timeout:10000 });
+            });
+        }
+        $(document.body).on('updated_checkout', ensureBtn);
+        $(ensureBtn);
+    })();
+    </script>
+    <?php
 }
 
 // Remove the checkout "Your personal data will be used…" privacy-policy paragraph.
@@ -801,6 +869,24 @@ add_filter( 'woocommerce_get_privacy_policy_text', function ( $text, $type ) {
 
 // Remove the "Additional information" / "Order notes (optional)" block at checkout.
 add_filter( 'woocommerce_enable_order_notes_field', '__return_false' );
+
+// Rename the COD gateway "Walk-In Customer" → "Pay With Cash" + premium description (deploy-safe).
+add_filter( 'option_woocommerce_cod_settings', 'shopys_cod_settings_override' );
+function shopys_cod_settings_override( $settings ) {
+    if ( ! is_array( $settings ) ) return $settings;
+    $settings['title']        = __( 'Pay With Cash', 'shopys' );
+    $settings['description']  = __( 'Pay in cash when your order is delivered, or when you collect it at our store. No online payment needed — just place your order and our team will contact you to confirm delivery or pickup.', 'shopys' );
+    $settings['instructions'] = __( 'Please prepare the exact amount in cash. Our team will reach out shortly to arrange delivery or pickup. Thank you!', 'shopys' );
+    return $settings;
+}
+// Update the label on existing orders (order detail, Telegram, etc.).
+add_filter( 'woocommerce_order_get_payment_method_title', 'shopys_cod_order_title', 10, 2 );
+function shopys_cod_order_title( $title, $order ) {
+    if ( is_a( $order, 'WC_Abstract_Order' ) && $order->get_payment_method() === 'cod' ) {
+        return __( 'Pay With Cash', 'shopys' );
+    }
+    return $title;
+}
 
 // Clean, full-width, centered layout for the "Pay for order" page only (not /checkout/).
 add_action( 'wp_head', 'shopys_order_pay_layout' );
@@ -1028,6 +1114,153 @@ add_filter( 'woocommerce_available_payment_gateways', function ( $gateways ) {
     return $gateways;
 } );
 
+// Force 12px font on all checkout routes (checkout, order-pay, order-received).
+add_action( 'wp_head', 'shopys_checkout_font_size', 99 );
+function shopys_checkout_font_size() {
+    if ( ! function_exists( 'is_checkout' ) || ! is_checkout() ) return;
+    echo '<style id="shopys-checkout-12">
+    body.woocommerce-checkout .woocommerce,
+    body.woocommerce-checkout .woocommerce p,
+    body.woocommerce-checkout .woocommerce li,
+    body.woocommerce-checkout .woocommerce td,
+    body.woocommerce-checkout .woocommerce th,
+    body.woocommerce-checkout .woocommerce label,
+    body.woocommerce-checkout .woocommerce span,
+    body.woocommerce-checkout .woocommerce a,
+    body.woocommerce-checkout .woocommerce strong,
+    body.woocommerce-checkout .woocommerce small,
+    body.woocommerce-checkout .woocommerce select,
+    body.woocommerce-checkout .woocommerce textarea,
+    body.woocommerce-checkout .woocommerce h1,
+    body.woocommerce-checkout .woocommerce h2,
+    body.woocommerce-checkout .woocommerce h3,
+    body.woocommerce-checkout .woocommerce h4,
+    body.woocommerce-checkout .woocommerce input,
+    body.woocommerce-checkout .woocommerce button,
+    body.woocommerce-checkout .woocommerce form,
+    body.woocommerce-checkout form.checkout,
+    body.woocommerce-checkout form#order_review,
+    body.woocommerce-checkout #payment,
+    body.woocommerce-checkout #place_order,
+    body.woocommerce-checkout button#place_order,
+    body.woocommerce-checkout .woocommerce .button{ font-size:12px !important; }
+    </style>';
+}
+
+// Premium styling for the "Select Shop" dropdown (matches the checkout theme).
+add_action( 'wp_head', 'shopys_shop_field_style' );
+function shopys_shop_field_style() {
+    if ( ! function_exists( 'is_checkout' ) || ! is_checkout() ) return;
+    if ( function_exists( 'is_wc_endpoint_url' ) && is_wc_endpoint_url( 'order-received' ) ) return;
+    echo '<style>
+    #billing_shop_branch_field{ margin-bottom:18px !important; }
+    #billing_shop_branch_field > label{ display:block !important; font-weight:700 !important; color:#0d1117 !important; margin-bottom:7px !important; }
+    #billing_shop_branch_field .required{ color:#e21c25 !important; text-decoration:none; }
+    #billing_shop_branch{
+        width:100% !important; height:auto !important; line-height:1.5 !important; min-height:0 !important;
+        padding:13px 42px 13px 15px !important; margin:0 !important;
+        border:1.6px solid #e7e9ee !important; border-radius:12px !important;
+        background-color:#fff !important; color:#0d1117 !important; font-weight:600 !important;
+        font-family:"Play","Battambang",-apple-system,sans-serif !important;
+        -webkit-appearance:none !important; -moz-appearance:none !important; appearance:none !important; cursor:pointer;
+        background-image:url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2716%27 height=%2716%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%235b6472%27 stroke-width=%272.5%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpolyline points=%276 9 12 15 18 9%27/%3E%3C/svg%3E") !important;
+        background-repeat:no-repeat !important; background-position:right 15px center !important; background-size:16px !important;
+        box-shadow:0 2px 8px rgba(15,23,42,.04) !important; transition:border-color .2s ease, box-shadow .2s ease !important;
+    }
+    #billing_shop_branch:hover{ border-color:#bdeccd !important; }
+    #billing_shop_branch:focus{ border-color:#00c44f !important; box-shadow:0 0 0 3px rgba(0,196,79,.14) !important; outline:none !important; }
+    </style>';
+}
+
+// ── Stepper checkout: Step 1 Delivery Address → Step 2 Your Order (Next/Back) ──
+add_action( 'wp_head', 'shopys_checkout_stepper_css', 100 );
+function shopys_checkout_stepper_css() {
+    if ( ! function_exists( 'is_checkout' ) || ! is_checkout() ) return;
+    if ( function_exists( 'is_wc_endpoint_url' ) && ( is_wc_endpoint_url( 'order-pay' ) || is_wc_endpoint_url( 'order-received' ) ) ) return;
+    ?>
+    <style>
+    .shopys-steps{ display:flex; align-items:center; gap:12px; margin:0 auto 22px; max-width:760px; font-family:"Play","Battambang",sans-serif; }
+    .shopys-step{ display:flex; align-items:center; gap:8px; font-weight:800; color:#9aa3b0; font-size:12px; cursor:pointer; white-space:nowrap; }
+    .shopys-step span{ width:26px; height:26px; border-radius:50%; background:#e7e9ee; color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; transition:background .2s; }
+    .shopys-step.active{ color:#0d1117; } .shopys-step.active span{ background:#00c44f; }
+    .shopys-step.done span{ background:#00a341; }
+    .shopys-step-line{ flex:1; height:2px; background:#e7e9ee; border-radius:2px; }
+    /* Top action bar on each step */
+    .shopys-actions{ display:flex; justify-content:space-between; align-items:center; gap:12px; margin:0 0 18px; flex-wrap:wrap; }
+    .shopys-actions.shopys-actions-end{ justify-content:flex-end; }
+    .shopys-next, .shopys-place{ display:inline-flex; align-items:center; gap:7px; padding:13px 26px; background:#00c44f; color:#fff; font-weight:800; font-size:13px; border:none; border-radius:11px; cursor:pointer; font-family:"Play","Battambang",sans-serif; box-shadow:0 8px 20px rgba(0,196,79,.28); transition:background .2s, transform .15s; }
+    .shopys-next:hover, .shopys-place:hover{ background:#00a341; transform:translateY(-1px); }
+    .shopys-back{ display:inline-flex; align-items:center; gap:6px; padding:11px 18px; background:#fff; border:1.5px solid #e7e9ee; border-radius:11px; color:#5b6472; font-weight:700; font-size:12px; cursor:pointer; font-family:"Play","Battambang",sans-serif; }
+    .shopys-back:hover{ border-color:#00c44f; color:#0a7d00; }
+    /* Hide the original bottom Place Order — we expose it in the top action bar */
+    body.woocommerce-checkout #order_review #payment .form-row.place-order{ display:none !important; }
+    body.woocommerce-checkout .woocommerce-billing-fields > h3{ display:none !important; }
+    body.woocommerce-checkout .woocommerce-billing-fields::before{ content:"STEP 1  \00b7  DELIVERY ADDRESS"; display:block; font-size:12px; font-weight:800; letter-spacing:1px; color:#00a341; margin:0 0 16px; padding-bottom:12px; border-bottom:1px solid #eef0f4; font-family:"Play","Battambang",sans-serif; }
+    body.woocommerce-checkout #order_review::before{ content:"STEP 2  \00b7  YOUR ORDER" !important; color:#00a341 !important; letter-spacing:1px !important; font-size:12px !important; font-weight:800 !important; }
+    </style>
+    <?php
+}
+
+add_action( 'wp_footer', 'shopys_checkout_stepper_js', 120 );
+function shopys_checkout_stepper_js() {
+    if ( ! function_exists( 'is_checkout' ) || ! is_checkout() ) return;
+    if ( function_exists( 'is_wc_endpoint_url' ) && ( is_wc_endpoint_url( 'order-pay' ) || is_wc_endpoint_url( 'order-received' ) ) ) return;
+    ?>
+    <script>
+    (function(){
+        if(!window.jQuery) return;
+        var $ = window.jQuery, step = 1;
+        function imp(el, prop, val){ if(el && el.style){ el.style.setProperty(prop, val, "important"); } }
+        function applyLayout(){
+            var $f = $("form.checkout"); if(!$f.length) return;
+            imp($f[0], "display", "block");
+            imp($f[0], "max-width", "760px");
+            imp($f[0], "margin-left", "auto");
+            imp($f[0], "margin-right", "auto");
+            var cust = document.getElementById("customer_details");
+            var rev  = document.getElementById("order_review");
+            if(cust) imp(cust, "display", step === 1 ? "block" : "none");
+            if(rev)  imp(rev,  "display", step === 2 ? "block" : "none");
+            $(".shopys-step").removeClass("active done");
+            $(".shopys-step[data-go='" + step + "']").addClass("active");
+            if(step === 2){ $(".shopys-step[data-go='1']").addClass("done"); }
+        }
+        function buildChrome(){
+            var $f = $("form.checkout"); if(!$f.length) return;
+            if(!$(".shopys-steps").length){
+                $f.prepend("<div class='shopys-steps'><div class='shopys-step' data-go='1'><span>1</span> Delivery Address</div><div class='shopys-step-line'></div><div class='shopys-step' data-go='2'><span>2</span> Your Order</div></div>");
+            }
+            if($("#customer_details").length && !$("#customer_details > .shopys-actions").length){
+                $("#customer_details").prepend("<div class='shopys-actions shopys-actions-end'><button type='button' class='shopys-next'>Next — Review Order →</button></div>");
+            }
+            if($("#order_review").length && !$("#order_review > .shopys-actions").length){
+                var placeTxt = ($.trim($("#place_order").text()) || "Place Order");
+                $("#order_review").prepend("<div class='shopys-actions'><button type='button' class='shopys-back'>← Back to Delivery</button><button type='button' class='shopys-place'>" + placeTxt + "</button></div>");
+            }
+            applyLayout();
+        }
+        function toForm(){ var $f = $("form.checkout"); if($f.length){ $("html,body").animate({ scrollTop: $f.offset().top - 90 }, 300); } }
+        $(document.body).on("click", ".shopys-next", function(e){
+            e.preventDefault();
+            var ok = true, bad = null;
+            $("#customer_details .validate-required:visible").each(function(){
+                var $r = $(this), v = ($r.find("input,select,textarea").first().val() || "").toString().trim();
+                if(v === ""){ ok = false; $r.addClass("woocommerce-invalid woocommerce-invalid-required-field"); if(!bad){ bad = $r; } }
+                else { $r.removeClass("woocommerce-invalid woocommerce-invalid-required-field"); }
+            });
+            if(!ok){ if(bad){ $("html,body").animate({ scrollTop: bad.offset().top - 110 }, 300); } return; }
+            step = 2; applyLayout(); toForm();
+        });
+        $(document.body).on("click", ".shopys-back", function(e){ e.preventDefault(); step = 1; applyLayout(); toForm(); });
+        $(document.body).on("click", ".shopys-place", function(e){ e.preventDefault(); var $p = $("#place_order"); if($p.length){ $p.trigger("click"); } else { $("form.checkout").trigger("submit"); } });
+        $(document.body).on("click", ".shopys-steps .shopys-step", function(){ if(parseInt($(this).attr("data-go"), 10) === 1){ step = 1; applyLayout(); toForm(); } });
+        $(buildChrome);
+        $(document.body).on("updated_checkout", buildChrome);
+    })();
+    </script>
+    <?php
+}
+
 // Premium card-style payment selector at checkout (no radio circles; click the whole card).
 add_action( 'wp_footer', 'shopys_premium_payment_methods' );
 function shopys_premium_payment_methods() {
@@ -1242,6 +1475,10 @@ function shopys_notify_telegram_paid_order( $order_id ) {
     $msg .= "👤  <b>Customer Name :</b> " . esc_html( $name !== '' ? $name : '-' ) . "\n";
     $msg .= "📞  <b>Customer Phone :</b> " . esc_html( $phone !== '' ? $phone : '-' ) . "\n";
     $msg .= "📍  <b>Customer Address :</b> " . esc_html( $addr !== '' ? $addr : '-' ) . "\n";
+    $map = $order->get_meta( '_delivery_map' );
+    if ( $map ) {
+        $msg .= "🗺️  <b>Delivery Map :</b> <a href=\"" . esc_url( $map ) . "\">" . esc_html__( 'Open in Google Maps', 'shopys' ) . "</a>\n";
+    }
     $wp_user = $order->get_user();
     if ( $wp_user ) {
         $msg .= "🧑‍💻  <b>Website Account:</b>\n";
