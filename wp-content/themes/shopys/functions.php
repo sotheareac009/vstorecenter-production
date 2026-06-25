@@ -885,21 +885,23 @@ function shopys_order_overview_style() {
     if ( ! is_wc_endpoint_url( 'order-pay' ) && ! is_wc_endpoint_url( 'order-received' ) ) return;
     ?>
     <style>
+    /* Full-width premium card; fields in a responsive grid (label on top, value below) */
     ul.woocommerce-order-overview.order_details{
-        max-width:430px; margin:18px auto 26px !important; padding:8px 20px !important; list-style:none !important;
-        display:block !important; background:#fff; border:1px solid #eef0f4 !important; border-radius:18px;
-        box-shadow:0 16px 44px rgba(15,23,42,.07); font-family:'Play','Battambang',-apple-system,sans-serif;
+        max-width:100% !important; width:100% !important; margin:0 0 26px !important; padding:24px 28px !important;
+        list-style:none !important; display:grid !important;
+        grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)) !important; gap:20px 30px !important;
+        background:#fff; border:1px solid #eef0f4 !important; border-radius:16px;
+        box-shadow:0 8px 26px rgba(15,23,42,.05); font-family:'Play','Battambang',-apple-system,sans-serif;
     }
     ul.woocommerce-order-overview.order_details li{
-        display:flex !important; justify-content:space-between; align-items:flex-start; gap:16px;
-        padding:13px 0 !important; margin:0 !important; border:0 !important; border-bottom:1px solid #f1f3f6 !important;
-        width:auto !important; float:none !important; text-transform:none !important; text-align:left !important;
-        font-size:13px !important; font-weight:600 !important; color:#9aa3b0 !important; line-height:1.5;
+        display:flex !important; flex-direction:column !important; gap:5px; align-items:flex-start;
+        padding:0 !important; margin:0 !important; border:0 !important; float:none !important; width:auto !important;
+        text-align:left !important; text-transform:uppercase !important; letter-spacing:.6px;
+        font-size:11px !important; font-weight:700 !important; color:#9aa3b0 !important; line-height:1.3;
     }
-    ul.woocommerce-order-overview.order_details li:last-child{ border-bottom:0 !important; }
     ul.woocommerce-order-overview.order_details li strong{
-        color:#0d1117 !important; font-weight:800 !important; font-size:13.5px !important;
-        text-align:right; max-width:64%; word-break:break-word; line-height:1.45;
+        color:#0d1117 !important; font-weight:800 !important; font-size:15px !important;
+        text-transform:none !important; letter-spacing:0; word-break:break-word; line-height:1.4;
     }
     </style>
     <?php
