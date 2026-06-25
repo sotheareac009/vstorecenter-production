@@ -1125,12 +1125,62 @@ function shopys_tg_walkin_chat_id() {
 }
 
 /** Route an order to the right Telegram channel by payment method. */
+/** The two shops the customer chooses between at checkout. */
+function shopys_shop_branches() {
+    return array(
+        'vstore' => 'V-Store Center',
+        'vtech'  => 'V-Tech Gaming Center',
+    );
+}
+
+/** Telegram channel for branch (vstore|vtech) + type (khqr|walkin) — env/constant overridable. */
+function shopys_tg_branch_chat( $branch, $type ) {
+    $branch = strtolower( (string) $branch );
+    $type   = strtolower( (string) $type );
+    $key    = 'SHOPYS_TG_' . strtoupper( $branch ) . '_' . strtoupper( $type ); // e.g. SHOPYS_TG_VSTORE_KHQR
+    if ( defined( $key ) ) return (string) constant( $key );
+    $v = getenv( $key );
+    return ( $v !== false ) ? (string) $v : ''; // not set → caller falls back to the generic channel
+}
+
 function shopys_tg_chat_for_order( $order ) {
-    if ( $order && $order->get_payment_method() !== 'khqrpay' ) {
-        $walkin = shopys_tg_walkin_chat_id();
-        if ( $walkin !== '' ) return $walkin;
+    $type   = ( $order && $order->get_payment_method() === 'khqrpay' ) ? 'khqr' : 'walkin';
+    $branch = $order ? $order->get_meta( '_shop_branch' ) : '';
+    if ( $branch ) {
+        $chat = shopys_tg_branch_chat( $branch, $type );
+        if ( $chat !== '' ) return $chat;
     }
-    return shopys_tg_order_chat_id();
+    // Fallback to the single-channel config if no shop was selected.
+    return ( $type === 'khqr' ) ? shopys_tg_order_chat_id() : ( shopys_tg_walkin_chat_id() ?: shopys_tg_order_chat_id() );
+}
+
+/* ── Required "Select Shop" field at checkout ──────────────────────────────── */
+add_filter( 'woocommerce_checkout_fields', 'shopys_add_shop_field' );
+function shopys_add_shop_field( $fields ) {
+    $fields['billing']['shop_branch'] = array(
+        'type'     => 'select',
+        'label'    => __( 'Select Shop', 'shopys' ),
+        'required' => true,
+        'class'    => array( 'form-row-wide', 'shopys-shop-field' ),
+        'priority' => 1,
+        'options'  => array( '' => __( 'Choose your shop…', 'shopys' ) ) + shopys_shop_branches(),
+    );
+    return $fields;
+}
+
+add_action( 'woocommerce_checkout_create_order', 'shopys_save_shop_field', 10, 2 );
+function shopys_save_shop_field( $order, $data ) {
+    $branch = isset( $_POST['shop_branch'] ) ? wc_clean( wp_unslash( $_POST['shop_branch'] ) ) : '';
+    if ( $branch !== '' ) $order->update_meta_data( '_shop_branch', $branch );
+}
+
+// Show the chosen shop on the admin order screen.
+add_action( 'woocommerce_admin_order_data_after_billing_address', 'shopys_admin_show_shop' );
+function shopys_admin_show_shop( $order ) {
+    $branch = $order->get_meta( '_shop_branch' );
+    if ( ! $branch ) return;
+    $names = shopys_shop_branches();
+    echo '<p><strong>' . esc_html__( 'Shop', 'shopys' ) . ':</strong> ' . esc_html( isset( $names[ $branch ] ) ? $names[ $branch ] : $branch ) . '</p>';
 }
 
 add_action( 'woocommerce_payment_complete', 'shopys_notify_telegram_paid_order', 20 );
@@ -1178,11 +1228,18 @@ function shopys_notify_telegram_paid_order( $order_id ) {
     $when = $order->get_date_created() ? $order->get_date_created()->date_i18n( 'd M Y · g:i A' ) : date_i18n( 'd M Y · g:i A' );
     $div  = "━━━━━━━━━━━━━━━";
 
+    $branch_meta  = $order->get_meta( '_shop_branch' );
+    $branch_names = shopys_shop_branches();
+    $shop_title   = ( $branch_meta && isset( $branch_names[ $branch_meta ] ) ) ? $branch_names[ $branch_meta ] : get_bloginfo( 'name' );
     $header = ( $order->get_payment_method() === 'khqrpay' ) ? '🛍️  <b>NEW PAID ORDER</b>' : '🛒  <b>NEW ORDER</b>';
     $msg  = $header . "\n";
-    $msg .= "<i>" . esc_html( get_bloginfo( 'name' ) ) . "</i>\n";
+    $msg .= "<i>" . esc_html( $shop_title ) . "</i>\n";
     $msg .= $div . "\n";
-    $msg .= "🧾  <b>Invoice</b>\n      <code>#" . esc_html( $order->get_order_number() ) . "</code>\n\n";
+    $msg .= "🧾  <b>Invoice</b>\n      <code>#" . esc_html( $order->get_order_number() ) . "</code>\n";
+    if ( $branch_meta && isset( $branch_names[ $branch_meta ] ) ) {
+        $msg .= "🏬  <b>Shop:</b> " . esc_html( $branch_names[ $branch_meta ] ) . "\n";
+    }
+    $msg .= "\n";
     $msg .= "👤  <b>Customer</b>\n      " . esc_html( $name !== '' ? $name : '-' ) . "\n";
     $msg .= "📞  " . esc_html( $phone !== '' ? $phone : '-' ) . "\n";
     $msg .= "📍  " . esc_html( $addr !== '' ? $addr : '-' ) . "\n";
