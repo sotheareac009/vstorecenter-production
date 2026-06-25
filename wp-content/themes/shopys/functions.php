@@ -794,6 +794,292 @@ function shopys_force_shipping_form_visible() {
     echo '<style>#ship-to-different-address-checkbox{display:none !important;}#ship-to-different-address label{cursor:default;font-weight:700;}.woocommerce-shipping-fields .shipping_address{display:block !important;}</style>';
 }
 
+// Remove the checkout "Your personal data will be used…" privacy-policy paragraph.
+add_filter( 'woocommerce_get_privacy_policy_text', function ( $text, $type ) {
+    return ( $type === 'checkout' ) ? '' : $text;
+}, 100, 2 );
+
+// Remove the "Additional information" / "Order notes (optional)" block at checkout.
+add_filter( 'woocommerce_enable_order_notes_field', '__return_false' );
+
+// Clean, full-width, centered layout for the "Pay for order" page only (not /checkout/).
+add_action( 'wp_head', 'shopys_order_pay_layout' );
+function shopys_order_pay_layout() {
+    if ( ! function_exists( 'is_wc_endpoint_url' ) || ! is_wc_endpoint_url( 'order-pay' ) ) return;
+    ?>
+    <style>
+    /* Full-width content, no sidebar, single centered column */
+    body.woocommerce-order-pay .sidebar-content-area,
+    body.woocommerce-order-pay #secondary,
+    body.woocommerce-order-pay .widget-area{ display:none !important; }
+    body.woocommerce-order-pay .primary-content-area,
+    body.woocommerce-order-pay .primary-content-wrap,
+    body.woocommerce-order-pay .content-wrap,
+    body.woocommerce-order-pay .entry-content,
+    body.woocommerce-order-pay #primary{ width:100% !important; max-width:100% !important; float:none !important; flex:0 0 100% !important; }
+    /* Hide empty customer/billing column that's not used when paying an existing order */
+    body.woocommerce-order-pay #customer_details,
+    body.woocommerce-order-pay .col2-set,
+    body.woocommerce-order-pay form.checkout > .col2-set{ display:none !important; }
+    /* The order/payment form: a clean centered card */
+    body.woocommerce-order-pay #order_review{
+        width:100% !important; max-width:840px !important; margin:24px auto 40px !important;
+        position:static !important; float:none !important; box-sizing:border-box;
+        background:#fff !important; border:1px solid #eef0f4 !important; border-radius:18px !important;
+        box-shadow:0 16px 44px rgba(15,23,42,.07) !important; padding:26px 28px !important;
+    }
+    body.woocommerce-order-pay #order_review_heading{ max-width:840px; margin:24px auto 0 !important; padding:0 28px; }
+    /* Restore a real TABLE layout (the checkout flex styling breaks 3-column alignment) */
+    body.woocommerce-order-pay #order_review table.shop_table{ display:table !important; width:100% !important; table-layout:auto !important; border-collapse:collapse !important; margin:6px 0 0 !important; }
+    body.woocommerce-order-pay #order_review table.shop_table thead{ display:table-header-group !important; }
+    body.woocommerce-order-pay #order_review table.shop_table tbody{ display:table-row-group !important; max-height:none !important; overflow:visible !important; }
+    body.woocommerce-order-pay #order_review table.shop_table tfoot{ display:table-footer-group !important; }
+    body.woocommerce-order-pay #order_review table.shop_table tr{ display:table-row !important; }
+    body.woocommerce-order-pay #order_review table.shop_table th,
+    body.woocommerce-order-pay #order_review table.shop_table td{ display:table-cell !important; border:0 !important; padding:14px 8px !important; vertical-align:middle; }
+    /* Continuous separators via collapsed cell borders */
+    body.woocommerce-order-pay #order_review table.shop_table thead th{ border-bottom:2px solid #eef0f4 !important; color:#9aa3b0 !important; font-size:12px !important; font-weight:700 !important; letter-spacing:.6px !important; text-transform:uppercase; padding-bottom:11px !important; }
+    body.woocommerce-order-pay #order_review table.shop_table tbody td{ border-bottom:1px solid #f1f3f6 !important; }
+    body.woocommerce-order-pay #order_review table.shop_table tfoot th,
+    body.woocommerce-order-pay #order_review table.shop_table tfoot td{ border-bottom:1px solid #f1f3f6 !important; }
+    body.woocommerce-order-pay #order_review table.shop_table tfoot tr:last-child th,
+    body.woocommerce-order-pay #order_review table.shop_table tfoot tr:last-child td{ border-bottom:0 !important; }
+    body.woocommerce-order-pay #order_review table.shop_table tfoot tr.order-total th,
+    body.woocommerce-order-pay #order_review table.shop_table tfoot tr.order-total td{ border-top:2px solid #eef0f4 !important; }
+    body.woocommerce-order-pay #order_review table.shop_table tfoot tr.order-total th,
+    body.woocommerce-order-pay #order_review table.shop_table tfoot tr.order-total .amount{ font-size:16px !important; font-weight:800 !important; color:#0d1117 !important; }
+    body.woocommerce-order-pay #order_review table.shop_table tbody td.product-name{ font-weight:700; color:#0d1117 !important; }
+    body.woocommerce-order-pay #order_review table.shop_table .amount{ color:#0d1117 !important; font-weight:700; }
+    /* Column alignment: Qty centered, Totals right */
+    body.woocommerce-order-pay #order_review table.shop_table th.product-quantity,
+    body.woocommerce-order-pay #order_review table.shop_table td.product-quantity,
+    body.woocommerce-order-pay #order_review table.shop_table thead th:nth-child(2),
+    body.woocommerce-order-pay #order_review table.shop_table tbody td:nth-child(2){ text-align:center !important; }
+    body.woocommerce-order-pay #order_review table.shop_table th:last-child,
+    body.woocommerce-order-pay #order_review table.shop_table td:last-child{ text-align:right !important; }
+    /* Keep the payment area + "Pay for order" button inside the card padding */
+    body.woocommerce-order-pay #order_review #payment{ background:transparent !important; border:0 !important; margin:0 !important; padding:0 !important; width:100% !important; max-width:100% !important; box-sizing:border-box; }
+    body.woocommerce-order-pay #order_review .form-row.place-order,
+    body.woocommerce-order-pay #order_review #payment .form-row{ margin:0 !important; padding:0 !important; width:100% !important; max-width:100% !important; box-sizing:border-box; }
+    body.woocommerce-order-pay #order_review{ overflow:visible !important; padding-bottom:26px !important; }
+    /* Keep #payment + the "Pay for order" button INSIDE the card padding.
+       Uses 2–3 IDs to out-specify checkout-premium.css's '#payment #place_order'. */
+    body.woocommerce-order-pay #order_review #payment{ width:100% !important; max-width:100% !important; margin:8px 0 0 !important; padding:0 !important; background:transparent !important; border:0 !important; box-sizing:border-box !important; }
+    body.woocommerce-order-pay #order_review #payment .form-row,
+    body.woocommerce-order-pay #order_review #payment .form-row.place-order{ width:100% !important; max-width:100% !important; margin:0 !important; padding:0 !important; box-sizing:border-box !important; }
+    body.woocommerce-order-pay #order_review #payment #place_order,
+    body.woocommerce-order-pay #order_review #payment button#place_order,
+    body.woocommerce-order-pay #order_review #payment input#place_order{
+        display:block !important; width:100% !important; max-width:100% !important;
+        margin:18px 0 0 !important; box-sizing:border-box !important;
+        position:static !important; float:none !important;
+    }
+    </style>
+    <?php
+}
+
+// Premium, centered order overview (Order number / Date / Total / Payment) on pay/received pages.
+add_action( 'wp_head', 'shopys_order_overview_style' );
+function shopys_order_overview_style() {
+    if ( ! function_exists( 'is_wc_endpoint_url' ) ) return;
+    if ( ! is_wc_endpoint_url( 'order-pay' ) && ! is_wc_endpoint_url( 'order-received' ) ) return;
+    ?>
+    <style>
+    ul.woocommerce-order-overview.order_details{
+        max-width:430px; margin:18px auto 26px !important; padding:8px 20px !important; list-style:none !important;
+        display:block !important; background:#fff; border:1px solid #eef0f4 !important; border-radius:18px;
+        box-shadow:0 16px 44px rgba(15,23,42,.07); font-family:'Play','Battambang',-apple-system,sans-serif;
+    }
+    ul.woocommerce-order-overview.order_details li{
+        display:flex !important; justify-content:space-between; align-items:flex-start; gap:16px;
+        padding:13px 0 !important; margin:0 !important; border:0 !important; border-bottom:1px solid #f1f3f6 !important;
+        width:auto !important; float:none !important; text-transform:none !important; text-align:left !important;
+        font-size:13px !important; font-weight:600 !important; color:#9aa3b0 !important; line-height:1.5;
+    }
+    ul.woocommerce-order-overview.order_details li:last-child{ border-bottom:0 !important; }
+    ul.woocommerce-order-overview.order_details li strong{
+        color:#0d1117 !important; font-weight:800 !important; font-size:13.5px !important;
+        text-align:right; max-width:64%; word-break:break-word; line-height:1.45;
+    }
+    </style>
+    <?php
+}
+
+// Cap the order-review item list height so long carts scroll (totals/payment stay visible).
+add_action( 'wp_head', 'shopys_order_review_scroll' );
+function shopys_order_review_scroll() {
+    if ( ! function_exists( 'is_checkout' ) || ! is_checkout() ) return;
+    // Skip the pay-for-order page (3-column table) and the received page — flex rows
+    // there break column alignment; only the main /checkout/ review needs scrolling.
+    if ( function_exists( 'is_wc_endpoint_url' ) && ( is_wc_endpoint_url( 'order-received' ) || is_wc_endpoint_url( 'order-pay' ) ) ) return;
+    ?>
+    <style>
+    body.woocommerce-checkout #order_review table.shop_table thead,
+    body.woocommerce-checkout #order_review table.shop_table tbody,
+    body.woocommerce-checkout #order_review table.shop_table tfoot{ display:block !important; width:100% !important; }
+    body.woocommerce-checkout #order_review table.shop_table thead tr,
+    body.woocommerce-checkout #order_review table.shop_table tbody tr,
+    body.woocommerce-checkout #order_review table.shop_table tfoot tr{ display:flex !important; justify-content:space-between; align-items:flex-start; gap:12px; width:100%; }
+    body.woocommerce-checkout #order_review table.shop_table th:last-child,
+    body.woocommerce-checkout #order_review table.shop_table td:last-child{ text-align:right !important; flex-shrink:0; white-space:nowrap; }
+    /* The product list scrolls; everything below (totals, coupon, payment) stays put */
+    body.woocommerce-checkout #order_review table.shop_table tbody{ max-height:300px; overflow-y:auto; overscroll-behavior:contain; }
+    body.woocommerce-checkout #order_review table.shop_table tbody::-webkit-scrollbar{ width:6px; }
+    body.woocommerce-checkout #order_review table.shop_table tbody::-webkit-scrollbar-thumb{ background:#cdd3db; border-radius:3px; }
+    body.woocommerce-checkout #order_review table.shop_table tbody::-webkit-scrollbar-track{ background:transparent; }
+    </style>
+    <?php
+}
+
+/* ── Move the coupon entry into the order summary, below the total ──────────── */
+remove_action( 'woocommerce_before_checkout_form', 'woocommerce_checkout_coupon_form', 10 );
+
+add_action( 'woocommerce_review_order_before_payment', 'shopys_checkout_coupon_field' );
+function shopys_checkout_coupon_field() {
+    if ( ! function_exists( 'wc_coupons_enabled' ) || ! wc_coupons_enabled() ) return;
+    ?>
+    <div class="shopys-coupon">
+        <button type="button" class="shopys-coupon-toggle">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a2 2 0 0 1 .703 3.872l-1.71.62a2 2 0 0 0-1.193 1.193l-.62 1.71A2 2 0 0 1 12 20a2 2 0 0 1-3.872.703l-.62-1.71a2 2 0 0 0-1.193-1.193l-1.71-.62A2 2 0 0 1 4 12"/><path d="M9 10h.01M15 10h.01"/></svg>
+            <?php esc_html_e( 'Have a coupon?', 'shopys' ); ?> <span><?php esc_html_e( 'Click here to enter your code', 'shopys' ); ?></span>
+        </button>
+        <div class="shopys-coupon-box">
+            <div class="shopys-coupon-row">
+                <input type="text" class="shopys-coupon-input" placeholder="<?php esc_attr_e( 'Coupon code', 'shopys' ); ?>" autocomplete="off">
+                <button type="button" class="shopys-coupon-apply"><?php esc_html_e( 'Apply', 'shopys' ); ?></button>
+            </div>
+            <div class="shopys-coupon-msg" aria-live="polite"></div>
+        </div>
+    </div>
+    <?php
+}
+
+add_action( 'wp_ajax_shopys_apply_coupon', 'shopys_apply_coupon' );
+add_action( 'wp_ajax_nopriv_shopys_apply_coupon', 'shopys_apply_coupon' );
+function shopys_apply_coupon() {
+    $code = isset( $_POST['code'] ) ? wc_format_coupon_code( wp_unslash( $_POST['code'] ) ) : '';
+    if ( $code === '' || ! function_exists( 'WC' ) || ! WC()->cart ) {
+        wp_send_json( array( 'ok' => false, 'msg' => __( 'Please enter a coupon code.', 'shopys' ) ) );
+    }
+    if ( WC()->cart->has_discount( $code ) ) {
+        wp_send_json( array( 'ok' => false, 'msg' => __( 'Coupon already applied.', 'shopys' ) ) );
+    }
+    wc_clear_notices();
+    $applied = WC()->cart->apply_coupon( $code );
+    $errors  = wc_get_notices( 'error' );
+    wc_clear_notices();
+    if ( $applied ) {
+        wp_send_json( array( 'ok' => true, 'msg' => __( 'Coupon applied ✓', 'shopys' ) ) );
+    }
+    $msg = $errors ? wp_strip_all_tags( $errors[0]['notice'] ) : __( 'Invalid coupon.', 'shopys' );
+    wp_send_json( array( 'ok' => false, 'msg' => $msg ) );
+}
+
+add_action( 'wp_footer', 'shopys_checkout_coupon_assets' );
+function shopys_checkout_coupon_assets() {
+    if ( ! function_exists( 'is_checkout' ) || ! is_checkout() ) return;
+    if ( function_exists( 'is_wc_endpoint_url' ) && is_wc_endpoint_url( 'order-received' ) ) return;
+    $ajax = esc_url( admin_url( 'admin-ajax.php' ) );
+    ?>
+    <style>
+    .shopys-coupon{ margin:14px 0 4px; padding-top:14px; border-top:1px dashed #e7e9ee; }
+    .shopys-coupon-toggle{ display:inline-flex; align-items:center; gap:7px; background:none; border:none; cursor:pointer; padding:0;
+        font-family:'Play','Battambang',-apple-system,sans-serif; font-size:13.5px; font-weight:700; color:#00a341; }
+    .shopys-coupon-toggle span{ font-weight:600; color:#5b6472; text-decoration:underline; }
+    .shopys-coupon-box{ display:none; margin-top:11px; }
+    .shopys-coupon-box.open{ display:block; }
+    .shopys-coupon-row{ display:flex; gap:8px; }
+    .shopys-coupon-input{ flex:1; padding:11px 14px; border:1.5px solid #e7e9ee; border-radius:10px; font-size:14px; font-family:inherit; outline:none; background:#fff; }
+    .shopys-coupon-input:focus{ border-color:#00c44f; box-shadow:0 0 0 3px rgba(0,196,79,.12); }
+    .shopys-coupon-apply{ padding:11px 22px; border:none; border-radius:10px; background:#00c44f; color:#fff; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit; transition:background .2s; white-space:nowrap; }
+    .shopys-coupon-apply:hover{ background:#00a341; }
+    .shopys-coupon-apply:disabled{ opacity:.6; cursor:default; }
+    .shopys-coupon-msg{ font-size:12.5px; margin-top:8px; font-weight:600; }
+    </style>
+    <script>
+    (function(){ if(!window.jQuery) return; var $=window.jQuery;
+        $(document.body).on('click','.shopys-coupon-toggle',function(e){ e.preventDefault();
+            $(this).siblings('.shopys-coupon-box').toggleClass('open'); });
+        $(document.body).on('click','.shopys-coupon-apply',function(){
+            var $b=$(this), $box=$b.closest('.shopys-coupon-box'), $msg=$box.find('.shopys-coupon-msg');
+            var code=$.trim($box.find('.shopys-coupon-input').val());
+            if(!code){ $msg.css('color','#d80019').text('Please enter a code.'); return; }
+            $b.prop('disabled',true).text('…');
+            $.post('<?php echo $ajax; ?>',{action:'shopys_apply_coupon',code:code},function(r){
+                $msg.css('color', (r&&r.ok)?'#0a7d00':'#d80019').text(r?r.msg:'Error');
+                if(r&&r.ok){ $(document.body).trigger('update_checkout'); }
+            },'json').fail(function(){ $msg.css('color','#d80019').text('Error, please try again.'); })
+            .always(function(){ $b.prop('disabled',false).text('Apply'); });
+        });
+    })();
+    </script>
+    <?php
+}
+
+// Make "Pay with KHQR" the default-selected method (first available gateway = default).
+add_filter( 'woocommerce_available_payment_gateways', function ( $gateways ) {
+    if ( isset( $gateways['khqrpay'] ) ) {
+        $khqr = $gateways['khqrpay'];
+        unset( $gateways['khqrpay'] );
+        $gateways = array( 'khqrpay' => $khqr ) + $gateways;
+    }
+    return $gateways;
+} );
+
+// Premium card-style payment selector at checkout (no radio circles; click the whole card).
+add_action( 'wp_footer', 'shopys_premium_payment_methods' );
+function shopys_premium_payment_methods() {
+    if ( ! function_exists( 'is_checkout' ) || ! is_checkout() ) return;
+    if ( function_exists( 'is_wc_endpoint_url' ) && is_wc_endpoint_url( 'order-received' ) ) return;
+    ?>
+    <style>
+    /* High specificity to override the theme's checkout-premium.css */
+    body.woocommerce-checkout #payment ul.wc_payment_methods{ background:transparent !important; border:0 !important; padding:0 !important; margin:0 0 18px !important; list-style:none !important; display:flex; flex-direction:column; gap:12px; }
+    body.woocommerce-checkout #payment ul.wc_payment_methods li.wc_payment_method{ position:relative; list-style:none !important; margin:0 !important; padding:16px 18px !important;
+        background:#fff !important; border:1.6px solid #e7e9ee !important; border-radius:14px !important; cursor:pointer;
+        transition:border-color .2s ease, box-shadow .2s ease, background .2s ease; }
+    body.woocommerce-checkout #payment ul.wc_payment_methods li.wc_payment_method:hover{ border-color:#bdeccd !important; background:#fff !important; box-shadow:0 6px 18px rgba(15,23,42,.06); }
+    body.woocommerce-checkout #payment ul.wc_payment_methods li.wc_payment_method input[type=radio]{ position:absolute !important; opacity:0 !important; pointer-events:none !important; width:0; height:0; margin:0; }
+    body.woocommerce-checkout #payment ul.wc_payment_methods li.wc_payment_method > label{ display:block; margin:0 !important; padding:0 !important; cursor:pointer;
+        font-family:'Play','Battambang',-apple-system,sans-serif; font-weight:800 !important; font-size:15px !important; color:#0d1117 !important; }
+    body.woocommerce-checkout #payment ul.wc_payment_methods li.wc_payment_method > label img{ display:none !important; }
+    /* Selected — strong, unmistakable highlight (full border on all sides, incl. last-child) */
+    body.woocommerce-checkout #payment ul.wc_payment_methods li.wc_payment_method.pm-selected{ border:2.5px solid #00c44f !important; background:#eafff2 !important;
+        box-shadow:0 0 0 3px rgba(0,196,79,.18), 0 12px 26px rgba(0,196,79,.2); padding-right:54px !important; }
+    body.woocommerce-checkout #payment ul.wc_payment_methods li.wc_payment_method.pm-selected > label{ color:#067a3b !important; }
+    body.woocommerce-checkout #payment ul.wc_payment_methods li.wc_payment_method.pm-selected::after{ content:''; position:absolute; top:15px; right:15px; width:28px; height:28px; border-radius:50%;
+        background:#00c44f url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='17' height='17' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E") center/17px no-repeat;
+        box-shadow:0 4px 10px rgba(0,196,79,.5); }
+    /* Dim the non-selected options so the choice is obvious */
+    body.woocommerce-checkout #payment ul.wc_payment_methods:has(.pm-selected) li.wc_payment_method:not(.pm-selected){ opacity:.62; }
+    body.woocommerce-checkout #payment ul.wc_payment_methods li.wc_payment_method:not(.pm-selected):hover{ opacity:1; }
+    /* Strip the inner grey description box (the KHQR card supplies its own styling) */
+    body.woocommerce-checkout #payment .payment_box{ background:transparent !important; border:0 !important; margin:10px 0 0 !important; padding:0 !important; }
+    body.woocommerce-checkout #payment .payment_box::before{ display:none !important; }
+    /* Remove the now-empty privacy text + its leftover card */
+    body.woocommerce-checkout .woocommerce-privacy-policy-text{ display:none !important; }
+    body.woocommerce-checkout .woocommerce-terms-and-conditions-wrapper{ background:transparent !important; border:0 !important; padding:0 !important; margin:0 !important; }
+    </style>
+    <script>
+    (function(){
+        if(!window.jQuery) return; var $=window.jQuery;
+        function mark(){
+            $("ul.wc_payment_methods li.wc_payment_method").removeClass("pm-selected");
+            $("ul.wc_payment_methods input[name=payment_method]:checked").closest("li.wc_payment_method").addClass("pm-selected");
+        }
+        $(document.body).on("click","ul.wc_payment_methods li.wc_payment_method",function(e){
+            if($(e.target).closest("a, input").length) return;
+            var $r=$(this).find("input[type=radio]");
+            if(!$r.prop("checked")){ $r.prop("checked",true).trigger("click"); }
+        });
+        $(document.body).on("change","input[name=payment_method]",mark);
+        $(document.body).on("updated_checkout payment_method_selected",mark);
+        $(function(){ setTimeout(mark,300); });
+    })();
+    </script>
+    <?php
+}
+
 // Align the Print / Download Invoice buttons into a premium row on the order page.
 add_action( 'wp_head', 'shopys_invoice_buttons_style' );
 function shopys_invoice_buttons_style() {
@@ -829,13 +1115,34 @@ function shopys_tg_order_chat_id() {
     return $v !== false ? (string) $v : '';
 }
 
+/** Separate channel for Walk-In Customer (COD) orders; falls back to the main one. */
+function shopys_tg_walkin_chat_id() {
+    if ( defined( 'SHOPYS_TG_WALKIN_CHAT_ID' ) ) return (string) SHOPYS_TG_WALKIN_CHAT_ID;
+    $v = getenv( 'SHOPYS_TG_WALKIN_CHAT_ID' );
+    return $v !== false ? (string) $v : '';
+}
+
+/** Route an order to the right Telegram channel by payment method. */
+function shopys_tg_chat_for_order( $order ) {
+    if ( $order && $order->get_payment_method() !== 'khqrpay' ) {
+        $walkin = shopys_tg_walkin_chat_id();
+        if ( $walkin !== '' ) return $walkin;
+    }
+    return shopys_tg_order_chat_id();
+}
+
 add_action( 'woocommerce_payment_complete', 'shopys_notify_telegram_paid_order', 20 );
+// Walk-In Customer (COD) and other gateways don't fire payment_complete — notify on
+// the status transition instead. The _shopys_tg_notified guard prevents duplicates.
+add_action( 'woocommerce_order_status_processing', 'shopys_notify_telegram_paid_order', 20 );
+add_action( 'woocommerce_order_status_completed', 'shopys_notify_telegram_paid_order', 20 );
+add_action( 'woocommerce_order_status_on-hold', 'shopys_notify_telegram_paid_order', 20 );
 function shopys_notify_telegram_paid_order( $order_id ) {
     $order = wc_get_order( $order_id );
     if ( ! $order || $order->get_meta( '_shopys_tg_notified' ) === 'yes' ) return;
 
     $token = defined( 'SHOPYS_TG_BOT_TOKEN' ) ? SHOPYS_TG_BOT_TOKEN : '';
-    $chat  = shopys_tg_order_chat_id();
+    $chat  = shopys_tg_chat_for_order( $order ); // KHQR → purchase channel, Walk-In → walk-in channel
     if ( ! $token || ! $chat ) return;
 
     $name  = trim( $order->get_formatted_billing_full_name() );
@@ -869,13 +1176,24 @@ function shopys_notify_telegram_paid_order( $order_id ) {
     $when = $order->get_date_created() ? $order->get_date_created()->date_i18n( 'd M Y · g:i A' ) : date_i18n( 'd M Y · g:i A' );
     $div  = "━━━━━━━━━━━━━━━";
 
-    $msg  = "🛍️  <b>NEW PAID ORDER</b>\n";
+    $header = ( $order->get_payment_method() === 'khqrpay' ) ? '🛍️  <b>NEW PAID ORDER</b>' : '🛒  <b>NEW ORDER</b>';
+    $msg  = $header . "\n";
     $msg .= "<i>" . esc_html( get_bloginfo( 'name' ) ) . "</i>\n";
     $msg .= $div . "\n";
     $msg .= "🧾  <b>Invoice</b>\n      <code>#" . esc_html( $order->get_order_number() ) . "</code>\n\n";
     $msg .= "👤  <b>Customer</b>\n      " . esc_html( $name !== '' ? $name : '-' ) . "\n";
     $msg .= "📞  " . esc_html( $phone !== '' ? $phone : '-' ) . "\n";
     $msg .= "📍  " . esc_html( $addr !== '' ? $addr : '-' ) . "\n";
+    $wp_user = $order->get_user();
+    if ( $wp_user ) {
+        $msg .= "🧑‍💻  <b>Website Account:</b>\n";
+        $msg .= "      Name : " . esc_html( $wp_user->display_name ) . "\n";
+        if ( $wp_user->user_email ) {
+            $msg .= "      Email : " . esc_html( $wp_user->user_email ) . "\n";
+        }
+    } else {
+        $msg .= "🧑‍💻  <b>Website Account:</b> " . esc_html__( 'Guest (not logged in)', 'shopys' ) . "\n";
+    }
     $msg .= $div . "\n";
     $msg .= "📦  <b>Order Items</b>\n" . implode( "\n", $lines ) . "\n";
     $msg .= $div . "\n";

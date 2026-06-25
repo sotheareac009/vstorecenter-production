@@ -262,6 +262,15 @@ function khqrpay_confirm_order_if_paid( WC_Order $order ) {
     return false;
 }
 
+/** A small KHQR logo badge as a data-URI (used as the gateway icon at checkout). */
+function khqrpay_logo_data_uri() {
+    $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="58" height="30" viewBox="0 0 58 30">'
+         . '<rect width="58" height="30" rx="7" fill="#e2231a"/>'
+         . '<text x="29" y="20" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="1.2">KHQR</text>'
+         . '</svg>';
+    return 'data:image/svg+xml;base64,' . base64_encode( $svg );
+}
+
 /* ───────────────────────── Register the gateway ───────────────────────── */
 
 add_filter( 'woocommerce_payment_gateways', function ( $gateways ) {
@@ -280,7 +289,9 @@ function khqrpay_load_gateway() {
             $this->id                 = 'khqrpay';
             $this->method_title       = 'KHQR (Bakong)';
             $this->method_description = 'Accept KHQR payments verified directly with the official Bakong Open API. Set BAKONG_ID and BAKONG_TOKEN in .env / wp-config.';
-            $this->has_fields         = false;
+            $this->has_fields         = true; // render the premium branded card in payment_fields()
+            // No gateway icon — WordPress strips data: URIs (broken img + duplicate title).
+            // The branded KHQR logo lives inside payment_fields() instead.
 
             $this->init_form_fields();
             $this->init_settings();
@@ -326,6 +337,47 @@ function khqrpay_load_gateway() {
             if ( ! $on ) return false;
             if ( khqrpay_cfg( 'bakong_id' ) === '' || khqrpay_cfg( 'bakong_token' ) === '' ) return false;
             return true;
+        }
+
+        /** Premium branded card shown under the payment option at checkout. */
+        public function payment_fields() {
+            ?>
+            <div class="khqr-pf">
+                <div class="khqr-pf-badge">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/>
+                        <rect x="3" y="14" width="7" height="7" rx="1.2"/><path d="M14 14h3M14 18v3M18 14v3M21 14v7M18 21h3"/>
+                    </svg>
+                    <span>KHQR</span>
+                </div>
+                <div class="khqr-pf-info">
+                    <strong><?php esc_html_e( 'Scan to pay with any banking app', 'shopys' ); ?></strong>
+                    <span class="khqr-pf-banks">ABA · ACLEDA · Wing · Bakong · <?php esc_html_e( '& all KHQR banks', 'shopys' ); ?></span>
+                    <span class="khqr-pf-secure">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        <?php esc_html_e( 'Secured by Bakong · National Bank of Cambodia', 'shopys' ); ?>
+                    </span>
+                </div>
+            </div>
+            <style>
+            li.payment_method_khqrpay > label img,
+            li.wc-block-components-payment-method-label img{ height:24px !important; width:auto !important; }
+            .khqr-pf{ display:flex; align-items:center; gap:14px; margin:10px 0 4px; padding:14px 16px;
+                background:linear-gradient(135deg,#fff,#fafbfc); border:1px solid #e7e9ee; border-radius:14px;
+                box-shadow:0 6px 20px rgba(15,23,42,.06); font-family:'Play','Battambang',-apple-system,sans-serif; }
+            .khqr-pf-badge{ flex-shrink:0; width:62px; height:62px; border-radius:14px; display:flex; flex-direction:column;
+                align-items:center; justify-content:center; gap:2px; color:#fff;
+                background:linear-gradient(135deg,#ef3b32,#c41a12); box-shadow:0 8px 18px rgba(196,26,18,.34); }
+            .khqr-pf-badge svg{ width:24px; height:24px; }
+            .khqr-pf-badge span{ font-size:10px; font-weight:800; letter-spacing:1px; }
+            .khqr-pf-info{ display:flex; flex-direction:column; gap:3px; }
+            .khqr-pf-info strong{ font-size:14.5px; font-weight:800; color:#0d1117; letter-spacing:-.2px; }
+            .khqr-pf-banks{ font-size:12px; color:#5b6472; font-weight:600; }
+            .khqr-pf-secure{ display:inline-flex; align-items:center; gap:5px; font-size:11px; color:#0a9d4a; font-weight:600; margin-top:2px; }
+            .khqr-pf-secure svg{ width:13px; height:13px; }
+            @media(max-width:480px){ .khqr-pf{ gap:11px; padding:12px; } .khqr-pf-badge{ width:54px; height:54px; } .khqr-pf-info strong{ font-size:13.5px; } }
+            </style>
+            <?php
         }
 
         public function process_payment( $order_id ) {
@@ -388,21 +440,102 @@ function khqrpay_load_gateway() {
 
             wp_enqueue_script( 'khqr-qrgen', 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js', array(), '1.4.4', false );
             ?>
-            <div class="khqr-pay" style="max-width:420px;margin:0 auto;text-align:center;font-family:inherit;">
-                <div style="background:#fff;border:1px solid #e7e9ee;border-radius:18px;box-shadow:0 14px 40px rgba(15,23,42,.08);overflow:hidden;">
-                    <div style="background:linear-gradient(135deg,#e21c25,#b3060c);color:#fff;padding:16px 18px;">
-                        <div style="font-weight:800;font-size:1.05rem;letter-spacing:.5px;">KHQR</div>
-                        <div style="opacity:.92;font-size:.82rem;margin-top:2px;"><?php echo esc_html( khqrpay_merchant_name() ); ?></div>
-                    </div>
-                    <div style="padding:20px 18px;">
-                        <div style="font-size:1.55rem;font-weight:800;color:#111827;"><?php echo $amount; // KHR label, pre-escaped ?></div>
-                        <div style="font-size:.82rem;color:#9ca3af;margin-top:2px;">≈ <?php echo wp_kses_post( $amount_sub ); ?></div>
-                        <div id="khqr-img" style="margin:14px auto;width:236px;height:236px;display:flex;align-items:center;justify-content:center;border:1px solid #eef0f4;border-radius:14px;background:#fff;"></div>
-                        <div id="khqr-status" style="font-size:.9rem;color:#6b7280;min-height:1.4em;"><?php esc_html_e( 'Scan with your bank app to pay.', 'shopys' ); ?></div>
-                        <div id="khqr-timer" style="font-size:.8rem;color:#9ca3af;margin-top:6px;"></div>
-                        <div style="margin-top:14px;font-size:.78rem;color:#9ca3af;line-height:1.5;">
-                            <?php esc_html_e( 'Open Bakong, ABA, or any Cambodian bank app → Scan QR. This page updates automatically once payment is confirmed.', 'shopys' ); ?>
+            <style>
+            .khqrx-wrap{ max-width:360px; margin:10px auto 28px; font-family:'Play','Battambang',-apple-system,BlinkMacSystemFont,sans-serif; }
+            .khqrx-card{ background:#fff; border:1px solid #eef0f4; border-radius:22px; overflow:hidden; box-shadow:0 24px 70px rgba(15,23,42,.13); }
+            .khqrx-head{ background:linear-gradient(135deg,#ef3b32,#c0140c); color:#fff; padding:18px 18px 16px; text-align:center; }
+            .khqrx-logo{ display:inline-flex; align-items:center; gap:9px; }
+            .khqrx-logo svg{ width:26px; height:26px; }
+            .khqrx-logo span{ font-size:1.25rem; font-weight:800; letter-spacing:2px; }
+            .khqrx-payee{ margin-top:7px; font-size:.9rem; font-weight:600; opacity:.95; }
+            .khqrx-sub{ font-size:.72rem; opacity:.8; margin-top:2px; letter-spacing:.3px; }
+            .khqrx-body{ padding:18px 18px 6px; text-align:center; }
+            .khqrx-ref{ font-size:.7rem; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#9aa3b0; }
+            .khqrx-amount{ font-size:1.65rem; font-weight:800; color:#0d1117; letter-spacing:-.5px; margin-top:3px; line-height:1.1; }
+            .khqrx-amount-sub{ font-size:.82rem; color:#9aa3b0; margin-top:2px; }
+            .khqrx-qrbox{ position:relative; width:208px; margin:14px auto 4px; padding:13px; background:#fff; border-radius:16px; box-shadow:0 8px 24px rgba(15,23,42,.08); }
+            .khqrx-qr{ width:180px; height:180px; display:flex; align-items:center; justify-content:center; margin:0 auto; }
+            .khqrx-qr svg{ width:100% !important; height:100% !important; }
+            .khqrx-corner{ position:absolute; width:24px; height:24px; border:3px solid #e21c25; }
+            .khqrx-corner.tl{ top:6px; left:6px; border-right:0; border-bottom:0; border-radius:9px 0 0 0; }
+            .khqrx-corner.tr{ top:6px; right:6px; border-left:0; border-bottom:0; border-radius:0 9px 0 0; }
+            .khqrx-corner.bl{ bottom:6px; left:6px; border-right:0; border-top:0; border-radius:0 0 0 9px; }
+            .khqrx-corner.br{ bottom:6px; right:6px; border-left:0; border-top:0; border-radius:0 0 9px 0; }
+            .khqrx-status{ display:inline-flex; align-items:center; gap:8px; font-size:.92rem; font-weight:700; color:#5b6472; margin-top:6px; }
+            .khqrx-dot{ width:9px; height:9px; border-radius:50%; background:#f59e0b; box-shadow:0 0 0 0 rgba(245,158,11,.5); animation:khqrxpulse 1.4s infinite; }
+            @keyframes khqrxpulse{ 0%{ box-shadow:0 0 0 0 rgba(245,158,11,.5);}70%{ box-shadow:0 0 0 8px rgba(245,158,11,0);}100%{ box-shadow:0 0 0 0 rgba(245,158,11,0);} }
+            .khqrx-timer{ font-size:.78rem; color:#aab1bd; margin-top:5px; }
+            .khqrx-banks{ display:flex; flex-wrap:wrap; justify-content:center; gap:7px; margin:16px 0 4px; }
+            .khqrx-banks span{ font-size:.72rem; font-weight:700; color:#5b6472; background:#f3f5f8; border:1px solid #e7e9ee; border-radius:50px; padding:5px 12px; }
+            .khqrx-hint{ font-size:.78rem; color:#9aa3b0; line-height:1.55; margin:12px 4px 4px; }
+            .khqrx-foot{ display:flex; align-items:center; justify-content:center; gap:7px; padding:13px; background:#f6fffb; border-top:1px solid #e7f5ec; color:#0a9d4a; font-size:.76rem; font-weight:700; }
+            .khqrx-foot svg{ width:14px; height:14px; }
+            .khqrx-cancel{ display:inline-flex; align-items:center; gap:7px; margin:16px auto 0; padding:11px 22px; border-radius:11px; border:1.5px solid #e7e9ee; background:#fff; color:#8a93a0; font-weight:700; font-size:13px; text-decoration:none; cursor:pointer; transition:border-color .2s,color .2s,background .2s; }
+            .khqrx-cancel:hover{ border-color:#ef4444; color:#ef4444; background:#fff5f5; }
+            .khqrx-cancel svg{ width:14px; height:14px; }
+            .khqrx-modal{ position:fixed; inset:0; z-index:2147483600; display:flex; align-items:center; justify-content:center; padding:20px; background:rgba(13,17,23,.55); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); opacity:0; visibility:hidden; transition:opacity .22s ease,visibility .22s ease; }
+            .khqrx-modal.open{ opacity:1; visibility:visible; }
+            .khqrx-modal-card{ width:100%; max-width:350px; background:#fff; border-radius:20px; padding:28px 24px 22px; text-align:center; box-shadow:0 30px 70px rgba(0,0,0,.3); transform:translateY(14px) scale(.97); transition:transform .25s cubic-bezier(.2,.7,.3,1); }
+            .khqrx-modal.open .khqrx-modal-card{ transform:none; }
+            .khqrx-modal-icon{ width:60px; height:60px; margin:0 auto 14px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:#fff1f1; color:#ef4444; }
+            .khqrx-modal-icon svg{ width:30px; height:30px; }
+            .khqrx-modal-card h3{ font-size:19px; font-weight:800; color:#0d1117; margin:0 0 8px; letter-spacing:-.2px; }
+            .khqrx-modal-card p{ font-size:13.5px; color:#6b7280; line-height:1.6; margin:0 0 22px; }
+            .khqrx-modal-actions{ display:flex; gap:10px; }
+            .khqrx-keep, .khqrx-confirm{ flex:1; padding:13px; font-weight:700; font-size:14px; border-radius:11px; cursor:pointer; font-family:inherit; transition:background .2s, border-color .2s; display:flex; align-items:center; justify-content:center; }
+            .khqrx-keep{ border:1.5px solid #e7e9ee; background:#fff; color:#374151; }
+            .khqrx-keep:hover{ background:#f3f5f8; }
+            .khqrx-confirm{ border:none; background:#ef4444; color:#fff; text-decoration:none; }
+            .khqrx-confirm:hover{ background:#dc2626; color:#fff; }
+            @media(max-width:480px){ .khqrx-amount{ font-size:1.5rem; } .khqrx-qrbox{ width:196px; } .khqrx-qr{ width:170px; height:170px; } }
+            </style>
+            <div class="khqrx-wrap">
+                <div class="khqrx-card">
+                    <div class="khqrx-head">
+                        <div class="khqrx-logo">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><path d="M14 14h3M14 18v3M18 14v3M21 14v7M18 21h3"/></svg>
+                            <span>KHQR</span>
                         </div>
+                        <div class="khqrx-payee"><?php echo esc_html( khqrpay_merchant_name() ); ?></div>
+                        <div class="khqrx-sub"><?php esc_html_e( 'Scan to pay with any banking app', 'shopys' ); ?></div>
+                    </div>
+                    <div class="khqrx-body">
+                        <div class="khqrx-ref"><?php esc_html_e( 'Order', 'shopys' ); ?> #<?php echo esc_html( $order->get_order_number() ); ?></div>
+                        <div class="khqrx-amount"><?php echo $amount; // KHR label, pre-escaped ?></div>
+                        <div class="khqrx-amount-sub">≈ <?php echo wp_kses_post( $amount_sub ); ?></div>
+                        <div class="khqrx-qrbox">
+                            <span class="khqrx-corner tl"></span><span class="khqrx-corner tr"></span>
+                            <span class="khqrx-corner bl"></span><span class="khqrx-corner br"></span>
+                            <div id="khqr-img" class="khqrx-qr"></div>
+                        </div>
+                        <div class="khqrx-status" id="khqr-status"><span class="khqrx-dot"></span><?php esc_html_e( 'Waiting for payment…', 'shopys' ); ?></div>
+                        <div class="khqrx-timer" id="khqr-timer"></div>
+                        <div class="khqrx-banks"><span>ABA</span><span>ACLEDA</span><span>Wing</span><span>Bakong</span></div>
+                        <div class="khqrx-hint"><?php esc_html_e( 'Open your banking app → Scan to Pay. This page confirms automatically once your payment is received.', 'shopys' ); ?></div>
+                    </div>
+                    <div class="khqrx-foot">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        <?php esc_html_e( 'Secured by Bakong · National Bank of Cambodia', 'shopys' ); ?>
+                    </div>
+                </div>
+                <?php $khqr_cancel_url = esc_url( $order->get_cancel_order_url( wc_get_page_permalink( 'shop' ) ) ); ?>
+                <div style="text-align:center;">
+                    <a href="<?php echo $khqr_cancel_url; ?>" class="khqrx-cancel" id="khqr-cancel-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+                        <?php esc_html_e( 'Cancel order', 'shopys' ); ?>
+                    </a>
+                </div>
+            </div>
+            <div class="khqrx-modal" id="khqr-cancel-modal" aria-hidden="true">
+                <div class="khqrx-modal-card" role="dialog" aria-modal="true">
+                    <div class="khqrx-modal-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+                    </div>
+                    <h3><?php esc_html_e( 'Cancel this order?', 'shopys' ); ?></h3>
+                    <p><?php esc_html_e( 'Your KHQR payment will be cancelled and you’ll need to start over.', 'shopys' ); ?></p>
+                    <div class="khqrx-modal-actions">
+                        <button type="button" class="khqrx-keep" id="khqr-keep"><?php esc_html_e( 'Keep order', 'shopys' ); ?></button>
+                        <a href="<?php echo $khqr_cancel_url; ?>" class="khqrx-confirm"><?php esc_html_e( 'Yes, cancel', 'shopys' ); ?></a>
                     </div>
                 </div>
             </div>
@@ -414,6 +547,17 @@ function khqrpay_load_gateway() {
                 var statusEl  = document.getElementById('khqr-status');
                 var timerEl   = document.getElementById('khqr-timer');
                 var done = false, started = Date.now();
+
+                // Premium cancel confirmation modal
+                var cancelBtn = document.getElementById('khqr-cancel-btn');
+                var cancelModal = document.getElementById('khqr-cancel-modal');
+                var keepBtn = document.getElementById('khqr-keep');
+                if (cancelBtn && cancelModal) {
+                    cancelBtn.addEventListener('click', function(e){ e.preventDefault(); cancelModal.classList.add('open'); });
+                    if (keepBtn) keepBtn.addEventListener('click', function(){ cancelModal.classList.remove('open'); });
+                    cancelModal.addEventListener('click', function(e){ if (e.target === cancelModal) cancelModal.classList.remove('open'); });
+                    document.addEventListener('keydown', function(e){ if (e.key === 'Escape') cancelModal.classList.remove('open'); });
+                }
 
                 function draw(){
                     try {
@@ -432,7 +576,7 @@ function khqrpay_load_gateway() {
                     if (done) return;
                     var s = Math.floor((Date.now()-started)/1000);
                     var m = Math.floor(s/60);
-                    timerEl.textContent = 'Waiting for payment… ' + m + ':' + ((s%60)<10?'0':'') + (s%60);
+                    timerEl.textContent = 'Auto-checking your payment · ' + m + ':' + ((s%60)<10?'0':'') + (s%60);
                     setTimeout(tick, 1000);
                 }
                 tick();
