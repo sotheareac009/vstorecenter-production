@@ -1226,7 +1226,7 @@ function shopys_notify_telegram_paid_order( $order_id ) {
         $recv_acct  = '';
     }
     $when = $order->get_date_created() ? $order->get_date_created()->date_i18n( 'd M Y · g:i A' ) : date_i18n( 'd M Y · g:i A' );
-    $div  = "━━━━━━━━━━━━━━━";
+    $div  = "━━━━━━━━━━━━━━━━━━━━━━━━━━";
 
     $branch_meta  = $order->get_meta( '_shop_branch' );
     $branch_names = shopys_shop_branches();
@@ -1235,14 +1235,13 @@ function shopys_notify_telegram_paid_order( $order_id ) {
     $msg  = $header . "\n";
     $msg .= "<i>" . esc_html( $shop_title ) . "</i>\n";
     $msg .= $div . "\n";
-    $msg .= "🧾  <b>Invoice</b>\n      <code>#" . esc_html( $order->get_order_number() ) . "</code>\n";
+    $msg .= "🧾  <b>Invoice :</b> #" . esc_html( $order->get_order_number() ) . "\n";
     if ( $branch_meta && isset( $branch_names[ $branch_meta ] ) ) {
-        $msg .= "🏬  <b>Shop:</b> " . esc_html( $branch_names[ $branch_meta ] ) . "\n";
+        $msg .= "🏬  <b>Shop :</b> " . esc_html( $branch_names[ $branch_meta ] ) . "\n";
     }
-    $msg .= "\n";
-    $msg .= "👤  <b>Customer</b>\n      " . esc_html( $name !== '' ? $name : '-' ) . "\n";
-    $msg .= "📞  " . esc_html( $phone !== '' ? $phone : '-' ) . "\n";
-    $msg .= "📍  " . esc_html( $addr !== '' ? $addr : '-' ) . "\n";
+    $msg .= "👤  <b>Customer Name :</b> " . esc_html( $name !== '' ? $name : '-' ) . "\n";
+    $msg .= "📞  <b>Customer Phone :</b> " . esc_html( $phone !== '' ? $phone : '-' ) . "\n";
+    $msg .= "📍  <b>Customer Address :</b> " . esc_html( $addr !== '' ? $addr : '-' ) . "\n";
     $wp_user = $order->get_user();
     if ( $wp_user ) {
         $msg .= "🧑‍💻  <b>Website Account:</b>\n";
@@ -1261,6 +1260,15 @@ function shopys_notify_telegram_paid_order( $order_id ) {
         $msg .= "🏦  <b>Received by:</b> " . esc_html( trim( $recv_name . ( $recv_acct !== '' ? ' · ' . $recv_acct : '' ) ) ) . "\n";
     }
     $msg .= "💰  <b>TOTAL:</b>  <b>" . esc_html( $money( $order->get_total() ) ) . "</b>\n";
+    $st_slug   = $order->get_status();
+    $st_badges = array(
+        'completed'  => '🟢', 'processing' => '🟢',
+        'on-hold'    => '🟡', 'pending'    => '🟠',
+        'cancelled'  => '🔴', 'failed'     => '🔴',
+        'refunded'   => '⚪',
+    );
+    $st_badge = isset( $st_badges[ $st_slug ] ) ? $st_badges[ $st_slug ] : '⚫';
+    $msg .= "📌  <b>Status:</b> " . $st_badge . " " . esc_html( wc_get_order_status_name( $st_slug ) ) . "\n";
     $msg .= $div . "\n";
     $msg .= "🕒  <i>" . esc_html( $when ) . "</i>";
 
@@ -1275,9 +1283,71 @@ function shopys_notify_telegram_paid_order( $order_id ) {
     ) );
     if ( ! is_wp_error( $resp ) && (int) wp_remote_retrieve_response_code( $resp ) === 200 ) {
         $order->update_meta_data( '_shopys_tg_notified', 'yes' );
+        $order->update_meta_data( '_shopys_tg_last_status', $order->get_status() );
         $order->save();
     } else {
         error_log( 'shopys TG order notify failed: ' . ( is_wp_error( $resp ) ? $resp->get_error_message() : wp_remote_retrieve_body( $resp ) ) );
+    }
+}
+
+/** Colored badge emoji for an order status (used in both the new-order + update messages). */
+function shopys_order_status_badge( $slug ) {
+    $b = array(
+        'completed' => '🟢', 'processing' => '🟢',
+        'on-hold'   => '🟡', 'pending'    => '🟠',
+        'cancelled' => '🔴', 'failed'     => '🔴',
+        'refunded'  => '⚪',
+    );
+    return isset( $b[ $slug ] ) ? $b[ $slug ] : '⚫';
+}
+
+/* ── Telegram: notify when an order's status changes (e.g. admin edits it) ──── */
+add_action( 'woocommerce_order_status_changed', 'shopys_notify_telegram_status_changed', 30, 4 );
+function shopys_notify_telegram_status_changed( $order_id, $from, $to, $order = null ) {
+    if ( ! $order ) $order = wc_get_order( $order_id );
+    if ( ! $order ) return;
+    // Only for orders we've already announced; skip the initial transition (same status just notified).
+    if ( $order->get_meta( '_shopys_tg_notified' ) !== 'yes' ) return;
+    $last = $order->get_meta( '_shopys_tg_last_status' );
+    if ( $last === '' ) $last = $from;
+    if ( $to === $last ) return;
+
+    $token = defined( 'SHOPYS_TG_BOT_TOKEN' ) ? SHOPYS_TG_BOT_TOKEN : '';
+    $chat  = shopys_tg_chat_for_order( $order );
+    if ( ! $token || ! $chat ) return;
+
+    $branch_names = shopys_shop_branches();
+    $branch       = $order->get_meta( '_shop_branch' );
+    $shop         = ( $branch && isset( $branch_names[ $branch ] ) ) ? $branch_names[ $branch ] : get_bloginfo( 'name' );
+    $cur          = $order->get_currency();
+    $total        = ( $cur === 'KHR' ) ? number_format( (float) $order->get_total(), 0 ) . ' ៛' : '$' . number_format( (float) $order->get_total(), 2 );
+    $div          = "━━━━━━━━━━━━━━━━━━━━━━━━━━";
+
+    $msg  = "🔄  <b>ORDER STATUS UPDATED</b>\n";
+    $msg .= "<i>" . esc_html( $shop ) . "</i>\n";
+    $msg .= $div . "\n";
+    $msg .= "🧾  <b>Invoice :</b> #" . esc_html( $order->get_order_number() ) . "\n";
+    if ( $branch && isset( $branch_names[ $branch ] ) ) {
+        $msg .= "🏬  <b>Shop :</b> " . esc_html( $shop ) . "\n";
+    }
+    $msg .= "📌  <b>Status:</b> " . shopys_order_status_badge( $last ) . " " . esc_html( wc_get_order_status_name( $last ) )
+          . "  →  " . shopys_order_status_badge( $to ) . " <b>" . esc_html( wc_get_order_status_name( $to ) ) . "</b>\n";
+    $msg .= "💰  <b>TOTAL:</b> " . esc_html( $total ) . "\n";
+    $msg .= $div . "\n";
+    $msg .= "🕒  <i>" . esc_html( date_i18n( 'd M Y · g:i A' ) ) . "</i>";
+
+    $resp = wp_remote_post( "https://api.telegram.org/bot{$token}/sendMessage", array(
+        'timeout' => 15,
+        'body'    => array(
+            'chat_id'                  => $chat,
+            'text'                     => $msg,
+            'parse_mode'               => 'HTML',
+            'disable_web_page_preview' => true,
+        ),
+    ) );
+    if ( ! is_wp_error( $resp ) && (int) wp_remote_retrieve_response_code( $resp ) === 200 ) {
+        $order->update_meta_data( '_shopys_tg_last_status', $to );
+        $order->save();
     }
 }
 
@@ -1554,6 +1624,11 @@ add_action( 'template_redirect', function() {
     // Must be logged in to view the dashboard
     if ( ! is_user_logged_in() ) {
         wp_safe_redirect( home_url( '/vstore-admin/' ) );
+        exit;
+    }
+    // Only administrators and shop managers may access the dashboard.
+    if ( ! array_intersect( array( 'administrator', 'shop_manager' ), (array) wp_get_current_user()->roles ) ) {
+        wp_safe_redirect( home_url( '/' ) );
         exit;
     }
 

@@ -20,6 +20,13 @@ if ( ! is_user_logged_in() ) {
 }
 
 $current_user   = wp_get_current_user();
+
+// Only administrators and shop managers may access the dashboard.
+if ( ! array_intersect( array( 'administrator', 'shop_manager' ), (array) $current_user->roles ) ) {
+    wp_safe_redirect( home_url( '/' ) );
+    exit;
+}
+
 $is_site_owner  = current_user_can( 'manage_options' );
 $active_tab     = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'overview';
 // Block non-owners from accessing owner-only tabs via URL
