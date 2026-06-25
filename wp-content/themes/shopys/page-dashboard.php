@@ -175,6 +175,55 @@ if ( class_exists( 'WooCommerce' ) ) {
     }
 }
 
+// ── Top Customers (aggregated from WC Analytics lookup tables) ────────────────
+$top_customers = [];
+$tc_statuses   = [];
+$tc_months     = [];
+$top_sort      = ( isset( $_GET['top_sort'] ) && $_GET['top_sort'] === 'orders' ) ? 'orders' : 'spent';
+$top_status    = isset( $_GET['top_status'] ) ? sanitize_text_field( wp_unslash( $_GET['top_status'] ) ) : 'wc-completed';
+$top_month     = ( ! empty( $_GET['top_month'] ) && preg_match( '/^\d{4}-\d{2}$/', $_GET['top_month'] ) ) ? $_GET['top_month'] : '';
+if ( class_exists( 'WooCommerce' ) ) {
+    global $wpdb;
+    $tc_os       = $wpdb->prefix . 'wc_order_stats';
+    $tc_cl       = $wpdb->prefix . 'wc_customer_lookup';
+    $tc_statuses = function_exists( 'wc_get_order_statuses' ) ? wc_get_order_statuses() : [];
+    // Validate the requested status against the known list (allow "all").
+    if ( $top_status !== 'all' && ! isset( $tc_statuses[ $top_status ] ) ) $top_status = 'wc-completed';
+
+    if ( $wpdb->get_var( "SHOW TABLES LIKE '{$tc_os}'" ) && $wpdb->get_var( "SHOW TABLES LIKE '{$tc_cl}'" ) ) {
+        // Months that actually have orders, for the dropdown.
+        $tc_months = $wpdb->get_col( "SELECT DISTINCT DATE_FORMAT(date_created,'%Y-%m') AS ym FROM {$tc_os} ORDER BY ym DESC" );
+
+        // Build the WHERE clause (status + month) safely.
+        $tc_where = [];
+        if ( $top_status !== 'all' ) {
+            $tc_where[] = $wpdb->prepare( 'o.status = %s', $top_status );
+        }
+        if ( $top_month ) {
+            $m_start    = $top_month . '-01 00:00:00';
+            $m_end      = date( 'Y-m-d H:i:s', strtotime( $m_start . ' +1 month' ) );
+            $tc_where[] = $wpdb->prepare( 'o.date_created >= %s AND o.date_created < %s', $m_start, $m_end );
+        }
+        $tc_where_sql = $tc_where ? ( 'WHERE ' . implode( ' AND ', $tc_where ) ) : '';
+
+        $tc_order = $top_sort === 'orders' ? 'orders DESC, spent DESC' : 'spent DESC, orders DESC';
+        $top_customers = $wpdb->get_results(
+            "SELECT o.customer_id,
+                    c.first_name, c.last_name, c.email, c.username, c.user_id, c.country, c.city,
+                    COUNT(*) AS orders,
+                    SUM(o.total_sales) AS spent,
+                    MAX(o.date_created) AS last_order
+             FROM {$tc_os} o
+             LEFT JOIN {$tc_cl} c ON c.customer_id = o.customer_id
+             {$tc_where_sql}
+             GROUP BY o.customer_id
+             ORDER BY {$tc_order}
+             LIMIT 50"
+        );
+    }
+}
+$tc_symbol = function_exists( 'get_woocommerce_currency_symbol' ) ? get_woocommerce_currency_symbol() : '$';
+
 $logo_id  = get_theme_mod( 'custom_logo' );
 $logo_url = $logo_id ? wp_get_attachment_image_url( $logo_id, 'medium' ) : '';
 
@@ -185,6 +234,7 @@ $menu_items = [
     'analytics' => [ 'icon' => 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', 'label' => 'Analytics' ],
     'users'     => [ 'icon' => 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z', 'label' => 'Users', 'owner_only' => true ],
     'guest-users'    => [ 'icon' => 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z', 'label' => 'Chatbot Users', 'owner_only' => true ],
+    'top-customers'  => [ 'icon' => 'M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z', 'label' => 'Top Customers' ],
     'products'  => [ 'icon' => 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4', 'label' => 'Products', 'href' => admin_url( 'edit.php?post_type=product' ) ],
     'orders'    => [ 'icon' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01', 'label' => 'Orders', 'href' => admin_url( 'edit.php?post_type=shop_order' ) ],
     'wp-admin'  => [ 'icon' => 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z', 'label' => 'WP Admin', 'href' => admin_url(), 'owner_only' => true ],
@@ -3167,6 +3217,82 @@ body {
             <p style="padding:24px;color:var(--muted);font-size:13px;">No users found.</p>
             <?php endif; ?>
         </div>
+        <?php endif; ?>
+        </div>
+
+        <!-- ── TOP CUSTOMERS PANEL ───────────────────────────────────── -->
+        <div class="ds-panel <?php echo $active_tab === 'top-customers' ? 'active' : ''; ?>" id="panel-top-customers">
+        <?php if ( $active_tab === 'top-customers' ) :
+            // Base URL preserving the active status + month filters (used by the Rank-by links).
+            $tc_base = add_query_arg( [ 'tab' => 'top-customers', 'top_status' => $top_status, 'top_month' => $top_month ], home_url( '/dashboard/' ) );
+        ?>
+            <form method="get" action="<?php echo esc_url( home_url( '/dashboard/' ) ); ?>" class="sv-filter">
+                <input type="hidden" name="tab" value="top-customers">
+                <input type="hidden" name="top_sort" value="<?php echo esc_attr( $top_sort ); ?>">
+                <label>Status:</label>
+                <select name="top_status">
+                    <option value="all" <?php selected( $top_status, 'all' ); ?>>All statuses</option>
+                    <?php foreach ( $tc_statuses as $sk => $sl ) : ?>
+                    <option value="<?php echo esc_attr( $sk ); ?>" <?php selected( $top_status, $sk ); ?>><?php echo esc_html( $sl ); ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <label>Month:</label>
+                <select name="top_month">
+                    <option value="">All time</option>
+                    <?php foreach ( $tc_months as $mo ) : if ( ! $mo ) continue; ?>
+                    <option value="<?php echo esc_attr( $mo ); ?>" <?php selected( $top_month, $mo ); ?>><?php echo esc_html( date_i18n( 'F Y', strtotime( $mo . '-01' ) ) ); ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <button type="submit" class="sv-filter-btn">Apply</button>
+            </form>
+            <div class="sv-filter">
+                <label>Rank by:</label>
+                <a class="an-period-btn <?php echo $top_sort === 'spent' ? 'active' : ''; ?>" href="<?php echo esc_url( add_query_arg( 'top_sort', 'spent', $tc_base ) ); ?>">Total Spent</a>
+                <a class="an-period-btn <?php echo $top_sort === 'orders' ? 'active' : ''; ?>" href="<?php echo esc_url( add_query_arg( 'top_sort', 'orders', $tc_base ) ); ?>">Order Count</a>
+            </div>
+            <div class="ds-table-wrap">
+                <div class="ds-table-head">Top Customers <span style="color:var(--muted);font-weight:400;font-size:12px;">— ranked by completed orders only</span></div>
+                <?php if ( $top_customers ) : ?>
+                <table class="ds-table">
+                    <thead><tr>
+                        <th>#</th>
+                        <th>Customer</th>
+                        <th style="text-align:right;">Orders</th>
+                        <th style="text-align:right;">Total Spent</th>
+                        <th>Location</th>
+                        <th>Last Order</th>
+                    </tr></thead>
+                    <tbody>
+                    <?php foreach ( $top_customers as $i => $tc ) :
+                        $tc_name = trim( $tc->first_name . ' ' . $tc->last_name );
+                        if ( $tc_name === '' ) $tc_name = $tc->username ?: ( $tc->email ?: 'Customer #' . $tc->customer_id );
+                        $tc_init = strtoupper( mb_substr( $tc_name, 0, 1 ) );
+                        $tc_loc  = trim( ( $tc->city ?: '' ) . ( $tc->country ? ( $tc->city ? ', ' : '' ) . $tc->country : '' ) );
+                        $tc_last = $tc->last_order ? date_i18n( 'j M Y', strtotime( $tc->last_order ) ) : '—';
+                    ?>
+                    <tr>
+                        <td style="color:var(--muted);font-size:12px;"><?php echo $i + 1; ?></td>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <div style="width:30px;height:30px;border-radius:50%;background:var(--green-dim);color:var(--green);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;"><?php echo esc_html( $tc_init ); ?></div>
+                                <div>
+                                    <div style="font-weight:600;font-size:13px;"><?php echo esc_html( $tc_name ); ?></div>
+                                    <div style="font-size:11px;color:var(--muted);"><?php echo esc_html( $tc->email ?: '—' ); ?></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td style="text-align:right;font-weight:700;"><?php echo number_format_i18n( (int) $tc->orders ); ?></td>
+                        <td style="text-align:right;font-weight:700;color:var(--green);"><?php echo esc_html( $tc_symbol . number_format( (float) $tc->spent, 2 ) ); ?></td>
+                        <td style="font-size:12px;color:var(--muted);"><?php echo esc_html( $tc_loc ?: '—' ); ?></td>
+                        <td style="font-size:12px;white-space:nowrap;"><?php echo esc_html( $tc_last ); ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+                <?php else : ?>
+                <p style="padding:24px;color:var(--muted);font-size:13px;">No customer order data yet.</p>
+                <?php endif; ?>
+            </div>
         <?php endif; ?>
         </div>
 
