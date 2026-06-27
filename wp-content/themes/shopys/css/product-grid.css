@@ -1273,3 +1273,22 @@ body article .entry-content .ppg-title-link:active,
     .ppg-qv-info { padding: 18px 16px; }
     .ppg-qv-name { font-size: 15px; }
 }
+
+/* ── Stock badges + disabled out-of-stock button ── */
+.ppg-stock { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; line-height: 1.2; }
+.ppg-stock::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; display: inline-block; flex-shrink: 0; }
+.ppg-stock-in   { color: #0a9d3e; }
+.ppg-stock-out  { color: #e21c25; }
+.ppg-stock-back { color: #d97706; }
+.ppg-stock-row  { margin-top: auto; padding-top: 10px; text-align: center; }
+.ppg-stock-row .ppg-stock { justify-content: center; }
+.ppg-lt-oos     { color: #e21c25; font-size: 12px; font-weight: 600; }
+.ppg-oos-btn {
+    opacity: .65 !important;
+    cursor: not-allowed !important;
+    background: #9aa3b0 !important;
+    border-color: #9aa3b0 !important;
+    color: #fff !important;
+    pointer-events: none !important;
+    box-shadow: none !important;
+}

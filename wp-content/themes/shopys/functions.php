@@ -761,16 +761,80 @@ require_once get_stylesheet_directory() . '/inc/shortcode-guide.php';
 require_once get_stylesheet_directory() . '/inc/hero-slider-settings.php';
 
 // ── Fixed $2 shipping — no zone setup required ────────────────────────────────
-add_filter( 'woocommerce_package_rates', 'shopys_force_flat_2_shipping', 99, 2 );
-function shopys_force_flat_2_shipping( $rates, $package ) {
-    $fixed_rate = new WC_Shipping_Rate(
-        'shopys_flat_2',              // rate ID
-        __( 'Shipping', 'shopys' ),   // label shown on cart/checkout
-        2,                            // cost — always $2
-        array(),                      // no taxes
-        'shopys_flat'                 // method ID
-    );
-    return array( 'shopys_flat_2' => $fixed_rate );
+// Charge $2 as a fee when "Delivery" is selected (Pick Up = free). A fee is used
+// instead of shipping because the store has no shipping zones/methods configured,
+// so WooCommerce would skip shipping calculation entirely.
+add_action( 'woocommerce_cart_calculate_fees', 'shopys_delivery_fee' );
+function shopys_delivery_fee( $cart ) {
+    if ( is_admin() && ! defined( 'DOING_AJAX' ) ) return;
+    if ( shopys_get_delivery_option() === 'delivery' ) {
+        $cart->add_fee( __( 'Delivery', 'shopys' ), 2 );
+    }
+}
+
+// Resolve the currently selected delivery option (pickup | delivery). Default: delivery.
+function shopys_get_delivery_option() {
+    if ( isset( $_POST['delivery_option'] ) ) {
+        $v = sanitize_key( wp_unslash( $_POST['delivery_option'] ) );
+        if ( in_array( $v, array( 'pickup', 'delivery' ), true ) ) {
+            if ( function_exists( 'WC' ) && WC()->session ) WC()->session->set( 'shopys_delivery_option', $v );
+            return $v;
+        }
+    }
+    if ( function_exists( 'WC' ) && WC()->session ) {
+        $s = WC()->session->get( 'shopys_delivery_option' );
+        if ( in_array( $s, array( 'pickup', 'delivery' ), true ) ) return $s;
+    }
+    return 'delivery';
+}
+
+// Capture the option from the checkout AJAX refresh so shipping recalculates correctly.
+add_action( 'woocommerce_checkout_update_order_review', 'shopys_capture_delivery_option' );
+function shopys_capture_delivery_option( $post_data ) {
+    parse_str( (string) $post_data, $data );
+    if ( isset( $data['delivery_option'] ) ) {
+        $v = sanitize_key( $data['delivery_option'] );
+        if ( in_array( $v, array( 'pickup', 'delivery' ), true ) && function_exists( 'WC' ) && WC()->session ) {
+            WC()->session->set( 'shopys_delivery_option', $v );
+        }
+    }
+}
+
+// Default the radio to "delivery" (and remember the session choice).
+add_filter( 'woocommerce_checkout_get_value', 'shopys_delivery_option_default', 10, 2 );
+function shopys_delivery_option_default( $value, $input ) {
+    if ( $input === 'delivery_option' && empty( $value ) ) {
+        $s = ( function_exists( 'WC' ) && WC()->session ) ? WC()->session->get( 'shopys_delivery_option' ) : '';
+        return in_array( $s, array( 'pickup', 'delivery' ), true ) ? $s : 'delivery';
+    }
+    return $value;
+}
+
+// Delivery Option styling + recalculate totals when the choice changes.
+add_action( 'wp_footer', 'shopys_delivery_option_assets', 100 );
+function shopys_delivery_option_assets() {
+    if ( ! function_exists( 'is_checkout' ) || ! is_checkout() ) return;
+    if ( function_exists( 'is_wc_endpoint_url' ) && ( is_wc_endpoint_url( 'order-pay' ) || is_wc_endpoint_url( 'order-received' ) ) ) return;
+    ?>
+    <style>
+    #delivery_option_field > label{ display:block; font-weight:700; color:#0d1117; margin-bottom:7px; }
+    .shopys-delivery-option .woocommerce-input-wrapper{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .shopys-delivery-option input[type=radio]{ display:none; }
+    .shopys-delivery-option label.radio{
+        display:flex; align-items:center; justify-content:center; gap:8px; text-align:center; margin:0;
+        padding:13px 14px; border:1.5px solid #e5e7eb; border-radius:10px; background:#f9fafb;
+        font-size:13px; font-weight:700; color:#5b6472; cursor:pointer; transition:border-color .15s, background .15s, color .15s;
+    }
+    .shopys-delivery-option label.radio:hover{ border-color:#bdeccd; }
+    .shopys-delivery-option input[type=radio]:checked + label.radio{ border-color:#00c44f; background:#eafff2; color:#0a7d00; box-shadow:0 0 0 3px rgba(0,196,79,.12); }
+    @media (max-width:480px){ .shopys-delivery-option .woocommerce-input-wrapper{ grid-template-columns:1fr; } }
+    </style>
+    <script>
+    (function(){ if(!window.jQuery) return; var $=window.jQuery;
+        $(document.body).on('change', 'input[name="delivery_option"]', function(){ $(document.body).trigger('update_checkout'); });
+    })();
+    </script>
+    <?php
 }
 
 // ── Checkout: single "Delivery Address" (no separate shipping address) ────────
@@ -821,6 +885,20 @@ function shopys_add_delivery_map_field( $fields ) {
         $fields['billing']['billing_phone']['label']    = __( 'Phone (Number that have Telegram)', 'shopys' );
     }
 
+    // Delivery Option — Pick Up (free) or Delivery (+$2). Shown near the top.
+    $fields['billing']['delivery_option'] = array(
+        'type'     => 'radio',
+        'label'    => __( 'Delivery Option', 'shopys' ),
+        'required' => true,
+        'class'    => array( 'form-row-wide', 'shopys-delivery-option' ),
+        'options'  => array(
+            'delivery' => __( 'Delivery (+$2)', 'shopys' ),
+            'pickup'   => __( 'Pick Up (Free)', 'shopys' ),
+        ),
+        'default'  => 'delivery',
+        'priority' => 2,
+    );
+
     // Delivery Location map field, placed just above Street address (billing_address_1 = 50).
     $fields['billing']['delivery_map'] = array(
         'type'        => 'text',
@@ -841,6 +919,9 @@ function shopys_save_delivery_map( $order, $data ) {
     // Country & State fields are removed from checkout — default them to Cambodia.
     $order->set_billing_country( 'KH' );
     $order->set_billing_state( 'Cambodia' );
+
+    // Save the chosen delivery option (Pick Up / Delivery).
+    $order->update_meta_data( '_delivery_option', shopys_get_delivery_option() === 'pickup' ? 'Pick Up' : 'Delivery' );
 }
 
 // Default the customer's billing country to Cambodia (used for shipping/tax calc).
@@ -851,6 +932,10 @@ function shopys_default_country_kh() {
 
 add_action( 'woocommerce_admin_order_data_after_billing_address', 'shopys_admin_show_delivery_map' );
 function shopys_admin_show_delivery_map( $order ) {
+    $opt = $order->get_meta( '_delivery_option' );
+    if ( $opt ) {
+        echo '<p><strong>' . esc_html__( 'Delivery Option', 'shopys' ) . ':</strong> ' . esc_html( $opt ) . '</p>';
+    }
     $map = $order->get_meta( '_delivery_map' );
     if ( $map ) {
         echo '<p><strong>' . esc_html__( 'Delivery Map', 'shopys' ) . ':</strong> <a href="' . esc_url( $map ) . '" target="_blank" rel="noopener">' . esc_html( $map ) . '</a></p>';
@@ -1532,6 +1617,11 @@ function shopys_notify_telegram_paid_order( $order_id ) {
     $msg .= "👤  <b>Customer Name :</b> " . esc_html( $name !== '' ? $name : '-' ) . "\n";
     $msg .= "📞  <b>Customer Phone :</b> " . esc_html( $phone !== '' ? $phone : '-' ) . "\n";
     $msg .= "📍  <b>Receiver Address :</b> " . esc_html( $addr !== '' ? $addr : '-' ) . "\n";
+    $deliv_opt = $order->get_meta( '_delivery_option' );
+    if ( $deliv_opt ) {
+        $deliv_label = ( $deliv_opt === 'Pick Up' ) ? 'Pick Up (Free)' : 'Delivery (+$2)';
+        $msg .= "🚚  <b>Delivery Option :</b> " . esc_html( $deliv_label ) . "\n";
+    }
     $map = $order->get_meta( '_delivery_map' );
     if ( $map ) {
         $msg .= "🗺️  <b>Delivery Map :</b> <a href=\"" . esc_url( $map ) . "\">" . esc_html__( 'Open in Google Maps', 'shopys' ) . "</a>\n";

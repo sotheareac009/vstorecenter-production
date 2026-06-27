@@ -6,6 +6,41 @@
  * @package Shopys
  */
 
+/**
+ * Render a stock badge for a product (in stock + qty, out of stock, or backorder).
+ */
+if ( ! function_exists( 'shopys_ppg_stock_badge' ) ) {
+    function shopys_ppg_stock_badge( $product ) {
+        if ( ! $product ) return '';
+        $status = $product->get_stock_status();
+        if ( $status === 'outofstock' ) {
+            return '<span class="ppg-stock ppg-stock-out">' . esc_html__( 'Out of stock', 'shopys' ) . '</span>';
+        }
+        if ( $status === 'onbackorder' ) {
+            return '<span class="ppg-stock ppg-stock-back">' . esc_html__( 'On backorder', 'shopys' ) . '</span>';
+        }
+        $qty = $product->get_stock_quantity();
+        if ( $qty !== null && $qty !== '' ) {
+            return '<span class="ppg-stock ppg-stock-in">' . sprintf( esc_html__( 'In stock: %d', 'shopys' ), (int) $qty ) . '</span>';
+        }
+        return '<span class="ppg-stock ppg-stock-in">' . esc_html__( 'In stock', 'shopys' ) . '</span>';
+    }
+}
+
+/**
+ * Output the add-to-cart button, or a disabled "Out of stock" button when not purchasable.
+ */
+if ( ! function_exists( 'shopys_ppg_add_to_cart' ) ) {
+    function shopys_ppg_add_to_cart( $product ) {
+        if ( ! $product ) return;
+        if ( $product->is_in_stock() && $product->is_purchasable() ) {
+            woocommerce_template_loop_add_to_cart();
+        } else {
+            echo '<span class="button ppg-oos-btn" role="button" aria-disabled="true">' . esc_html__( 'Out of stock', 'shopys' ) . '</span>';
+        }
+    }
+}
+
 function premium_product_grid_shortcode( $atts ) {
     $atts = shortcode_atts( array(
         'limit'            => 12,
@@ -167,9 +202,7 @@ function premium_product_grid_shortcode( $atts ) {
                                     <?php if ( $sku ) : ?>
                                         <span class="ppg-lt-sku">SKU: <?php echo esc_html( $sku ); ?></span>
                                     <?php endif; ?>
-                                    <?php if ( ! $product->is_in_stock() ) : ?>
-                                        <span class="ppg-lt-oos"><?php esc_html_e( 'Out of stock', 'shopys' ); ?></span>
-                                    <?php endif; ?>
+                                    <?php echo shopys_ppg_stock_badge( $product ); ?>
                                 </div>
                             </div>
                         </td>
@@ -183,7 +216,7 @@ function premium_product_grid_shortcode( $atts ) {
                         </td>
                         <?php if ( $atts['cart'] === 'true' ) : ?>
                         <td class="ppg-lt-col-action">
-                            <?php woocommerce_template_loop_add_to_cart(); ?>
+                            <?php shopys_ppg_add_to_cart( $product ); ?>
                         </td>
                         <?php endif; ?>
                         <td class="ppg-lt-col-qv">
@@ -285,6 +318,7 @@ function premium_product_grid_shortcode( $atts ) {
                     <?php if ( $sku ) : ?>
                     <div class="ppg-sku"><span class="ppg-sku-separator"></span><?php esc_html_e( 'Code', 'shopys' ); ?> : <?php echo esc_html( $sku ); ?></div>
                     <?php endif; ?>
+                    <div class="ppg-stock-row"><?php echo shopys_ppg_stock_badge( $product ); ?></div>
                     <?php if ( $atts['cart'] === 'true' || $atts['view'] === 'true' ) : ?>
                     <div class="ppg-actions">
                         <?php if ( $atts['view'] === 'true' ) : ?>
@@ -293,7 +327,7 @@ function premium_product_grid_shortcode( $atts ) {
                             </button>
                         <?php endif; ?>
                         <?php if ( $atts['cart'] === 'true' ) : ?>
-                            <?php woocommerce_template_loop_add_to_cart(); ?>
+                            <?php shopys_ppg_add_to_cart( $product ); ?>
                         <?php elseif ( $atts['view'] !== 'true' ) : ?>
                             <a href="<?php echo esc_url( get_permalink() ); ?>" class="button ppg-view-btn"><?php esc_html_e( 'View Product', 'shopys' ); ?></a>
                         <?php endif; ?>
@@ -464,9 +498,7 @@ function ppg_ajax_paginate_handler() {
                                     <?php if ( $sku ) : ?>
                                         <span class="ppg-lt-sku">SKU: <?php echo esc_html( $sku ); ?></span>
                                     <?php endif; ?>
-                                    <?php if ( ! $product->is_in_stock() ) : ?>
-                                        <span class="ppg-lt-oos"><?php esc_html_e( 'Out of stock', 'shopys' ); ?></span>
-                                    <?php endif; ?>
+                                    <?php echo shopys_ppg_stock_badge( $product ); ?>
                                 </div>
                             </div>
                         </td>
@@ -479,7 +511,7 @@ function ppg_ajax_paginate_handler() {
                             <?php endif; ?>
                         </td>
                         <?php if ( $atts['cart'] === 'true' ) : ?>
-                        <td class="ppg-lt-col-action"><?php woocommerce_template_loop_add_to_cart(); ?></td>
+                        <td class="ppg-lt-col-action"><?php shopys_ppg_add_to_cart( $product ); ?></td>
                         <?php endif; ?>
                         <td class="ppg-lt-col-qv">
                             <button class="ppg-qv-btn" aria-label="<?php esc_attr_e( 'Quick View', 'shopys' ); ?>">
@@ -574,6 +606,7 @@ function ppg_ajax_paginate_handler() {
                     <?php if ( $sku ) : ?>
                     <div class="ppg-sku"><span class="ppg-sku-separator"></span><?php esc_html_e( 'Code', 'shopys' ); ?> : <?php echo esc_html( $sku ); ?></div>
                     <?php endif; ?>
+                    <div class="ppg-stock-row"><?php echo shopys_ppg_stock_badge( $product ); ?></div>
                     <?php if ( $atts['cart'] === 'true' || $atts['view'] === 'true' ) : ?>
                     <div class="ppg-actions">
                         <?php if ( $atts['view'] === 'true' ) : ?>
@@ -582,7 +615,7 @@ function ppg_ajax_paginate_handler() {
                             </button>
                         <?php endif; ?>
                         <?php if ( $atts['cart'] === 'true' ) : ?>
-                            <?php woocommerce_template_loop_add_to_cart(); ?>
+                            <?php shopys_ppg_add_to_cart( $product ); ?>
                         <?php elseif ( $atts['view'] !== 'true' ) : ?>
                             <a href="<?php echo esc_url( get_permalink() ); ?>" class="button ppg-view-btn"><?php esc_html_e( 'View Product', 'shopys' ); ?></a>
                         <?php endif; ?>
