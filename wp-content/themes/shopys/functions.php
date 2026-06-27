@@ -831,7 +831,59 @@ function shopys_delivery_option_assets() {
     </style>
     <script>
     (function(){ if(!window.jQuery) return; var $=window.jQuery;
-        $(document.body).on('change', 'input[name="delivery_option"]', function(){ $(document.body).trigger('update_checkout'); });
+        // Hide Delivery Location, Receiver Address & Email for Pick Up (not needed when collecting in store).
+        var HIDE = ["#delivery_map_field", "#billing_address_1_field", "#billing_email_field"];
+        var REQ  = ["#delivery_map_field", "#billing_address_1_field"]; // required again for Delivery
+        function setReq($row, required){
+            if(!$row.length) return;
+            $row.toggleClass("validate-required", required);
+            var $label = $row.children("label").first();
+            if(required){
+                $row.find("span.optional").remove();
+                if($label.length && !$label.find("abbr.required").length){ $label.append(" <abbr class='required' title='required'>*</abbr>"); }
+            } else {
+                $row.find("abbr.required").remove();
+                if($label.length && !$label.find("span.optional").length){ $label.append(" <span class='optional'>(optional)</span>"); }
+            }
+        }
+        function applyPickupFields(){
+            var pickup = $("input[name='delivery_option']:checked").val() === "pickup";
+            HIDE.forEach(function(sel){ var $r = $(sel); if(pickup){ $r.hide(); } else { $r.show(); } });
+            REQ.forEach(function(sel){ setReq($(sel), !pickup); }); // required for Delivery, optional for Pick Up
+        }
+        $(document.body).on("change", "input[name='delivery_option']", function(){ applyPickupFields(); $(document.body).trigger("update_checkout"); });
+        $(applyPickupFields);
+        $(document.body).on("updated_checkout", applyPickupFields);
+
+        // Validate the Delivery Location is a Google Maps link (inline feedback).
+        function isMapsUrl(v){
+            v = (v||"").trim(); if(!v) return true;
+            try{
+                var u = new URL(v), h = u.hostname.toLowerCase(), p = u.pathname.toLowerCase();
+                if(h === "maps.app.goo.gl") return true;
+                if(h === "goo.gl" && p.indexOf("/maps") === 0) return true;
+                if(/(^|\.)google\.[a-z.]+$/.test(h)){ if(h.indexOf("maps.") === 0) return true; if(p.indexOf("/maps") !== -1) return true; }
+                return false;
+            }catch(e){ return false; }
+        }
+        $(document.body).on("blur change input", "#delivery_map", function(){
+            var $f = $("#delivery_map_field"), ok = isMapsUrl($(this).val());
+            $f.toggleClass("woocommerce-invalid woocommerce-invalid-required-field", !ok);
+            $f.toggleClass("woocommerce-validated", ok && ($(this).val()||"").trim() !== "");
+        });
+        // Block advancing to Step 2 if the Delivery Location isn't a valid Google Maps link (Delivery only).
+        // Bound at wp_footer 100 → runs before the stepper's Next handler (120) so it can stop it.
+        $(document.body).on("click", ".shopys-next", function(e){
+            if($("input[name='delivery_option']:checked").val() === "pickup") return; // map hidden for pickup
+            var $inp = $("#delivery_map"), v = ($inp.val()||"").trim();
+            if(v !== "" && !isMapsUrl(v)){
+                e.preventDefault(); e.stopImmediatePropagation();
+                var $f = $("#delivery_map_field");
+                $f.addClass("woocommerce-invalid woocommerce-invalid-required-field").removeClass("woocommerce-validated");
+                if($f.offset()){ $("html,body").animate({ scrollTop: $f.offset().top - 110 }, 300); }
+                $inp.focus();
+            }
+        });
     })();
     </script>
     <?php
@@ -868,15 +920,24 @@ function shopys_add_delivery_map_field( $fields ) {
     unset( $fields['billing']['billing_state'] );
     unset( $fields['billing']['billing_country'] );
 
-    // Rename "Street address" to "Receiver Address".
+    // Pick Up orders don't need a delivery address/map — make those fields not required.
+    $is_pickup = ( shopys_get_delivery_option() === 'pickup' );
+
+    // Rename "Street address" to "Receiver Address" (required only for Delivery).
     if ( isset( $fields['billing']['billing_address_1'] ) ) {
         $fields['billing']['billing_address_1']['label']       = __( 'Receiver Address', 'shopys' );
         $fields['billing']['billing_address_1']['placeholder'] = __( 'Receiver Address', 'shopys' );
+        $fields['billing']['billing_address_1']['required']    = ! $is_pickup;
     }
 
     // Make Email address optional.
     if ( isset( $fields['billing']['billing_email'] ) ) {
         $fields['billing']['billing_email']['required'] = false;
+    }
+
+    // Make Town / City optional.
+    if ( isset( $fields['billing']['billing_city'] ) ) {
+        $fields['billing']['billing_city']['required'] = false;
     }
 
     // Move Phone above the Delivery Location (Map) field (map = 45) and relabel it.
@@ -904,11 +965,37 @@ function shopys_add_delivery_map_field( $fields ) {
         'type'        => 'text',
         'label'       => __( 'Delivery Location (Map)', 'shopys' ),
         'placeholder' => __( 'Tap "Use my current location" or paste a Google Maps link', 'shopys' ),
-        'required'    => false,
+        'required'    => ! $is_pickup, // required for Delivery, not for Pick Up
         'class'       => array( 'form-row-wide', 'shopys-map-field' ),
         'priority'    => 45,
     );
     return $fields;
+}
+
+/** True if $url is a Google Maps link (short link or google.com/maps). */
+function shopys_is_google_maps_url( $url ) {
+    $url  = trim( (string) $url );
+    $host = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
+    $path = strtolower( (string) wp_parse_url( $url, PHP_URL_PATH ) );
+    if ( $host === '' ) return false;
+    if ( $host === 'maps.app.goo.gl' ) return true;                       // app short link
+    if ( $host === 'goo.gl' && strpos( $path, '/maps' ) === 0 ) return true; // legacy short link
+    if ( preg_match( '/(^|\.)google\.[a-z.]+$/', $host ) ) {              // any google.* domain
+        if ( strpos( $host, 'maps.' ) === 0 ) return true;               // maps.google.com
+        if ( strpos( $path, '/maps' ) !== false ) return true;           // www.google.com/maps...
+    }
+    return false;
+}
+
+// Validate the Delivery Location value is a real Google Maps link (Delivery orders only).
+add_action( 'woocommerce_checkout_process', 'shopys_validate_delivery_map' );
+function shopys_validate_delivery_map() {
+    if ( shopys_get_delivery_option() === 'pickup' ) return; // pickup hides the field
+    $val = isset( $_POST['delivery_map'] ) ? trim( wp_unslash( $_POST['delivery_map'] ) ) : '';
+    if ( $val === '' ) return; // empty is handled by the field's "required" flag
+    if ( ! shopys_is_google_maps_url( $val ) ) {
+        wc_add_notice( __( 'Delivery Location must be a Google Maps link (e.g. https://maps.app.goo.gl/…). Tap "Use my current location" or paste a Google Maps link.', 'shopys' ), 'error' );
+    }
 }
 
 add_action( 'woocommerce_checkout_create_order', 'shopys_save_delivery_map', 10, 2 );
