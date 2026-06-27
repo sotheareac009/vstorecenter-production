@@ -36,7 +36,24 @@ if ( ! function_exists( 'shopys_ppg_add_to_cart' ) ) {
         if ( $product->is_in_stock() && $product->is_purchasable() ) {
             woocommerce_template_loop_add_to_cart();
         } else {
-            echo '<span class="button ppg-oos-btn" role="button" aria-disabled="true">' . esc_html__( 'Out of stock', 'shopys' ) . '</span>';
+            // Out of stock → "Contact Seller": opens the seller's Telegram chat with a
+            // pre-filled message (product name + link). Clipboard copy is a silent fallback.
+            $tg_user = function_exists( 'shopys_contact_seller_username' ) ? shopys_contact_seller_username() : 'unicorn_vvipcplus';
+            $tg_user = apply_filters( 'shopys_contact_seller_username', $tg_user );
+            $pname   = $product->get_name();
+            $purl    = get_permalink( $product->get_id() );
+            $msg     = sprintf(
+                /* translators: 1: product name, 2: product URL */
+                __( "Hi, I'm interested in this product - 🛍️ %1\$s\nIs it still available?\n\n🔗 Link: %2\$s", 'shopys' ),
+                $pname,
+                $purl
+            );
+            // Note: esc_attr (not esc_url) — esc_url strips the encoded newlines (%0A) we need for line breaks.
+            $tg_url = 'https://t.me/' . rawurlencode( $tg_user ) . '?text=' . rawurlencode( $msg );
+            echo '<a href="' . esc_attr( $tg_url ) . '" target="_blank" rel="noopener" class="button ppg-contact-btn" '
+                . 'data-product="' . esc_attr( $pname ) . '" data-url="' . esc_url( $purl ) . '">'
+                . '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71l-4.1-3.02-1.97 1.91c-.22.22-.4.4-.83.4z"/></svg> '
+                . esc_html__( 'Contact Seller', 'shopys' ) . '</a>';
         }
     }
 }

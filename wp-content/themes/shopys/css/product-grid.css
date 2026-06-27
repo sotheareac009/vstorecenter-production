@@ -1292,3 +1292,39 @@ body article .entry-content .ppg-title-link:active,
     pointer-events: none !important;
     box-shadow: none !important;
 }
+
+/* "Contact Seller" button (out of stock) — Telegram blue */
+.ppg-contact-btn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: #229ED9 !important;
+    border-color: #229ED9 !important;
+    color: #fff !important;
+    text-decoration: none !important;
+    box-shadow: none !important;
+}
+.ppg-contact-btn:hover { background: #1b8ec4 !important; border-color: #1b8ec4 !important; }
+.ppg-contact-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+/* Copy toast */
+.ppg-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 26px;
+    transform: translateX(-50%) translateY(16px);
+    background: #111820;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 11px 18px;
+    border-radius: 10px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, .28);
+    z-index: 99999;
+    opacity: 0;
+    transition: opacity .3s, transform .3s;
+    max-width: 90vw;
+    text-align: center;
+}
+.ppg-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }

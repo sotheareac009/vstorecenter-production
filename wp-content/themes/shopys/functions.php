@@ -1274,10 +1274,10 @@ function shopys_shop_field_style() {
     if ( ! function_exists( 'is_checkout' ) || ! is_checkout() ) return;
     if ( function_exists( 'is_wc_endpoint_url' ) && is_wc_endpoint_url( 'order-received' ) ) return;
     echo '<style>
-    #billing_shop_branch_field{ margin-bottom:18px !important; }
-    #billing_shop_branch_field > label{ display:block !important; font-weight:700 !important; color:#0d1117 !important; margin-bottom:7px !important; }
-    #billing_shop_branch_field .required{ color:#e21c25 !important; text-decoration:none; }
-    #billing_shop_branch{
+    #shop_branch_field{ margin-bottom:18px !important; }
+    #shop_branch_field > label{ display:block !important; font-weight:700 !important; color:#0d1117 !important; margin-bottom:7px !important; }
+    #shop_branch_field .required{ color:#e21c25 !important; text-decoration:none; }
+    #shop_branch{
         width:100% !important; height:46px !important; line-height:1.4 !important; min-height:0 !important;
         padding:0 40px 0 14px !important; margin:0 !important;
         border:1.5px solid #e5e7eb !important; border-radius:10px !important;
@@ -1288,7 +1288,7 @@ function shopys_shop_field_style() {
         background-repeat:no-repeat !important; background-position:right 12px center !important; background-size:16px !important;
         box-shadow:none !important; box-sizing:border-box !important; transition:border-color .15s, background .15s, box-shadow .15s !important;
     }
-    #billing_shop_branch:focus{ border-color:#00c44f !important; background-color:#fff !important; box-shadow:0 0 0 4px rgba(0,196,79,.15) !important; outline:none !important; }
+    #shop_branch:focus{ border-color:#00c44f !important; background-color:#fff !important; box-shadow:0 0 0 4px rgba(0,196,79,.15) !important; outline:none !important; }
     </style>';
 }
 
@@ -1487,6 +1487,19 @@ function shopys_tg_order_chat_id() {
     return $v !== false ? (string) $v : '';
 }
 
+/** Telegram username for the "Contact Seller" button (out-of-stock products). Configurable via env / wp-config. */
+function shopys_contact_seller_username() {
+    $u = '';
+    if ( defined( 'SHOPYS_CONTACT_SELLER' ) ) {
+        $u = (string) SHOPYS_CONTACT_SELLER;
+    } else {
+        $v = getenv( 'SHOPYS_CONTACT_SELLER' );
+        if ( $v !== false ) $u = (string) $v;
+    }
+    if ( $u === '' ) $u = 'unicorn_vvipcplus'; // fallback default
+    return ltrim( trim( $u ), '@' ); // store/accept with or without leading "@"
+}
+
 /** Separate channel for Walk-In Customer (COD) orders; falls back to the main one. */
 function shopys_tg_walkin_chat_id() {
     if ( defined( 'SHOPYS_TG_WALKIN_CHAT_ID' ) ) return (string) SHOPYS_TG_WALKIN_CHAT_ID;
@@ -1501,6 +1514,210 @@ function shopys_shop_branches() {
         'vstore' => 'V-Store Center',
         'vtech'  => 'V-Tech Gaming Center',
     );
+}
+
+/**
+ * Shop pickup location info for a branch (name, address, coords, phone) — env/constant configurable.
+ * Keys: SHOPYS_SHOP_<BRANCH>_ADDRESS | _COORDS | _PHONE   (BRANCH = VSTORE | VTECH)
+ */
+function shopys_shop_info( $branch ) {
+    $branch = strtolower( (string) $branch );
+    $b      = strtoupper( $branch );
+    $names  = shopys_shop_branches();
+    $get = function ( $suffix ) use ( $b ) {
+        $key = "SHOPYS_SHOP_{$b}_{$suffix}";
+        if ( defined( $key ) ) return (string) constant( $key );
+        $v = getenv( $key );
+        return $v !== false ? (string) $v : '';
+    };
+    return array(
+        'name'      => isset( $names[ $branch ] ) ? $names[ $branch ] : '',
+        'address'   => trim( $get( 'ADDRESS' ) ),
+        'coords'    => trim( $get( 'COORDS' ) ),
+        'phone'     => trim( $get( 'PHONE' ) ),
+        'embed_url' => trim( $get( 'MAP_EMBED' ) ), // full Google Maps "embed?pb=..." src (optional)
+        'link'      => trim( $get( 'MAP_LINK' ) ),  // shareable Google Maps link (e.g. maps.app.goo.gl/...)
+    );
+}
+
+/** Show the selected shop's location + map on the order-received / view-order page. */
+add_action( 'woocommerce_order_details_after_order_table', 'shopys_order_shop_map_section', 5 );
+function shopys_order_shop_map_section( $order ) {
+    if ( ! is_a( $order, 'WC_Order' ) ) return;
+    if ( $order->get_meta( '_delivery_option' ) !== 'Pick Up' ) return; // only for pickup orders
+    $branch = $order->get_meta( '_shop_branch' );
+    if ( ! $branch ) return;
+    $info  = shopys_shop_info( $branch );
+    $embed = shopys_shop_map_embed( $info );
+    $link  = shopys_shop_map_link( $info );
+    if ( $info['address'] === '' && $embed === '' ) return; // nothing configured yet
+
+    echo '<section class="shopys-shopmap">';
+    echo '<h2 class="shopys-shopmap-title">🏬 ' . esc_html( $info['name'] ) . '</h2>';
+    echo '<p class="shopys-shopmap-note">' . esc_html__( 'Shop location — for pickup or to visit us.', 'shopys' ) . '</p>';
+    if ( $info['address'] !== '' ) {
+        echo '<p class="shopys-shopmap-addr">📍 ' . esc_html( $info['address'] ) . '</p>';
+    }
+    if ( $info['phone'] !== '' ) {
+        echo '<p class="shopys-shopmap-phone">📞 ' . esc_html( $info['phone'] ) . '</p>';
+    }
+    if ( $embed !== '' ) {
+        echo '<div class="shopys-shopmap-frame"><iframe src="' . esc_url( $embed ) . '" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe></div>';
+    }
+    if ( $link !== '' ) {
+        echo '<a class="shopys-shopmap-open" href="' . esc_url( $link ) . '" target="_blank" rel="noopener">' . esc_html__( 'Open in Google Maps', 'shopys' ) . ' →</a>';
+    }
+    echo '</section>';
+    echo '<style>
+    .shopys-shopmap{ margin:22px 0; padding:18px; border:1.5px solid #e5e7eb; border-radius:14px; background:#f9fafb; }
+    .shopys-shopmap-title{ font-size:16px !important; margin:0 0 4px !important; color:#0d1117; }
+    .shopys-shopmap-note{ font-size:12px; color:#6b7280; margin:0 0 10px; }
+    .shopys-shopmap-addr, .shopys-shopmap-phone{ font-size:13px; color:#111827; margin:2px 0; }
+    .shopys-shopmap-frame{ margin:12px 0; border-radius:12px; overflow:hidden; border:1px solid #e5e7eb; }
+    .shopys-shopmap-frame iframe{ width:100%; height:260px; border:0; display:block; }
+    .shopys-shopmap-open{ display:inline-flex; align-items:center; gap:6px; padding:10px 16px; background:#00c44f; color:#fff !important; font-weight:700; font-size:13px; border-radius:10px; text-decoration:none !important; }
+    .shopys-shopmap-open:hover{ background:#00a341; }
+    </style>';
+}
+
+/** Google Maps embed URL (no API key) for a shop info array; '' if no location set. */
+function shopys_shop_map_embed( $info ) {
+    if ( ! empty( $info['embed_url'] ) ) return $info['embed_url']; // explicit embed src wins
+    $q = $info['coords'] !== '' ? $info['coords'] : $info['address'];
+    return $q !== '' ? 'https://maps.google.com/maps?q=' . rawurlencode( $q ) . '&z=16&output=embed' : '';
+}
+
+/** "Open in Google Maps" link for a shop info array; '' if no location set. */
+function shopys_shop_map_link( $info ) {
+    // Explicit shareable link wins (e.g. maps.app.goo.gl/...).
+    if ( ! empty( $info['link'] ) ) return $info['link'];
+    // Otherwise prefer coords pulled from the embed URL (!3d<lat>!2d<lng>) so the link matches the embedded map.
+    if ( ! empty( $info['embed_url'] )
+        && preg_match( '/!3d(-?[0-9.]+)/', $info['embed_url'], $lat )
+        && preg_match( '/!2d(-?[0-9.]+)/', $info['embed_url'], $lng ) ) {
+        return 'https://www.google.com/maps?q=' . rawurlencode( $lat[1] . ',' . $lng[1] );
+    }
+    $q = $info['coords'] !== '' ? $info['coords'] : $info['address'];
+    return $q !== '' ? 'https://www.google.com/maps?q=' . rawurlencode( $q ) : '';
+}
+
+// Checkout: confirm dialog (customer info + selected shop map) before placing a PICK-UP order.
+// Bound at priority 115 so it runs before the stepper's Place Order proxy (priority 120).
+add_action( 'wp_footer', 'shopys_checkout_confirm_dialog', 115 );
+function shopys_checkout_confirm_dialog() {
+    if ( ! function_exists( 'is_checkout' ) || ! is_checkout() ) return;
+    if ( function_exists( 'is_wc_endpoint_url' ) && ( is_wc_endpoint_url( 'order-pay' ) || is_wc_endpoint_url( 'order-received' ) ) ) return;
+
+    $shops = array();
+    foreach ( array_keys( shopys_shop_branches() ) as $b ) {
+        $info        = shopys_shop_info( $b );
+        $shops[ $b ] = array(
+            'name'    => $info['name'],
+            'address' => $info['address'],
+            'phone'   => $info['phone'],
+            'embed'   => shopys_shop_map_embed( $info ),
+            'link'    => shopys_shop_map_link( $info ),
+        );
+    }
+    ?>
+    <style>
+    .shopys-cd-overlay{ position:fixed; inset:0; background:rgba(13,17,23,.55); z-index:100000; display:flex; align-items:center; justify-content:center; padding:16px; }
+    .shopys-cd-box{ background:#fff; width:100%; max-width:440px; max-height:90vh; overflow:auto; border-radius:16px; padding:22px; position:relative; font-family:"Play","Battambang",sans-serif; box-shadow:0 20px 60px rgba(0,0,0,.3); }
+    .shopys-cd-x{ position:absolute; top:12px; right:14px; background:none; border:none; font-size:24px; line-height:1; color:#9aa3b0; cursor:pointer; }
+    .shopys-cd-title{ font-size:17px !important; font-weight:800; margin:0 0 4px !important; color:#0d1117; }
+    .shopys-cd-sub{ font-size:12px; color:#6b7280; margin:0 0 14px; }
+    .shopys-cd-info{ display:grid; gap:8px; margin-bottom:16px; }
+    .shopys-cd-info > div{ display:flex; justify-content:space-between; gap:12px; font-size:13px; border-bottom:1px dashed #eef0f4; padding-bottom:7px; }
+    .shopys-cd-info span{ color:#6b7280; } .shopys-cd-info b{ color:#0d1117; text-align:right; }
+    .shopys-cd-shop{ background:#f9fafb; border:1.5px solid #e5e7eb; border-radius:12px; padding:14px; margin-bottom:16px; }
+    .shopys-cd-shopname{ font-weight:800; font-size:14px; color:#0d1117; margin-bottom:6px; }
+    .shopys-cd-addr{ font-size:12.5px; color:#374151; margin:2px 0; }
+    .shopys-cd-map{ margin:10px 0; border-radius:10px; overflow:hidden; border:1px solid #e5e7eb; }
+    .shopys-cd-map iframe{ width:100%; height:200px; border:0; display:block; }
+    .shopys-cd-maprow{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .shopys-cd-open{ display:inline-block; font-size:12.5px; font-weight:700; color:#00a341 !important; text-decoration:none !important; }
+    .shopys-cd-copy{ display:inline-flex; align-items:center; gap:5px; padding:7px 12px; border:1.5px solid #e5e7eb; background:#fff; border-radius:9px; color:#5b6472; font-weight:700; font-size:12px; cursor:pointer; font-family:inherit; }
+    .shopys-cd-copy:hover{ border-color:#00c44f; color:#0a7d00; }
+    .shopys-cd-copy svg{ width:14px; height:14px; }
+    .shopys-cd-actions{ display:flex; gap:10px; }
+    .shopys-cd-cancel{ flex:0 0 auto; padding:13px 18px; border:1.5px solid #e5e7eb; background:#fff; color:#5b6472; font-weight:700; font-size:13px; border-radius:11px; cursor:pointer; font-family:inherit; }
+    .shopys-cd-confirm{ flex:1; padding:13px 18px; border:none; background:#00c44f; color:#fff; font-weight:800; font-size:13px; border-radius:11px; cursor:pointer; font-family:inherit; }
+    .shopys-cd-confirm:hover{ background:#00a341; }
+    </style>
+    <script>
+    (function(){
+        if(!window.jQuery) return; var $=window.jQuery;
+        var SHOPS = <?php echo wp_json_encode( $shops ); ?>;
+        function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
+        function legacyCopy(text, cb){
+            try{
+                var ta=document.createElement("textarea");
+                ta.value=text; ta.setAttribute("readonly",""); ta.style.position="fixed"; ta.style.top="-9999px"; ta.style.opacity="0";
+                document.body.appendChild(ta); ta.focus(); ta.select(); ta.setSelectionRange(0, ta.value.length);
+                var ok=document.execCommand("copy"); document.body.removeChild(ta);
+                if(ok && cb) cb();
+            }catch(e){}
+        }
+        function openDialog(branch, onConfirm){
+            var shop = SHOPS[branch] || {};
+            var name = (($("#billing_first_name").val()||"")+" "+($("#billing_last_name").val()||"")).trim();
+            var phone = $("#billing_phone").val()||"";
+            var addr = (($("#billing_address_1").val()||"")+", "+($("#billing_city").val()||"")).replace(/^,\s*|,\s*$/g,"");
+            var h = "<div class='shopys-cd-box'>"
+                + "<button type='button' class='shopys-cd-x' aria-label='Close'>&times;</button>"
+                + "<h3 class='shopys-cd-title'>Pick Up — Confirm</h3>"
+                + "<p class='shopys-cd-sub'>Please confirm your details and the shop location to pick up your order.</p>"
+                + "<div class='shopys-cd-info'>"
+                +   "<div><span>Name</span><b>"+esc(name||"-")+"</b></div>"
+                +   "<div><span>Phone</span><b>"+esc(phone||"-")+"</b></div>"
+                +   "<div><span>Address</span><b>"+esc(addr||"-")+"</b></div>"
+                +   "<div><span>Shop</span><b>"+esc(shop.name||"")+"</b></div>"
+                + "</div>";
+            h += "<div class='shopys-cd-shop'>";
+            h += "<div class='shopys-cd-shopname'>🏬 "+esc(shop.name||"")+"</div>";
+            if(shop.address) h += "<div class='shopys-cd-addr'>📍 "+esc(shop.address)+"</div>";
+            if(shop.phone)   h += "<div class='shopys-cd-addr'>📞 "+esc(shop.phone)+"</div>";
+            if(shop.embed)   h += "<div class='shopys-cd-map'><iframe src='"+esc(shop.embed)+"' loading='lazy' allowfullscreen></iframe></div>";
+            if(shop.link){
+                h += "<div class='shopys-cd-maprow'>";
+                h += "<a class='shopys-cd-open' href='"+esc(shop.link)+"' target='_blank' rel='noopener'>Open in Google Maps &rarr;</a>";
+                h += "<button type='button' class='shopys-cd-copy' data-link='"+esc(shop.link)+"' title='Copy Google Maps link'>"
+                   + "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='9' y='9' width='13' height='13' rx='2' ry='2'></rect><path d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'></path></svg>"
+                   + "<span class='shopys-cd-copy-txt'>Copy</span></button>";
+                h += "</div>";
+            }
+            h += "</div>";
+            h += "<div class='shopys-cd-actions'>"
+                + "<button type='button' class='shopys-cd-cancel'>Cancel</button>"
+                + "<button type='button' class='shopys-cd-confirm'>Confirm &amp; Place Order</button>"
+                + "</div></div>";
+            var $ov = $("<div class='shopys-cd-overlay'></div>").html(h);
+            $("body").append($ov);
+            function close(){ $ov.remove(); }
+            $ov.on("click", function(e){ if(e.target===$ov[0]) close(); });
+            $ov.find(".shopys-cd-x, .shopys-cd-cancel").on("click", close);
+            $ov.on("click", ".shopys-cd-copy", function(){
+                var link = $(this).attr("data-link"), $txt = $(this).find(".shopys-cd-copy-txt");
+                function done(){ var old = $txt.data("orig") || $txt.text(); $txt.data("orig", old); $txt.text("Copied!"); setTimeout(function(){ $txt.text(old); }, 1500); }
+                if(navigator.clipboard && navigator.clipboard.writeText){
+                    navigator.clipboard.writeText(link).then(done).catch(function(){ legacyCopy(link, done); });
+                } else {
+                    legacyCopy(link, done);
+                }
+            });
+            $ov.find(".shopys-cd-confirm").on("click", function(){ close(); onConfirm(); });
+        }
+        $(document.body).on("click", ".shopys-place", function(e){
+            var deliv  = $("input[name='delivery_option']:checked").val() || "";
+            var branch = $("#shop_branch").val() || "";
+            // Only for PICK UP orders, with a shop that has a configured location.
+            if(deliv !== "pickup" || !branch || !SHOPS[branch] || !SHOPS[branch].embed){ return; }
+            e.preventDefault(); e.stopImmediatePropagation();
+            openDialog(branch, function(){ $("#place_order").trigger("click"); });
+        });
+    })();
+    </script>
+    <?php
 }
 
 /** Telegram channel for branch (vstore|vtech) + type (khqr|walkin) — env/constant overridable. */

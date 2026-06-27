@@ -370,3 +370,30 @@
 
 })();
 
+/* ── Out-of-stock "Contact Seller": copy product name + link, then open Telegram ── */
+(function () {
+    'use strict';
+    function toast(msg) {
+        var t = document.createElement('div');
+        t.className = 'ppg-toast';
+        t.textContent = msg;
+        document.body.appendChild(t);
+        requestAnimationFrame(function () { t.classList.add('show'); });
+        setTimeout(function () { t.classList.remove('show'); setTimeout(function () { t.remove(); }, 300); }, 2600);
+    }
+    document.addEventListener('click', function (e) {
+        var a = e.target.closest ? e.target.closest('.ppg-contact-btn') : null;
+        if (!a) return;
+        var name = a.getAttribute('data-product') || '';
+        var url = a.getAttribute('data-url') || '';
+        if (!name) return; // let the link open normally
+        var text = name + (url ? ' — ' + url : '');
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(function () {
+                toast('📋 Product copied (in case it didn\'t auto-fill)');
+            }).catch(function () {});
+        }
+        // The link itself (target=_blank) opens the Telegram seller chat.
+    });
+})();
+
