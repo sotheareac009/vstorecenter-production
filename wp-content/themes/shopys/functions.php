@@ -1587,6 +1587,90 @@ function shopys_contact_seller_username() {
     return ltrim( trim( $u ), '@' ); // store/accept with or without leading "@"
 }
 
+// Never serve a cached (logged-out) page to a logged-in user — fixes "appears logged out
+// after navigating / asked to log in again on add-to-cart" caused by full-page caching on production.
+add_action( 'template_redirect', 'shopys_no_cache_for_logged_in', 0 );
+function shopys_no_cache_for_logged_in() {
+    if ( ! is_user_logged_in() ) return;
+    if ( ! defined( 'DONOTCACHEPAGE' ) ) define( 'DONOTCACHEPAGE', true ); // WP Super Cache / W3TC / etc.
+    do_action( 'litespeed_control_set_nocache', 'shopys: logged-in user must not be cached' ); // LiteSpeed
+    nocache_headers(); // CDN / browser
+}
+
+// Premium mobile overlay menu — targets the theme .sider.overcenter panel (mobile-only; hidden on desktop).
+add_action( 'wp_head', 'shopys_premium_mobile_menu', 130 );
+function shopys_premium_mobile_menu() {
+    echo '<style>
+    /* Mobile only (theme mobile menu activates at <=1024px) — desktop header untouched */
+    @media screen and (max-width:1024px){
+    /* Backdrop + solid premium panel */
+    .open-shop-mobile-menu-wrapper{ background:rgba(5,8,12,.55) !important; -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); }
+    .mobile-menu-active .sider.overcenter,
+    .sticky-mobile-menu-active .sider.overcenter,
+    .mobile-bottom-menu-active .sider.overcenter{
+        background:linear-gradient(180deg,#0d1117 0%,#080b10 100%) !important;
+    }
+    /* Centered menu column */
+    .mobile-menu-active .sider.overcenter .open-shop-menu,
+    .sticky-mobile-menu-active .sider.overcenter .open-shop-menu,
+    .mobile-bottom-menu-active .sider.overcenter .open-shop-menu{
+        max-width:520px !important; width:auto !important; margin:0 auto !important; padding:0 22px !important; display:block !important; list-style:none !important;
+    }
+    .mobile-menu-active .sider.overcenter .open-shop-menu > li,
+    .sticky-mobile-menu-active .sider.overcenter .open-shop-menu > li,
+    .mobile-bottom-menu-active .sider.overcenter .open-shop-menu > li{
+        display:block !important; float:none !important; width:100% !important; margin:0 0 11px !important; padding:0 !important; border:none !important; text-align:left !important; line-height:1.3 !important;
+    }
+    /* Each item = premium card row */
+    .mobile-menu-active .sider.overcenter .open-shop-menu > li > a,
+    .sticky-mobile-menu-active .sider.overcenter .open-shop-menu > li > a,
+    .mobile-bottom-menu-active .sider.overcenter .open-shop-menu > li > a{
+        display:flex !important; align-items:center !important; justify-content:space-between; gap:10px;
+        padding:18px 26px !important; border-radius:14px !important; line-height:1.25 !important; min-height:0 !important; height:auto !important; text-align:left !important;
+        background:rgba(255,255,255,.045) !important; border:1px solid rgba(255,255,255,.08) !important;
+        color:#e6edf3 !important; font-size:15.5px !important; font-weight:600 !important; letter-spacing:.2px; text-transform:none !important;
+        transition:background .18s, border-color .18s, box-shadow .18s, transform .12s !important;
+    }
+    .mobile-menu-active .sider.overcenter .open-shop-menu > li > a *{ color:inherit !important; }
+    .mobile-menu-active .sider.overcenter .open-shop-menu > li > a .open-shop-menu-link,
+    .sticky-mobile-menu-active .sider.overcenter .open-shop-menu > li > a .open-shop-menu-link,
+    .mobile-bottom-menu-active .sider.overcenter .open-shop-menu > li > a .open-shop-menu-link{
+        display:inline-block !important; line-height:1.25 !important; padding:0 !important; margin:0 0 0 10px !important; color:inherit !important; font-weight:600 !important;
+    }
+    .mobile-menu-active .sider.overcenter .open-shop-menu > li > a:hover{ transform:translateY(-1px); border-color:rgba(0,196,79,.55) !important; background:rgba(0,196,79,.08) !important; }
+    .mobile-menu-active .sider.overcenter .open-shop-menu > li.current-menu-item > a,
+    .mobile-menu-active .sider.overcenter .open-shop-menu > li.current_page_item > a,
+    .mobile-menu-active .sider.overcenter .open-shop-menu > li.menu-active > a,
+    .sticky-mobile-menu-active .sider.overcenter .open-shop-menu > li.current-menu-item > a,
+    .mobile-bottom-menu-active .sider.overcenter .open-shop-menu > li.current-menu-item > a{
+        background:linear-gradient(135deg,#00c44f,#00a341) !important; border-color:transparent !important; color:#fff !important;
+        box-shadow:0 10px 26px rgba(0,196,79,.34) !important;
+    }
+    /* Sub-menu (accordion) */
+    .mobile-menu-active .sider.overcenter .open-shop-menu ul.sub-menu{
+        margin:8px 0 4px !important; padding:6px !important; background:rgba(255,255,255,.03) !important; border-radius:12px !important; list-style:none !important;
+    }
+    .mobile-menu-active .sider.overcenter .open-shop-menu ul.sub-menu li{ border:none !important; margin:0 !important; width:100% !important; }
+    .mobile-menu-active .sider.overcenter .open-shop-menu ul.sub-menu li a{
+        color:#aeb8c4 !important; padding:12px 16px !important; border-radius:10px !important; font-size:14px !important; display:block !important; background:transparent !important;
+    }
+    .mobile-menu-active .sider.overcenter .open-shop-menu ul.sub-menu li a:hover{ background:rgba(0,196,79,.12) !important; color:#fff !important; }
+    /* Dropdown arrow chip */
+    .mobile-menu-active .sider.overcenter .open-shop-menu .arrow{
+        width:24px; height:24px; flex:0 0 auto; display:inline-flex !important; align-items:center; justify-content:center;
+        border-radius:7px; background:rgba(255,255,255,.07);
+    }
+    .mobile-menu-active .sider.overcenter .open-shop-menu .arrow:before{ color:#cfd6df !important; }
+    /* Close button */
+    .mobile-menu-active .sider.overcenter .menu-close-btn{
+        width:42px !important; height:42px !important; border-radius:50% !important; display:inline-flex !important; align-items:center; justify-content:center;
+        background:rgba(255,255,255,.08) !important; border:1px solid rgba(255,255,255,.12) !important; color:#fff !important; margin:0 auto 6px !important;
+    }
+    .mobile-menu-active .sider.overcenter .menu-close-btn:hover{ background:#ef4444 !important; border-color:#ef4444 !important; }
+    }
+    </style>';
+}
+
 /** Separate channel for Walk-In Customer (COD) orders; falls back to the main one. */
 function shopys_tg_walkin_chat_id() {
     if ( defined( 'SHOPYS_TG_WALKIN_CHAT_ID' ) ) return (string) SHOPYS_TG_WALKIN_CHAT_ID;
