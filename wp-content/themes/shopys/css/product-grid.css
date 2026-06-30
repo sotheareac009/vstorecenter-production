@@ -1293,19 +1293,27 @@ body article .entry-content .ppg-title-link:active,
     box-shadow: none !important;
 }
 
-/* "Contact Seller" button (out of stock) — Telegram blue */
+/* "Contact Seller" button (out of stock) — distinct from the green Add to Cart.
+   Higher-specificity selectors so the theme's .ppg-actions .button green gradient can't win. */
+.ppg-actions a.button.ppg-contact-btn,
+.ppg-list-table .ppg-lt-col-action a.button.ppg-contact-btn,
+a.button.ppg-contact-btn,
 .ppg-contact-btn {
     display: flex !important;
     align-items: center;
     justify-content: center;
     gap: 6px;
     background: #229ED9 !important;
+    background-image: none !important;
     border-color: #229ED9 !important;
     color: #fff !important;
     text-decoration: none !important;
     box-shadow: none !important;
 }
-.ppg-contact-btn:hover { background: #1b8ec4 !important; border-color: #1b8ec4 !important; }
+.ppg-actions a.button.ppg-contact-btn:hover,
+.ppg-list-table .ppg-lt-col-action a.button.ppg-contact-btn:hover,
+a.button.ppg-contact-btn:hover,
+.ppg-contact-btn:hover { background: #1b8ec4 !important; background-image: none !important; border-color: #1b8ec4 !important; }
 .ppg-contact-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
 
 /* Copy toast */
