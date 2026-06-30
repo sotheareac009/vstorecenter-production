@@ -2062,6 +2062,64 @@ function shopys_notify_telegram_paid_order( $order_id ) {
     }
 }
 
+// ── Separate "payment received" notification for KHQR payments, per shop (payment details only) ──
+// Sends to SHOPYS_TG_<BRANCH>_PAYMENT (e.g. SHOPYS_TG_VSTORE_PAYMENT). No products — just the money + order id.
+add_action( 'woocommerce_payment_complete', 'shopys_notify_telegram_payment', 25 );
+add_action( 'woocommerce_order_status_processing', 'shopys_notify_telegram_payment', 25 );
+add_action( 'woocommerce_order_status_completed', 'shopys_notify_telegram_payment', 25 );
+function shopys_notify_telegram_payment( $order_id ) {
+    $order = wc_get_order( $order_id );
+    if ( ! $order ) return;
+    if ( $order->get_payment_method() !== 'khqrpay' ) return;          // QR payments only
+    if ( $order->get_meta( '_shopys_tg_pay_notified' ) === 'yes' ) return; // once per order
+
+    $branch = $order->get_meta( '_shop_branch' );
+    $chat   = $branch ? shopys_tg_branch_chat( $branch, 'payment' ) : ''; // SHOPYS_TG_<BRANCH>_PAYMENT
+    $token  = defined( 'SHOPYS_TG_BOT_TOKEN' ) ? SHOPYS_TG_BOT_TOKEN : '';
+    if ( ! $token || ! $chat ) return; // no payment group configured for this shop → skip
+
+    $branch_names = shopys_shop_branches();
+    $shop  = ( $branch && isset( $branch_names[ $branch ] ) ) ? $branch_names[ $branch ] : get_bloginfo( 'name' );
+    $cur   = $order->get_currency();
+    $total = ( $cur === 'KHR' ) ? number_format( (float) $order->get_total(), 0 ) . ' ៛' : '$' . number_format( (float) $order->get_total(), 2 );
+
+    // Per-shop receiver account (from the KHQR gateway).
+    $recv = function_exists( 'khqrpay_order_account' ) ? khqrpay_order_account( $order ) : array();
+    $recv_name = $recv['merchant_name'] ?? '';
+    $recv_acct = $recv['account_number'] ?? ( $recv['account_info'] ?? '' );
+
+    $name  = trim( $order->get_formatted_billing_full_name() );
+    $phone = $order->get_billing_phone();
+    $when  = $order->get_date_paid() ? $order->get_date_paid()->date_i18n( 'd M Y · g:i A' )
+           : ( $order->get_date_created() ? $order->get_date_created()->date_i18n( 'd M Y · g:i A' ) : date_i18n( 'd M Y · g:i A' ) );
+    $div   = "━━━━━━━━━━━━━━━━━━━━━━━━━━";
+
+    $msg  = "✅  <b>PAYMENT RECEIVED — KHQR</b>\n";
+    $msg .= "<i>" . esc_html( $shop ) . "</i>\n";
+    $msg .= $div . "\n";
+    $msg .= "🧾  <b>Order ID :</b> #" . esc_html( $order->get_order_number() ) . "\n";
+    $msg .= "💰  <b>Amount :</b> <b>" . esc_html( $total ) . "</b>\n";
+    $msg .= "💳  <b>Method :</b> KHQR (Bakong)\n";
+    if ( $recv_name !== '' || $recv_acct !== '' ) {
+        $msg .= "🏦  <b>Received by :</b> " . esc_html( trim( $recv_name . ( $recv_acct !== '' ? ' · ' . $recv_acct : '' ) ) ) . "\n";
+    }
+    if ( $name !== '' )  $msg .= "👤  <b>Customer :</b> " . esc_html( $name ) . "\n";
+    if ( $phone !== '' ) $msg .= "📞  <b>Phone :</b> " . esc_html( $phone ) . "\n";
+    $msg .= $div . "\n";
+    $msg .= "🕒  <i>" . esc_html( $when ) . "</i>";
+
+    $resp = wp_remote_post( "https://api.telegram.org/bot{$token}/sendMessage", array(
+        'timeout' => 15,
+        'body'    => array( 'chat_id' => $chat, 'text' => $msg, 'parse_mode' => 'HTML', 'disable_web_page_preview' => true ),
+    ) );
+    if ( ! is_wp_error( $resp ) && (int) wp_remote_retrieve_response_code( $resp ) === 200 ) {
+        $order->update_meta_data( '_shopys_tg_pay_notified', 'yes' );
+        $order->save();
+    } else {
+        error_log( 'shopys TG payment notify failed: ' . ( is_wp_error( $resp ) ? $resp->get_error_message() : wp_remote_retrieve_body( $resp ) ) );
+    }
+}
+
 /** Colored badge emoji for an order status (used in both the new-order + update messages). */
 function shopys_order_status_badge( $slug ) {
     $b = array(
