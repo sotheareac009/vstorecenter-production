@@ -36,6 +36,38 @@ function khqrpay_cfg( $key ) {
     return '';
 }
 
+/**
+ * Receiver account for an order's selected shop branch (per-shop routing).
+ * Reads KHQR_<BRANCH>_<FIELD> (e.g. KHQR_VSTORE_BAKONG_ID); falls back to the
+ * global values when a shop-specific one isn't set. BRANCH = VSTORE | VTECH.
+ */
+function khqrpay_order_account( $order = null ) {
+    $branch = '';
+    if ( $order instanceof WC_Abstract_Order ) {
+        $branch = strtolower( (string) $order->get_meta( '_shop_branch' ) ); // 'vstore' | 'vtech'
+    }
+    $pick = function ( $field, $global_key ) use ( $branch ) {
+        if ( $branch !== '' ) {
+            $v = khqrpay_cfg( 'khqr_' . $branch . '_' . $field ); // KHQR_VSTORE_BAKONG_ID, etc.
+            if ( $v !== '' ) return $v;
+        }
+        return khqrpay_cfg( $global_key );
+    };
+    $info = $pick( 'account_info', 'khqr_account_info' );
+    if ( $info === '' ) $info = khqrpay_cfg( 'account_info' );
+    $bank = $pick( 'acquiring_bank', 'khqr_acquiring_bank' );
+    if ( $bank === '' ) $bank = khqrpay_cfg( 'acquiring_bank' );
+    $acct = $pick( 'account_number', 'khqr_account_number' );
+    if ( $acct === '' ) $acct = khqrpay_cfg( 'account_number' );
+    return array(
+        'bakong_id'      => $pick( 'bakong_id', 'bakong_id' ),
+        'merchant_name'  => $pick( 'merchant_name', 'merchant_name' ),
+        'account_info'   => $info,
+        'acquiring_bank' => $bank,
+        'account_number' => $acct,
+    );
+}
+
 function khqrpay_api_base() {
     $u = khqrpay_cfg( 'kh_qr_api_url' );
     if ( $u === '' ) $u = khqrpay_cfg( 'api_url' );
@@ -130,13 +162,14 @@ function khqrpay_qr_ttl_min() {
  * Returns array|WP_Error.
  */
 function khqrpay_build_qr( WC_Order $order ) {
-    $account = khqrpay_cfg( 'bakong_id' );
+    $acctcfg = khqrpay_order_account( $order ); // per-shop receiver (V-Store vs V-Tech)
+    $account = $acctcfg['bakong_id'];
     if ( $account === '' || strpos( $account, '@' ) === false ) {
         return new WP_Error( 'khqrpay_no_account', 'Missing/invalid BAKONG_ID (must be name@bank).' );
     }
 
     $cur  = khqrpay_qr_currency();
-    $name = mb_substr( khqrpay_merchant_name(), 0, 25 );
+    $name = mb_substr( $acctcfg['merchant_name'] !== '' ? $acctcfg['merchant_name'] : get_bloginfo( 'name' ), 0, 25 );
     $city = khqrpay_city();
 
     // Amount, formatted exactly as the SDK does.
@@ -160,10 +193,8 @@ function khqrpay_build_qr( WC_Order $order ) {
     // Individual account (tag 29): sub-00 account id, optional sub-01 account info
     // and sub-02 acquiring bank (e.g. ACLEDA uses khqr@aclb + phone + "ACLEDA").
     $acct = khqrpay_tlv( '00', $account );
-    $info = khqrpay_cfg( 'khqr_account_info' );
-    if ( $info === '' ) $info = khqrpay_cfg( 'account_info' );
-    $bank = khqrpay_cfg( 'khqr_acquiring_bank' );
-    if ( $bank === '' ) $bank = khqrpay_cfg( 'acquiring_bank' );
+    $info = $acctcfg['account_info'];
+    $bank = $acctcfg['acquiring_bank'];
     if ( $info !== '' ) $acct .= khqrpay_tlv( '01', $info );
     if ( $bank !== '' ) $acct .= khqrpay_tlv( '02', $bank );
 
@@ -488,6 +519,11 @@ function khqrpay_load_gateway() {
             .khqrx-confirm{ border:none; background:#ef4444; color:#fff; text-decoration:none; }
             .khqrx-confirm:hover{ background:#dc2626; color:#fff; }
             @media(max-width:480px){ .khqrx-amount{ font-size:1.5rem; } .khqrx-qrbox{ width:196px; } .khqrx-qr{ width:170px; height:170px; } }
+            .khqrx-qrbox.khqrx-paid{ position:relative; }
+            .khqrx-qrbox.khqrx-paid .khqrx-qr{ filter:blur(3px); opacity:.35; transition:opacity .3s, filter .3s; }
+            .khqrx-paid-ov{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+            .khqrx-paid-ov svg{ width:84px; height:84px; padding:18px; border-radius:50%; background:#00c44f; box-shadow:0 12px 30px rgba(0,196,79,.45); animation:khqrx-pop .35s cubic-bezier(.2,.8,.3,1.2); }
+            @keyframes khqrx-pop{ 0%{ transform:scale(.4); opacity:0; } 100%{ transform:scale(1); opacity:1; } }
             </style>
             <div class="khqrx-wrap">
                 <div class="khqrx-card">
@@ -496,7 +532,7 @@ function khqrpay_load_gateway() {
                             <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><path d="M14 14h3M14 18v3M18 14v3M21 14v7M18 21h3"/></svg>
                             <span>KHQR</span>
                         </div>
-                        <div class="khqrx-payee"><?php echo esc_html( khqrpay_merchant_name() ); ?></div>
+                        <div class="khqrx-payee"><?php $khqr_payee = khqrpay_order_account( $order ); echo esc_html( $khqr_payee['merchant_name'] !== '' ? $khqr_payee['merchant_name'] : khqrpay_merchant_name() ); ?></div>
                         <div class="khqrx-sub"><?php esc_html_e( 'Scan to pay with any banking app', 'shopys' ); ?></div>
                     </div>
                     <div class="khqrx-body">
@@ -589,9 +625,19 @@ function khqrpay_load_gateway() {
                           if (done) return;
                           if (d && d.paid){
                               done = true;
+                              if (timerEl) timerEl.textContent = '';
                               statusEl.style.color = '#0a7d00';
-                              statusEl.textContent = '✓ Payment confirmed! Redirecting…';
-                              location.href = d.redirect || returnUrl;
+                              statusEl.innerHTML = '✅ Payment received! Confirming your order…';
+                              // Show a clear success overlay on the QR so the buyer knows it worked.
+                              var qbox = document.querySelector('.khqrx-qrbox');
+                              if (qbox){
+                                  qbox.classList.add('khqrx-paid');
+                                  var ov = document.createElement('div');
+                                  ov.className = 'khqrx-paid-ov';
+                                  ov.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+                                  qbox.appendChild(ov);
+                              }
+                              setTimeout(function(){ location.href = d.redirect || returnUrl; }, 1700);
                               return;
                           }
                           setTimeout(poll, 3000);
@@ -696,11 +742,10 @@ function khqrpay_payment_method_title_with_account( $title, $order ) {
     if ( ! is_a( $order, 'WC_Abstract_Order' ) || $order->get_payment_method() !== 'khqrpay' ) {
         return $title;
     }
-    // Prefer a human account number (KHQR_ACCOUNT_NUMBER) if set; fall back to the Bakong ID.
-    $acct = khqrpay_cfg( 'khqr_account_number' );
-    if ( $acct === '' ) $acct = khqrpay_cfg( 'account_number' );
-    if ( $acct === '' ) $acct = khqrpay_cfg( 'bakong_id' );
-    $name = khqrpay_merchant_name();
+    // Per-shop receiver account (V-Store vs V-Tech). Prefer a human account number; fall back to Bakong ID.
+    $cfg  = khqrpay_order_account( $order );
+    $acct = $cfg['account_number'] !== '' ? $cfg['account_number'] : $cfg['bakong_id'];
+    $name = $cfg['merchant_name'] !== '' ? $cfg['merchant_name'] : khqrpay_merchant_name();
     if ( ( $name === '' && $acct === '' ) || ( $acct !== '' && strpos( (string) $title, $acct ) !== false ) ) {
         return $title; // nothing to add, or already appended
     }
