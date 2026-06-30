@@ -45,8 +45,43 @@ if ( ! hash_equals( RELAY_SECRET, (string) $sent ) ) {
     exit;
 }
 
+// Diagnostic: shows whether the Authorization header reaches PHP (token value NOT exposed).
+// Call with ?diag=1 plus the X-Relay-Secret header.
+if ( isset( $_GET['diag'] ) ) {
+    $a = khqr_relay_auth_header();
+    echo json_encode( array(
+        'auth_received'     => $a !== '',
+        'auth_length'       => strlen( $a ),
+        'starts_with'       => $a !== '' ? substr( $a, 0, 7 ) : '',
+        'has_HTTP_AUTH'     => ! empty( $_SERVER['HTTP_AUTHORIZATION'] ),
+        'has_REDIRECT_AUTH' => ! empty( $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ),
+        'apache_fn'         => function_exists( 'apache_request_headers' ),
+        'getallheaders_fn'  => function_exists( 'getallheaders' ),
+        'sapi'              => PHP_SAPI,
+    ) );
+    exit;
+}
+
 $body = file_get_contents( 'php://input' );
-$auth = isset( $_SERVER['HTTP_AUTHORIZATION'] ) ? $_SERVER['HTTP_AUTHORIZATION'] : '';
+
+// Read the Authorization (Bearer token) header. Apache/cPanel often strips
+// HTTP_AUTHORIZATION, so check every place it can end up.
+function khqr_relay_auth_header() {
+    if ( ! empty( $_SERVER['HTTP_AUTHORIZATION'] ) )          return $_SERVER['HTTP_AUTHORIZATION'];
+    if ( ! empty( $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ) ) return $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+    if ( function_exists( 'apache_request_headers' ) ) {
+        foreach ( apache_request_headers() as $k => $v ) {
+            if ( strtolower( $k ) === 'authorization' ) return $v;
+        }
+    }
+    if ( function_exists( 'getallheaders' ) ) {
+        foreach ( getallheaders() as $k => $v ) {
+            if ( strtolower( $k ) === 'authorization' ) return $v;
+        }
+    }
+    return '';
+}
+$auth = khqr_relay_auth_header();
 
 $ch = curl_init( BAKONG_ENDPOINT );
 curl_setopt_array( $ch, array(
