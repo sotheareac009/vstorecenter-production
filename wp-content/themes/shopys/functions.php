@@ -2103,6 +2103,12 @@ function shopys_notify_telegram_payment( $order_id ) {
     if ( $recv_name !== '' || $recv_acct !== '' ) {
         $msg .= "🏦  <b>Received by :</b> " . esc_html( trim( $recv_name . ( $recv_acct !== '' ? ' · ' . $recv_acct : '' ) ) ) . "\n";
     }
+    // Sender (payer) account from Bakong, if captured.
+    $from_acct = (string) $order->get_meta( '_khqrpay_from_account' );
+    $from_name = (string) $order->get_meta( '_khqrpay_from_name' );
+    if ( $from_acct !== '' || $from_name !== '' ) {
+        $msg .= "📤  <b>Paid by :</b> " . esc_html( trim( $from_name . ( $from_acct !== '' ? ' · ' . $from_acct : '' ) ) ) . "\n";
+    }
     if ( $name !== '' )  $msg .= "👤  <b>Customer :</b> " . esc_html( $name ) . "\n";
     if ( $phone !== '' ) $msg .= "📞  <b>Phone :</b> " . esc_html( $phone ) . "\n";
     $msg .= $div . "\n";

@@ -9,6 +9,39 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
+// ── Registration: required Phone number field ────────────────────────────────
+add_action( 'woocommerce_register_form', 'shopys_register_phone_field' );
+function shopys_register_phone_field() {
+    $val = isset( $_POST['reg_billing_phone'] ) ? esc_attr( wp_unslash( $_POST['reg_billing_phone'] ) ) : '';
+    ?>
+    <p class="woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide">
+        <label for="reg_billing_phone"><?php esc_html_e( 'Phone number', 'shopys' ); ?>&nbsp;<span class="required">*</span></label>
+        <input type="tel" class="woocommerce-Input woocommerce-Input--text input-text" name="reg_billing_phone" id="reg_billing_phone"
+               autocomplete="tel" value="<?php echo $val; ?>" required aria-required="true" />
+    </p>
+    <?php
+}
+
+// Require it on submit.
+add_action( 'woocommerce_register_post', 'shopys_register_validate_phone', 10, 3 );
+function shopys_register_validate_phone( $username, $email, $errors ) {
+    $phone = isset( $_POST['reg_billing_phone'] ) ? trim( wp_unslash( $_POST['reg_billing_phone'] ) ) : '';
+    if ( $phone === '' ) {
+        $errors->add( 'reg_billing_phone_error', __( 'Phone number is required.', 'shopys' ) );
+    } elseif ( strlen( preg_replace( '/\D/', '', $phone ) ) < 6 ) {
+        $errors->add( 'reg_billing_phone_invalid', __( 'Please enter a valid phone number.', 'shopys' ) );
+    }
+}
+
+// Save it to the new customer (also used as billing_phone at checkout).
+add_action( 'woocommerce_created_customer', 'shopys_register_save_phone' );
+function shopys_register_save_phone( $customer_id ) {
+    if ( ! empty( $_POST['reg_billing_phone'] ) ) {
+        $phone = sanitize_text_field( wp_unslash( $_POST['reg_billing_phone'] ) );
+        update_user_meta( $customer_id, 'billing_phone', $phone );
+    }
+}
+
 // ── 1. Enqueue CSS ───────────────────────────────────────────────────────────
 add_action( 'wp_enqueue_scripts', 'shopys_customer_login_assets' );
 function shopys_customer_login_assets() {

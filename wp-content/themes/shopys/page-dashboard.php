@@ -34,6 +34,53 @@ if ( $active_tab === 'users' && ! $is_site_owner ) $active_tab = 'overview';
 if ( $active_tab === 'telegram-users' && ! $is_site_owner ) $active_tab = 'overview';
 if ( $active_tab === 'guest-users' && ! $is_site_owner ) $active_tab = 'overview';
 
+// ── Users → Export to Excel (CSV), respects the month filter ──────────────────
+if ( $is_site_owner && isset( $_GET['export'] ) && $_GET['export'] === 'users_csv' ) {
+    $ex_month = ( ! empty( $_GET['u_month'] ) && preg_match( '/^\d{4}-\d{2}$/', $_GET['u_month'] ) ) ? $_GET['u_month'] : '';
+    $ex_role  = isset( $_GET['u_role'] ) ? sanitize_key( $_GET['u_role'] ) : '';
+    $ex_args  = array( 'orderby' => 'registered', 'order' => 'DESC', 'number' => -1 );
+    if ( $ex_month ) {
+        $ex_start = $ex_month . '-01 00:00:00';
+        $ex_end   = date( 'Y-m-t 23:59:59', strtotime( $ex_start ) );
+        $ex_args['date_query'] = array( array( 'column' => 'user_registered', 'after' => $ex_start, 'before' => $ex_end, 'inclusive' => true ) );
+    }
+    if ( $ex_role ) $ex_args['role'] = $ex_role;
+    $ex_users  = get_users( $ex_args );
+    // Search across name / login / email / phone.
+    $ex_search = isset( $_GET['u_search'] ) ? trim( sanitize_text_field( wp_unslash( $_GET['u_search'] ) ) ) : '';
+    if ( $ex_search !== '' ) {
+        $ex_t = function_exists( 'mb_strtolower' ) ? mb_strtolower( $ex_search ) : strtolower( $ex_search );
+        $ex_users = array_filter( $ex_users, function ( $eu ) use ( $ex_t ) {
+            $ph  = get_user_meta( $eu->ID, 'billing_phone', true );
+            $hay = strtolower( $eu->display_name . ' ' . $eu->user_login . ' ' . $eu->user_email . ' ' . $ph );
+            return strpos( $hay, $ex_t ) !== false;
+        } );
+    }
+    nocache_headers();
+    header( 'Content-Type: text/csv; charset=utf-8' );
+    header( 'Content-Disposition: attachment; filename="users-' . ( $ex_role ?: 'all' ) . '-' . ( $ex_month ?: 'all' ) . '.csv"' );
+    $out = fopen( 'php://output', 'w' );
+    fwrite( $out, "\xEF\xBB\xBF" ); // UTF-8 BOM so Excel shows Khmer/accents correctly
+    fputcsv( $out, array( 'No', 'ID', 'Name', 'Email', 'Phone', 'Role', 'Registered', 'Last Login' ) );
+    $ex_no = 0;
+    foreach ( $ex_users as $eu ) {
+        $ex_no++;
+        $ll = get_user_meta( $eu->ID, 'shopys_last_login', true );
+        fputcsv( $out, array(
+            $ex_no,
+            $eu->ID,
+            $eu->display_name ?: $eu->user_login,
+            $eu->user_email,
+            get_user_meta( $eu->ID, 'billing_phone', true ),
+            ! empty( $eu->roles ) ? $eu->roles[0] : '',
+            $eu->user_registered,
+            $ll ?: '',
+        ) );
+    }
+    fclose( $out );
+    exit;
+}
+
 // ── VIP / VVIP toggle handler ─────────────────────────────────────────────────
 if (
     $is_site_owner &&
@@ -182,6 +229,7 @@ $tc_months     = [];
 $top_sort      = ( isset( $_GET['top_sort'] ) && $_GET['top_sort'] === 'orders' ) ? 'orders' : 'spent';
 $top_status    = isset( $_GET['top_status'] ) ? sanitize_text_field( wp_unslash( $_GET['top_status'] ) ) : 'wc-completed';
 $top_month     = ( ! empty( $_GET['top_month'] ) && preg_match( '/^\d{4}-\d{2}$/', $_GET['top_month'] ) ) ? $_GET['top_month'] : '';
+$top_search    = isset( $_GET['top_search'] ) ? trim( sanitize_text_field( wp_unslash( $_GET['top_search'] ) ) ) : '';
 if ( class_exists( 'WooCommerce' ) ) {
     global $wpdb;
     $tc_os       = $wpdb->prefix . 'wc_order_stats';
@@ -194,7 +242,7 @@ if ( class_exists( 'WooCommerce' ) ) {
         // Months that actually have orders, for the dropdown.
         $tc_months = $wpdb->get_col( "SELECT DISTINCT DATE_FORMAT(date_created,'%Y-%m') AS ym FROM {$tc_os} ORDER BY ym DESC" );
 
-        // Build the WHERE clause (status + month) safely.
+        // Build the WHERE clause (status + month + search) safely.
         $tc_where = [];
         if ( $top_status !== 'all' ) {
             $tc_where[] = $wpdb->prepare( 'o.status = %s', $top_status );
@@ -204,22 +252,40 @@ if ( class_exists( 'WooCommerce' ) ) {
             $m_end      = date( 'Y-m-d H:i:s', strtotime( $m_start . ' +1 month' ) );
             $tc_where[] = $wpdb->prepare( 'o.date_created >= %s AND o.date_created < %s', $m_start, $m_end );
         }
+        if ( $top_search !== '' ) {
+            $tc_like = '%' . $wpdb->esc_like( $top_search ) . '%';
+            $tc_where[] = $wpdb->prepare( '(c.first_name LIKE %s OR c.last_name LIKE %s OR c.email LIKE %s OR c.username LIKE %s)', $tc_like, $tc_like, $tc_like, $tc_like );
+        }
         $tc_where_sql = $tc_where ? ( 'WHERE ' . implode( ' AND ', $tc_where ) ) : '';
-
         $tc_order = $top_sort === 'orders' ? 'orders DESC, spent DESC' : 'spent DESC, orders DESC';
-        $top_customers = $wpdb->get_results(
-            "SELECT o.customer_id,
-                    c.first_name, c.last_name, c.email, c.username, c.user_id, c.country, c.city,
-                    COUNT(*) AS orders,
-                    SUM(o.total_sales) AS spent,
-                    MAX(o.date_created) AS last_order
-             FROM {$tc_os} o
-             LEFT JOIN {$tc_cl} c ON c.customer_id = o.customer_id
-             {$tc_where_sql}
-             GROUP BY o.customer_id
-             ORDER BY {$tc_order}
-             LIMIT 50"
-        );
+        $tc_select = "SELECT o.customer_id, c.first_name, c.last_name, c.email, c.username, c.user_id, c.country, c.city,
+                    COUNT(*) AS orders, SUM(o.total_sales) AS spent, MAX(o.date_created) AS last_order
+             FROM {$tc_os} o LEFT JOIN {$tc_cl} c ON c.customer_id = o.customer_id
+             {$tc_where_sql} GROUP BY o.customer_id ORDER BY {$tc_order}";
+
+        // Export to Excel (CSV) — respects status / month / search / sort.
+        if ( $is_site_owner && isset( $_GET['export'] ) && $_GET['export'] === 'topcust_csv' ) {
+            $rows = $wpdb->get_results( $tc_select . ' LIMIT 5000' );
+            $sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_woocommerce_currency_symbol() : '$';
+            nocache_headers();
+            header( 'Content-Type: text/csv; charset=utf-8' );
+            header( 'Content-Disposition: attachment; filename="top-customers-' . ( $top_status === 'all' ? 'all' : preg_replace( '/^wc-/', '', $top_status ) ) . '-' . ( $top_month ?: 'all' ) . '.csv"' );
+            $out = fopen( 'php://output', 'w' );
+            fwrite( $out, "\xEF\xBB\xBF" );
+            fputcsv( $out, array( 'No', 'Customer', 'Email', 'Orders', 'Total Spent', 'Location', 'Last Order' ) );
+            $no = 0;
+            foreach ( $rows as $r ) {
+                $no++;
+                $cname = trim( $r->first_name . ' ' . $r->last_name );
+                if ( $cname === '' ) $cname = $r->username ?: ( $r->email ?: 'Customer #' . $r->customer_id );
+                $loc = trim( ( $r->city ?: '' ) . ( $r->country ? ( $r->city ? ', ' : '' ) . $r->country : '' ) );
+                fputcsv( $out, array( $no, $cname, $r->email, (int) $r->orders, $sym . number_format( (float) $r->spent, 2 ), $loc, ( $r->last_order ? date( 'Y-m-d', strtotime( $r->last_order ) ) : '' ) ) );
+            }
+            fclose( $out );
+            exit;
+        }
+
+        $top_customers = $wpdb->get_results( $tc_select . ' LIMIT 50' );
     }
 }
 $tc_symbol = function_exists( 'get_woocommerce_currency_symbol' ) ? get_woocommerce_currency_symbol() : '$';
@@ -3078,7 +3144,29 @@ body {
         <!-- ── USERS TAB ──────────────────────────────────────────────── -->
         <div class="ds-panel <?php echo $active_tab === 'users' ? 'active' : ''; ?>" id="panel-users">
         <?php if ( $active_tab === 'users' ) :
-            $all_users = get_users( [ 'orderby' => 'registered', 'order' => 'DESC', 'number' => 200 ] );
+            $u_month = ( ! empty( $_GET['u_month'] ) && preg_match( '/^\d{4}-\d{2}$/', $_GET['u_month'] ) ) ? $_GET['u_month'] : '';
+            $u_role  = isset( $_GET['u_role'] ) ? sanitize_key( $_GET['u_role'] ) : '';
+            $u_args  = [ 'orderby' => 'registered', 'order' => 'DESC', 'number' => 500 ];
+            if ( $u_month ) {
+                $u_start = $u_month . '-01 00:00:00';
+                $u_end   = date( 'Y-m-t 23:59:59', strtotime( $u_start ) );
+                $u_args['date_query'] = [ [ 'column' => 'user_registered', 'after' => $u_start, 'before' => $u_end, 'inclusive' => true ] ];
+            }
+            if ( $u_role ) $u_args['role'] = $u_role;
+            $all_users = get_users( $u_args );
+            // Search across name / login / email / phone.
+            $u_search = isset( $_GET['u_search'] ) ? trim( sanitize_text_field( wp_unslash( $_GET['u_search'] ) ) ) : '';
+            if ( $u_search !== '' ) {
+                $u_t = strtolower( $u_search );
+                $all_users = array_values( array_filter( $all_users, function ( $u ) use ( $u_t ) {
+                    $ph  = get_user_meta( $u->ID, 'billing_phone', true );
+                    return strpos( strtolower( $u->display_name . ' ' . $u->user_login . ' ' . $u->user_email . ' ' . $ph ), $u_t ) !== false;
+                } ) );
+            }
+            // Months that have registrations (for the dropdown).
+            global $wpdb;
+            $u_months   = $wpdb->get_col( "SELECT DISTINCT DATE_FORMAT(user_registered,'%Y-%m') ym FROM {$wpdb->users} ORDER BY ym DESC" );
+            $u_all_roles = function_exists( 'wp_roles' ) ? wp_roles()->get_names() : []; // slug => label
             $role_labels = [
                 'administrator' => 'Administrator',
                 'editor'        => 'Editor',
@@ -3140,14 +3228,38 @@ body {
         </div>
 
         <div class="ds-table-wrap">
-            <div class="ds-table-head" style="display:flex;align-items:center;justify-content:space-between;">
-                <span>All Users <span style="color:var(--muted);font-weight:400;font-size:12px;margin-left:6px;"><?php echo count($all_users); ?> accounts</span></span>
+            <div class="ds-table-head" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                <span>All Users <span style="color:var(--muted);font-weight:400;font-size:12px;margin-left:6px;"><?php echo count($all_users); ?> account<?php echo count($all_users)===1?'':'s'; ?><?php echo ( $u_role && isset($u_all_roles[$u_role]) ) ? ' · ' . esc_html($u_all_roles[$u_role]) : ''; ?><?php echo $u_month ? ' · ' . esc_html( date_i18n('F Y', strtotime($u_month.'-01')) ) : ''; ?></span></span>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                    <?php $u_sel_css = 'padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;font-family:inherit;cursor:pointer;'; ?>
+                    <form method="get" action="<?php echo esc_url( home_url('/dashboard/') ); ?>" style="display:flex;gap:6px;align-items:center;margin:0;">
+                        <input type="hidden" name="tab" value="users">
+                        <input type="search" name="u_search" value="<?php echo esc_attr( $u_search ); ?>" placeholder="Search name, email, phone…" style="<?php echo $u_sel_css; ?>min-width:200px;">
+                        <select name="u_role" onchange="this.form.submit()" style="<?php echo $u_sel_css; ?>">
+                            <option value="">All roles</option>
+                            <?php foreach ( (array) $u_all_roles as $rk => $rlabel ) : ?>
+                            <option value="<?php echo esc_attr( $rk ); ?>" <?php selected( $u_role, $rk ); ?>><?php echo esc_html( $rlabel ); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <select name="u_month" onchange="this.form.submit()" style="<?php echo $u_sel_css; ?>">
+                            <option value="">All months</option>
+                            <?php foreach ( (array) $u_months as $m ) : if ( ! $m ) continue; ?>
+                            <option value="<?php echo esc_attr( $m ); ?>" <?php selected( $u_month, $m ); ?>><?php echo esc_html( date_i18n( 'F Y', strtotime( $m . '-01' ) ) ); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </form>
+                    <a class="ds-store-btn" href="<?php echo esc_url( add_query_arg( [ 'tab' => 'users', 'export' => 'users_csv', 'u_role' => $u_role, 'u_month' => $u_month, 'u_search' => $u_search ], home_url('/dashboard/') ) ); ?>" title="Download as Excel/CSV">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                        Export Excel
+                    </a>
+                </div>
             </div>
             <?php if ( $all_users ) : ?>
             <table class="ds-table">
                 <thead><tr>
                     <th>#</th>
                     <th>User</th>
+                    <th>Phone</th>
                     <th>Role</th>
                     <th>Registered</th>
                     <th>Last Login</th>
@@ -3195,6 +3307,7 @@ body {
                             </div>
                         </div>
                     </td>
+                    <td style="font-size:12.5px;white-space:nowrap;"><?php $u_phone = get_user_meta( $u->ID, 'billing_phone', true ); echo $u_phone ? esc_html( $u_phone ) : '<span style="color:var(--muted);">—</span>'; ?></td>
                     <td><span class="user-role-badge <?php echo $role_class; ?>"><?php echo esc_html($role_label); ?></span></td>
                     <td style="font-size:12px;white-space:nowrap;">
                         <div><?php echo esc_html($reg_disp); ?></div>
@@ -3224,11 +3337,12 @@ body {
         <div class="ds-panel <?php echo $active_tab === 'top-customers' ? 'active' : ''; ?>" id="panel-top-customers">
         <?php if ( $active_tab === 'top-customers' ) :
             // Base URL preserving the active status + month filters (used by the Rank-by links).
-            $tc_base = add_query_arg( [ 'tab' => 'top-customers', 'top_status' => $top_status, 'top_month' => $top_month ], home_url( '/dashboard/' ) );
+            $tc_base = add_query_arg( [ 'tab' => 'top-customers', 'top_status' => $top_status, 'top_month' => $top_month, 'top_search' => $top_search ], home_url( '/dashboard/' ) );
         ?>
             <form method="get" action="<?php echo esc_url( home_url( '/dashboard/' ) ); ?>" class="sv-filter">
                 <input type="hidden" name="tab" value="top-customers">
                 <input type="hidden" name="top_sort" value="<?php echo esc_attr( $top_sort ); ?>">
+                <input type="search" name="top_search" value="<?php echo esc_attr( $top_search ); ?>" placeholder="Search customer / email…" style="padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;font-family:inherit;min-width:200px;">
                 <label>Status:</label>
                 <select name="top_status">
                     <option value="all" <?php selected( $top_status, 'all' ); ?>>All statuses</option>
@@ -3251,7 +3365,13 @@ body {
                 <a class="an-period-btn <?php echo $top_sort === 'orders' ? 'active' : ''; ?>" href="<?php echo esc_url( add_query_arg( 'top_sort', 'orders', $tc_base ) ); ?>">Order Count</a>
             </div>
             <div class="ds-table-wrap">
-                <div class="ds-table-head">Top Customers <span style="color:var(--muted);font-weight:400;font-size:12px;">— ranked by completed orders only</span></div>
+                <div class="ds-table-head" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                    <span>Top Customers <span style="color:var(--muted);font-weight:400;font-size:12px;"><?php echo count( (array) $top_customers ); ?> shown<?php echo $top_search !== '' ? ' · “' . esc_html( $top_search ) . '”' : ''; ?></span></span>
+                    <a class="ds-store-btn" href="<?php echo esc_url( add_query_arg( [ 'tab' => 'top-customers', 'export' => 'topcust_csv', 'top_status' => $top_status, 'top_month' => $top_month, 'top_search' => $top_search, 'top_sort' => $top_sort ], home_url('/dashboard/') ) ); ?>" title="Download as Excel/CSV">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                        Export Excel
+                    </a>
+                </div>
                 <?php if ( $top_customers ) : ?>
                 <table class="ds-table">
                     <thead><tr>

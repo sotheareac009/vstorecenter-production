@@ -285,6 +285,20 @@ function khqrpay_confirm_order_if_paid( WC_Order $order ) {
         $amtOk   = ( $paidAmt === null ) || ( $expected <= 0 ) || ( abs( $paidAmt - $expected ) < 1 );
         if ( ! $amtOk ) { khqrpay_log( 'amount mismatch order ' . $order->get_id(), array( 'paid' => $paidAmt, 'want' => $expected ) ); continue; }
 
+        // Capture the sender (payer) details from Bakong's response (field names vary).
+        $d = isset( $data['data'] ) && is_array( $data['data'] ) ? $data['data'] : array();
+        $first = function ( $keys ) use ( $d ) {
+            foreach ( (array) $keys as $k ) { if ( ! empty( $d[ $k ] ) ) return (string) $d[ $k ]; }
+            return '';
+        };
+        $from_acct = $first( array( 'fromAccountId', 'fromAccount', 'payerAccountId', 'senderAccountId', 'sourceAccountId' ) );
+        $from_name = $first( array( 'payerName', 'fromName', 'senderName', 'fromAccountName' ) );
+        if ( $from_acct !== '' ) $order->update_meta_data( '_khqrpay_from_account', sanitize_text_field( $from_acct ) );
+        if ( $from_name !== '' ) $order->update_meta_data( '_khqrpay_from_name', sanitize_text_field( $from_name ) );
+        if ( ! empty( $d['hash'] ) ) $order->update_meta_data( '_khqrpay_tx_hash', sanitize_text_field( (string) $d['hash'] ) );
+        // Log the full payload once so we can confirm the exact sender field if needed.
+        khqrpay_log( 'paid data order ' . $order->get_id(), $d );
+
         $order->payment_complete( $md5 );
         $order->add_order_note( 'KHQR payment confirmed by Bakong Open API (md5 ' . $md5 . ', bill ' . $order->get_meta( '_khqrpay_bill' ) . ').' );
         khqrpay_log( 'order ' . $order->get_id() . ' marked paid (md5 ' . $md5 . ')' );
