@@ -26,7 +26,12 @@
 const RELAY_SECRET    = 'CHANGE_ME_to_a_long_random_string';
 // ▲▲▲ ----------------------------------------------------------------------------- ▲▲▲
 
-const BAKONG_ENDPOINT = 'https://api-bakong.nbc.gov.kh/v1/check_transaction_by_md5';
+// Whitelisted Bakong endpoints. Default is the transaction check; the store can
+// ask for another with ?ep=<key> (e.g. ?ep=deeplink for mobile bank-app links).
+const BAKONG_ENDPOINTS = array(
+    'check'    => 'https://api-bakong.nbc.gov.kh/v1/check_transaction_by_md5',
+    'deeplink' => 'https://api-bakong.nbc.gov.kh/v1/generate_deeplink_by_qr',
+);
 
 header( 'Content-Type: application/json' );
 header( 'X-Robots-Tag: noindex, nofollow' );
@@ -83,7 +88,11 @@ function khqr_relay_auth_header() {
 }
 $auth = khqr_relay_auth_header();
 
-$ch = curl_init( BAKONG_ENDPOINT );
+// Pick the (whitelisted) Bakong endpoint; unknown/missing ?ep falls back to the check.
+$ep       = isset( $_GET['ep'] ) ? (string) $_GET['ep'] : 'check';
+$endpoint = isset( BAKONG_ENDPOINTS[ $ep ] ) ? BAKONG_ENDPOINTS[ $ep ] : BAKONG_ENDPOINTS['check'];
+
+$ch = curl_init( $endpoint );
 curl_setopt_array( $ch, array(
     CURLOPT_POST           => true,
     CURLOPT_POSTFIELDS     => $body,

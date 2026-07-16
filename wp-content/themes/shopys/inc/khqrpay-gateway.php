@@ -260,6 +260,58 @@ function khqrpay_bakong_check( $md5 ) {
     return $data;
 }
 
+/** Generate a Bakong deeplink for a KHQR string — tapping it on a phone opens the
+ *  customer's banking app with the payment pre-filled (no screenshot needed).
+ *  Uses the same Cambodian-IP relay as the check call (?ep=deeplink). Returns ''
+ *  on any failure so the QR page still works without the button. */
+function khqrpay_bakong_deeplink( $qr, WC_Order $order ) {
+    $token = khqrpay_cfg( 'bakong_token' );
+    if ( $token === '' || $qr === '' ) return '';
+
+    $headers = array(
+        'Authorization' => 'Bearer ' . $token,
+        'Content-Type'  => 'application/json',
+        'Accept'        => 'application/json',
+    );
+    $relay = khqrpay_cfg( 'khqr_check_url' );
+    if ( $relay !== '' ) {
+        $url    = add_query_arg( 'ep', 'deeplink', $relay );
+        $secret = khqrpay_cfg( 'khqr_relay_secret' );
+        if ( $secret !== '' ) $headers['X-Relay-Secret'] = $secret;
+    } else {
+        $url = khqrpay_api_base() . '/generate_deeplink_by_qr';
+    }
+
+    // If Bakong's deeplink service errored recently, don't slow every mobile
+    // page load retrying it — back off for 6 hours.
+    if ( get_transient( 'khqrpay_deeplink_down' ) ) return '';
+
+    $resp = wp_remote_post( $url, array(
+        'timeout' => 8,
+        'headers' => $headers,
+        'body'    => wp_json_encode( array(
+            'qr'         => $qr,
+            'sourceInfo' => array(
+                'appIconUrl'          => get_site_icon_url( 192 ) ?: home_url( '/favicon.ico' ),
+                'appName'             => get_bloginfo( 'name' ),
+                'appDeepLinkCallback' => $order->get_checkout_order_received_url(),
+            ),
+        ) ),
+    ) );
+    if ( is_wp_error( $resp ) ) {
+        khqrpay_log( 'deeplink error', $resp->get_error_message() );
+        set_transient( 'khqrpay_deeplink_down', 1, 6 * HOUR_IN_SECONDS );
+        return '';
+    }
+    $data = json_decode( wp_remote_retrieve_body( $resp ), true );
+    if ( is_array( $data ) && isset( $data['responseCode'] ) && (int) $data['responseCode'] === 0 && ! empty( $data['data']['shortLink'] ) ) {
+        return (string) $data['data']['shortLink'];
+    }
+    khqrpay_log( 'deeplink failed', substr( (string) wp_remote_retrieve_body( $resp ), 0, 300 ) );
+    set_transient( 'khqrpay_deeplink_down', 1, 6 * HOUR_IN_SECONDS );
+    return '';
+}
+
 /**
  * Ask Bakong about every md5 ever generated for the order; on a confirmed match
  * (with amount), mark the order paid (idempotent). Returns true if paid.
@@ -473,6 +525,23 @@ function khqrpay_load_gateway() {
                 $amount_label = ( $cur === '116' ) ? number_format( (float) $amt, 0 ) . ' KHR' : '$' . number_format( (float) $amt, 2 );
             }
 
+            // Mobile: a Bakong deeplink lets the customer tap straight into their
+            // banking app instead of screenshotting the QR. Generated once per QR
+            // (cached against the current md5) and only for mobile visitors.
+            $deeplink = '';
+            if ( wp_is_mobile() ) {
+                $cur_md5  = (string) $order->get_meta( '_khqrpay_md5' );
+                $deeplink = (string) $order->get_meta( '_khqrpay_deeplink' );
+                if ( $deeplink === '' || (string) $order->get_meta( '_khqrpay_deeplink_md5' ) !== $cur_md5 ) {
+                    $deeplink = khqrpay_bakong_deeplink( $qr_str, $order );
+                    if ( $deeplink !== '' ) {
+                        $order->update_meta_data( '_khqrpay_deeplink', $deeplink );
+                        $order->update_meta_data( '_khqrpay_deeplink_md5', $cur_md5 );
+                        $order->save();
+                    }
+                }
+            }
+
             $poll_url = add_query_arg( array(
                 'action'   => 'khqrpay_poll',
                 'order_id' => $order->get_id(),
@@ -512,6 +581,17 @@ function khqrpay_load_gateway() {
             .khqrx-timer{ font-size:.78rem; color:#aab1bd; margin-top:5px; }
             .khqrx-banks{ display:flex; flex-wrap:wrap; justify-content:center; gap:7px; margin:16px 0 4px; }
             .khqrx-banks span{ font-size:.72rem; font-weight:700; color:#5b6472; background:#f3f5f8; border:1px solid #e7e9ee; border-radius:50px; padding:5px 12px; }
+            .khqrx-applink{ display:flex; align-items:center; justify-content:center; gap:9px; margin:14px 2px 0; padding:14px 18px; border-radius:13px; background:linear-gradient(135deg,#ef3b32,#c0140c); color:#fff !important; font-weight:800; font-size:.95rem; text-decoration:none !important; box-shadow:0 10px 24px rgba(224,32,22,.32); transition:transform .15s ease, box-shadow .15s ease; }
+            .khqrx-applink:active{ transform:scale(.97); box-shadow:0 5px 14px rgba(224,32,22,.3); }
+            .khqrx-applink svg{ width:18px; height:18px; flex-shrink:0; }
+            .khqrx-applink-note{ font-size:.72rem; color:#aab1bd; margin-top:8px; }
+            .khqrx-saveqr{ display:flex; align-items:center; justify-content:center; gap:9px; width:100%; margin:14px 0 0; padding:14px 18px; border:0; border-radius:13px; background:linear-gradient(135deg,#ef3b32,#c0140c); color:#fff; font-weight:800; font-size:.95rem; font-family:inherit; cursor:pointer; box-shadow:0 10px 24px rgba(224,32,22,.32); transition:transform .15s ease, box-shadow .15s ease; }
+            .khqrx-saveqr:active{ transform:scale(.97); box-shadow:0 5px 14px rgba(224,32,22,.3); }
+            .khqrx-saveqr svg{ width:18px; height:18px; flex-shrink:0; }
+            .khqrx-saveqr.is-secondary{ margin-top:10px; background:#fff; color:#c0140c; border:1.5px solid #f3c6c3; box-shadow:none; }
+            /* Share/deeplink buttons only make sense on the device that will pay —
+               show on phones + tablets (same 1024px breakpoint as the mobile menu). */
+            @media (min-width:1025px){ .khqrx-mobilepay{ display:none; } }
             .khqrx-hint{ font-size:.78rem; color:#9aa3b0; line-height:1.55; margin:12px 4px 4px; }
             .khqrx-foot{ display:flex; align-items:center; justify-content:center; gap:7px; padding:13px; background:#f6fffb; border-top:1px solid #e7f5ec; color:#0a9d4a; font-size:.76rem; font-weight:700; }
             .khqrx-foot svg{ width:14px; height:14px; }
@@ -561,6 +641,19 @@ function khqrpay_load_gateway() {
                         <div class="khqrx-status" id="khqr-status"><span class="khqrx-dot"></span><?php esc_html_e( 'Waiting for payment…', 'shopys' ); ?></div>
                         <div class="khqrx-timer" id="khqr-timer"></div>
                         <div class="khqrx-banks"><span>ABA</span><span>ACLEDA</span><span>Wing</span><span>Bakong</span></div>
+                        <div class="khqrx-mobilepay">
+                            <?php if ( $deeplink !== '' ) : ?>
+                            <a href="<?php echo esc_url( $deeplink ); ?>" class="khqrx-applink" id="khqr-applink">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
+                                <?php esc_html_e( 'Open Banking App to Pay', 'shopys' ); ?>
+                            </a>
+                            <?php endif; ?>
+                            <button type="button" class="khqrx-saveqr<?php echo $deeplink !== '' ? ' is-secondary' : ''; ?>" id="khqr-save-btn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/></svg>
+                                <?php esc_html_e( 'Share QR to Bank App & Pay', 'shopys' ); ?>
+                            </button>
+                            <div class="khqrx-applink-note"><?php esc_html_e( 'Share the QR to your bank app (ABA, ACLEDA…) — it scans automatically, then just confirm.', 'shopys' ); ?></div>
+                        </div>
                         <div class="khqrx-hint"><?php esc_html_e( 'Open your banking app → Scan to Pay. This page confirms automatically once your payment is received.', 'shopys' ); ?></div>
                     </div>
                     <div class="khqrx-foot">
@@ -594,6 +687,8 @@ function khqrpay_load_gateway() {
                 var qrData    = <?php echo wp_json_encode( $qr_str ); ?>;
                 var pollUrl   = <?php echo wp_json_encode( $poll_url ); ?>;
                 var returnUrl = <?php echo wp_json_encode( $return_url ); ?>;
+                var saveLabel = <?php echo wp_json_encode( $amount_label ); ?>;
+                var saveName  = <?php echo wp_json_encode( 'khqr-order-' . $order->get_id() . '.png' ); ?>;
                 var statusEl  = document.getElementById('khqr-status');
                 var timerEl   = document.getElementById('khqr-timer');
                 var done = false, started = Date.now();
@@ -620,6 +715,42 @@ function khqrpay_load_gateway() {
                     }
                 }
                 if (window.qrcode) draw(); else window.addEventListener('load', draw);
+
+                // ── Save QR as PNG (mobile): share sheet first (iOS → "Save Image"
+                //    lands in Photos, which bank apps can scan), download fallback.
+                var saveBtn = document.getElementById('khqr-save-btn');
+                if (saveBtn) saveBtn.addEventListener('click', function(){
+                    try {
+                        var qr = qrcode(0, 'M'); qr.addData(qrData); qr.make();
+                        var count = qr.getModuleCount(), scale = 14, quiet = 4 * scale;
+                        var side = count * scale + quiet * 2, label = 84;
+                        var c = document.createElement('canvas'); c.width = side; c.height = side + label;
+                        var ctx = c.getContext('2d');
+                        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+                        ctx.fillStyle = '#000';
+                        for (var r = 0; r < count; r++) for (var col = 0; col < count; col++)
+                            if (qr.isDark(r, col)) ctx.fillRect(quiet + col * scale, quiet + r * scale, scale, scale);
+                        ctx.fillStyle = '#0d1117'; ctx.textAlign = 'center';
+                        ctx.font = '700 40px -apple-system, BlinkMacSystemFont, sans-serif';
+                        ctx.fillText(saveLabel, side / 2, side + 46);
+                        function dl(blob){
+                            var a = document.createElement('a');
+                            a.href = URL.createObjectURL(blob); a.download = saveName;
+                            document.body.appendChild(a); a.click();
+                            setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+                        }
+                        c.toBlob(function(blob){
+                            if (!blob) return;
+                            var file;
+                            try { file = new File([blob], saveName, {type: 'image/png'}); } catch(e){}
+                            if (file && navigator.canShare && navigator.canShare({files:[file]}) && navigator.share) {
+                                navigator.share({files:[file]}).catch(function(err){
+                                    if (!err || err.name !== 'AbortError') dl(blob);
+                                });
+                            } else dl(blob);
+                        }, 'image/png');
+                    } catch(e){ alert('Could not save the QR — please screenshot it instead.'); }
+                });
 
                 // The QR stays valid until paid — just show a "waiting" indicator (no reload).
                 function tick(){
