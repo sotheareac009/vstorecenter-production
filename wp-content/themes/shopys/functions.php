@@ -1415,6 +1415,57 @@ function shopys_checkout_stepper_css() {
     body.woocommerce-checkout .woocommerce-billing-fields > h3{ display:none !important; }
     body.woocommerce-checkout .woocommerce-billing-fields::before{ content:"STEP 1  \00b7  DELIVERY ADDRESS"; display:block; font-size:12px; font-weight:800; letter-spacing:1px; color:#00a341; margin:0 0 16px; padding-bottom:12px; border-bottom:1px solid #eef0f4; font-family:"Play","Battambang",sans-serif; }
     body.woocommerce-checkout #order_review::before{ content:"STEP 2  \00b7  YOUR ORDER" !important; color:#00a341 !important; letter-spacing:1px !important; font-size:12px !important; font-weight:800 !important; }
+
+    /* ── Mobile / tablet: compact app-like checkout ─────────────────────── */
+    @media (max-width:768px){
+        /* Reclaim horizontal space — collapse the theme's nested wrappers */
+        body.woocommerce-checkout #content .container{ padding-left:8px !important; padding-right:8px !important; max-width:100% !important; width:100% !important; }
+        body.woocommerce-checkout .content-wrap,
+        body.woocommerce-checkout .primary-content-wrap,
+        body.woocommerce-checkout .thunk-content-wrap{ padding:0 !important; margin:0 !important; }
+        body.woocommerce-checkout #sidebar-primary{ display:none !important; }
+        body.woocommerce-checkout .primary-content-area{ width:100% !important; max-width:100% !important; flex:1 1 100% !important; }
+
+        /* Slim page header: keep the title, drop the breadcrumb */
+        body.woocommerce-checkout .page-head{ margin:6px 0 4px !important; padding:0 !important; }
+        body.woocommerce-checkout .page-head .breadcrumb-trail,
+        body.woocommerce-checkout .page-head .trail-items,
+        body.woocommerce-checkout .breadcrumb-trail{ display:none !important; }
+        body.woocommerce-checkout .page-head h1{ font-size:18px !important; margin:0 !important; }
+
+        /* Stepper + action bars */
+        .shopys-steps{ margin:2px auto 8px !important; gap:8px !important; }
+        .shopys-actions{ margin:0 0 8px !important; gap:8px !important; }
+        .shopys-actions .shopys-place{ flex:1; justify-content:center; }
+        .shopys-next{ width:100%; justify-content:center; }
+
+        /* Form fields: tighter rows, 16px inputs (stops iOS zoom-on-focus) */
+        body.woocommerce-checkout form.checkout .form-row{ margin:0 0 8px !important; padding:0 !important; float:none !important; width:100% !important; }
+        body.woocommerce-checkout form.checkout label{ font-size:12.5px !important; margin-bottom:3px !important; }
+        body.woocommerce-checkout form.checkout .input-text,
+        body.woocommerce-checkout form.checkout select,
+        body.woocommerce-checkout form.checkout textarea{ font-size:16px !important; padding:10px 12px !important; border-radius:10px !important; width:100% !important; }
+        body.woocommerce-checkout .woocommerce-billing-fields::before{ margin:0 0 10px !important; padding-bottom:8px !important; }
+
+        /* Order review table: compact, no letter-spacing blowout */
+        body.woocommerce-checkout #order_review{ padding:10px 8px !important; }
+        body.woocommerce-checkout .woocommerce-checkout-review-order-table{ font-size:13px !important; margin:0 0 8px !important; }
+        body.woocommerce-checkout .woocommerce-checkout-review-order-table th,
+        body.woocommerce-checkout .woocommerce-checkout-review-order-table td{ padding:7px 5px !important; letter-spacing:0 !important; line-height:1.35 !important; }
+        body.woocommerce-checkout .woocommerce-checkout-review-order-table thead th{ font-size:11px !important; }
+        body.woocommerce-checkout .woocommerce-checkout-review-order-table .order-total td,
+        body.woocommerce-checkout .woocommerce-checkout-review-order-table .order-total th{ font-size:15px !important; }
+
+        /* Coupon strip */
+        body.woocommerce-checkout .woocommerce-form-coupon-toggle .woocommerce-info{ padding:8px 10px !important; font-size:12.5px !important; margin:0 0 8px !important; line-height:1.4 !important; }
+        body.woocommerce-checkout form.checkout_coupon{ padding:10px !important; margin:0 0 8px !important; }
+
+        /* Payment area: tight, card-like (KHQR card layout lives in the gateway CSS) */
+        body.woocommerce-checkout #payment{ border-radius:14px !important; }
+        body.woocommerce-checkout #payment ul.payment_methods{ padding:8px !important; margin:0 !important; }
+        body.woocommerce-checkout #payment ul.payment_methods li{ padding:5px 3px !important; }
+        body.woocommerce-checkout #payment div.payment_box{ padding:6px 4px !important; margin:5px 0 0 !important; font-size:12.5px !important; }
+    }
     </style>
     <noscript><style>
     /* No-JS fallback: show the full single-page checkout so an order can still be placed */

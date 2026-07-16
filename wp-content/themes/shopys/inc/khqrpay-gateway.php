@@ -472,7 +472,14 @@ function khqrpay_load_gateway() {
             .khqr-pf-banks{ font-size:12px; color:#5b6472; font-weight:600; }
             .khqr-pf-secure{ display:inline-flex; align-items:center; gap:5px; font-size:11px; color:#0a9d4a; font-weight:600; margin-top:2px; }
             .khqr-pf-secure svg{ width:13px; height:13px; }
-            @media(max-width:480px){ .khqr-pf{ gap:11px; padding:12px; } .khqr-pf-badge{ width:54px; height:54px; } .khqr-pf-info strong{ font-size:13.5px; } }
+            /* Mobile: stack — KHQR badge on top, text centered below */
+            @media(max-width:768px){
+                .khqr-pf{ flex-direction:column; align-items:center; text-align:center; gap:8px; padding:12px 10px; }
+                .khqr-pf-badge{ width:52px; height:52px; }
+                .khqr-pf-info{ align-items:center; gap:2px; }
+                .khqr-pf-info strong{ font-size:13px; }
+                .khqr-pf-secure{ justify-content:center; }
+            }
             </style>
             <?php
         }
