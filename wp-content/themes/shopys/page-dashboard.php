@@ -119,6 +119,55 @@ if (
     exit;
 }
 
+// ── Order status update handler (dashboard Cart tab: single row + bulk) ───────
+if (
+    isset( $_POST['_wpnonce'] ) &&
+    wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'cart_order_status' ) &&
+    function_exists( 'wc_get_order' ) &&
+    ( isset( $_POST['co_row_update'] ) || ( isset( $_POST['co_do'] ) && $_POST['co_do'] === 'bulk' ) )
+) {
+    $co_valid = wc_get_order_statuses(); // 'wc-*' => label
+    $co_apply = function ( $oid, $status ) use ( $co_valid ) {
+        $status = sanitize_key( $status );
+        if ( $status === '' || ! array_key_exists( 'wc-' . $status, $co_valid ) ) return false;
+        $o = wc_get_order( (int) $oid );
+        if ( ! $o ) return false;
+        if ( $o->get_status() !== $status ) {
+            $o->update_status( $status, __( 'Status changed from dashboard.', 'shopys' ), true );
+        }
+        return true;
+    };
+
+    $co_done = 0;
+    if ( isset( $_POST['co_row_update'] ) ) {
+        // Single-row update
+        $oid    = (int) $_POST['co_row_update'];
+        $rowmap = ( isset( $_POST['co_row_status'] ) && is_array( $_POST['co_row_status'] ) ) ? $_POST['co_row_status'] : [];
+        $status = isset( $rowmap[ $oid ] ) ? wp_unslash( $rowmap[ $oid ] ) : '';
+        if ( $co_apply( $oid, $status ) ) $co_done = 1;
+    } else {
+        // Bulk update on the checked orders
+        $bulk_status = isset( $_POST['co_bulk_status'] ) ? wp_unslash( $_POST['co_bulk_status'] ) : '';
+        $ids         = ( isset( $_POST['co_ids'] ) && is_array( $_POST['co_ids'] ) ) ? array_map( 'intval', $_POST['co_ids'] ) : [];
+        foreach ( $ids as $oid ) {
+            if ( $co_apply( $oid, $bulk_status ) ) $co_done++;
+        }
+    }
+
+    $co_ret_month = ( ! empty( $_POST['co_ret_month'] ) && preg_match( '/^\d{4}-\d{2}$/', $_POST['co_ret_month'] ) ) ? $_POST['co_ret_month'] : '';
+    $co_ret_day   = ( ! empty( $_POST['co_ret_day'] ) && preg_match( '/^\d{4}-\d{2}-\d{2}$/', $_POST['co_ret_day'] ) ) ? $_POST['co_ret_day'] : '';
+    wp_safe_redirect( add_query_arg( array_filter( [
+        'tab'        => 'cart',
+        'co_pg'      => max( 1, (int) ( $_POST['co_pg'] ?? 1 ) ),
+        'co_status'  => sanitize_key( wp_unslash( $_POST['co_ret_status'] ?? '' ) ),
+        'co_month'   => $co_ret_month,
+        'co_day'     => $co_ret_day,
+        'co_search'  => sanitize_text_field( wp_unslash( $_POST['co_ret_search'] ?? '' ) ),
+        'co_updated' => $co_done,
+    ], 'strlen' ), home_url( '/dashboard/' ) ) );
+    exit;
+}
+
 // ── Collect Site-View data (safe even if view-counter isn't loaded) ───────────
 $has_vc = function_exists( 'shopys_vc_count_views' );
 
@@ -304,8 +353,8 @@ $menu_items = [
     'users'     => [ 'icon' => 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z', 'label' => 'Users', 'owner_only' => true ],
     'guest-users'    => [ 'icon' => 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z', 'label' => 'Chatbot Users', 'owner_only' => true ],
     'top-customers'  => [ 'icon' => 'M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z', 'label' => 'Top Customers' ],
-    'products'  => [ 'icon' => 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4', 'label' => 'Products', 'href' => admin_url( 'edit.php?post_type=product' ) ],
-    'orders'    => [ 'icon' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01', 'label' => 'Orders', 'href' => admin_url( 'edit.php?post_type=shop_order' ) ],
+    'cart'      => [ 'icon' => 'M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z', 'label' => 'Orders' ],
+    // 'products'  => [ 'icon' => 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4', 'label' => 'Products', 'href' => admin_url( 'edit.php?post_type=product' ) ],
     'wp-admin'  => [ 'icon' => 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z', 'label' => 'WP Admin', 'href' => admin_url(), 'owner_only' => true ],
 ];
 
@@ -3485,6 +3534,480 @@ body {
                 <?php endif; ?>
             </div>
         <?php endif; ?>
+        </div>
+
+        <!-- ── CART / ORDERS PANEL ───────────────────────────────────── -->
+        <div class="ds-panel <?php echo $active_tab === 'cart' ? 'active' : ''; ?>" id="panel-cart">
+        <?php if ( $active_tab === 'cart' ) :
+            if ( ! function_exists( 'wc_get_orders' ) ) : ?>
+            <p style="padding:24px;color:var(--muted);font-size:13px;">WooCommerce is not active.</p>
+            <?php else :
+            $co_search = isset( $_GET['co_search'] ) ? trim( sanitize_text_field( wp_unslash( $_GET['co_search'] ) ) ) : '';
+            $co_status = isset( $_GET['co_status'] ) ? sanitize_key( $_GET['co_status'] ) : '';
+            $co_month  = ( ! empty( $_GET['co_month'] ) && preg_match( '/^\d{4}-\d{2}$/', $_GET['co_month'] ) ) ? $_GET['co_month'] : '';
+            $co_day    = ( ! empty( $_GET['co_day'] ) && preg_match( '/^\d{4}-\d{2}-\d{2}$/', $_GET['co_day'] ) ) ? $_GET['co_day'] : '';
+
+            $co_sel_css      = 'padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;font-family:inherit;cursor:pointer;';
+            $co_all_statuses = wc_get_order_statuses(); // 'wc-processing' => 'Processing'
+            $co_status_norm  = ( $co_status && array_key_exists( 'wc-' . $co_status, $co_all_statuses ) ) ? $co_status : '';
+
+            // Shared status colour map (used by cards, list badges, and the detail view).
+            $co_card_map = [
+                'pending'    => [ 'Pending',    '#b45309', 'rgba(245,158,11,.14)' ],
+                'processing' => [ 'Processing', '#047857', 'rgba(16,185,129,.14)' ],
+                'on-hold'    => [ 'On hold',    '#6b7280', 'rgba(148,163,184,.16)' ],
+                'completed'  => [ 'Completed',  '#1d4ed8', 'rgba(59,130,246,.14)' ],
+                'cancelled'  => [ 'Cancelled',  '#b91c1c', 'rgba(239,68,68,.14)' ],
+                'refunded'   => [ 'Refunded',   '#7c3aed', 'rgba(139,92,246,.14)' ],
+                'failed'     => [ 'Failed',     '#b91c1c', 'rgba(239,68,68,.14)' ],
+            ];
+
+            // Detail view? (?tab=cart&co_order=<id>)
+            $co_view_id = isset( $_GET['co_order'] ) ? (int) $_GET['co_order'] : 0;
+            $co_view    = $co_view_id ? wc_get_order( $co_view_id ) : false;
+            $co_back    = add_query_arg( array_filter( [ 'tab' => 'cart', 'co_status' => $co_status, 'co_month' => $co_month, 'co_day' => $co_day, 'co_search' => $co_search, 'co_pg' => max( 1, (int) ( $_GET['co_pg'] ?? 1 ) ) ], 'strlen' ), home_url( '/dashboard/' ) );
+        ?>
+
+        <?php if ( $co_view ) :
+            $v_status  = $co_view->get_status();
+            $v_meta    = $co_card_map[ $v_status ] ?? [ ucfirst( str_replace( '-', ' ', $v_status ) ), '#6b7280', 'rgba(148,163,184,.16)' ];
+            $v_created = $co_view->get_date_created();
+            $v_name    = trim( $co_view->get_billing_first_name() . ' ' . $co_view->get_billing_last_name() );
+            if ( $v_name === '' ) $v_name = $co_view->get_billing_company() ?: '—';
+            $v_bill    = $co_view->get_formatted_billing_address();
+            $v_ship    = $co_view->get_formatted_shipping_address();
+            $v_totals  = $co_view->get_order_item_totals();
+            $v_delivery= $co_view->get_meta( '_delivery_option' );
+            $v_shop    = $co_view->get_meta( 'shop_branch' ) ?: $co_view->get_meta( '_shop_branch' );
+            $v_paidby  = $co_view->get_meta( '_khqrpay_from_account' );
+            $v_maplink = $co_view->get_meta( '_delivery_map' ) ?: $co_view->get_meta( 'billing_delivery_map' );
+        ?>
+        <div class="ds-table-wrap" style="margin-bottom:20px;">
+            <div class="ds-table-head" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                <span style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                    Order #<?php echo esc_html( $co_view->get_order_number() ); ?>
+                    <span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;color:<?php echo esc_attr( $v_meta[1] ); ?>;background:<?php echo esc_attr( $v_meta[2] ); ?>;"><?php echo esc_html( $v_meta[0] ); ?></span>
+                    <span style="color:var(--muted);font-weight:400;font-size:12px;"><?php echo $v_created ? esc_html( $v_created->date_i18n( 'j M Y, H:i' ) ) : ''; ?></span>
+                </span>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                    <a class="ds-store-btn" href="<?php echo esc_url( $co_view->get_edit_order_url() ); ?>" target="_blank">Open in WP Admin</a>
+                    <a class="ds-store-btn" href="<?php echo esc_url( $co_back ); ?>" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);">&laquo; Back to orders</a>
+                </div>
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:20px;align-items:start;">
+            <!-- Items + totals -->
+            <div class="ds-table-wrap">
+                <div class="ds-table-head">Items <span style="color:var(--muted);font-weight:400;font-size:12px;margin-left:6px;"><?php echo number_format_i18n( $co_view->get_item_count() ); ?></span></div>
+                <table class="ds-table">
+                    <thead><tr><th>Product</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Total</th></tr></thead>
+                    <tbody>
+                    <?php foreach ( $co_view->get_items() as $item ) :
+                        $prod = $item->get_product();
+                        $thumb = $prod ? $prod->get_image( [ 40, 40 ] ) : '';
+                        $plink = $prod ? get_edit_post_link( $prod->get_id() ) : '';
+                    ?>
+                    <tr>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <?php if ( $thumb ) echo wp_kses_post( $thumb ); ?>
+                                <div style="font-weight:600;font-size:13px;line-height:1.3;"><?php echo esc_html( $item->get_name() ); ?></div>
+                            </div>
+                        </td>
+                        <td style="text-align:center;font-weight:600;"><?php echo number_format_i18n( $item->get_quantity() ); ?></td>
+                        <td style="text-align:right;white-space:nowrap;"><?php echo wp_kses_post( wc_price( $item->get_total(), [ 'currency' => $co_view->get_currency() ] ) ); ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                    <?php if ( ! empty( $v_totals ) ) : ?>
+                    <tfoot>
+                        <?php foreach ( $v_totals as $tk => $trow ) : ?>
+                        <tr>
+                            <td colspan="2" style="text-align:right;color:var(--muted);<?php echo $tk === 'order_total' ? 'font-weight:800;color:var(--text);' : ''; ?>"><?php echo esc_html( $trow['label'] ); ?></td>
+                            <td style="text-align:right;white-space:nowrap;<?php echo $tk === 'order_total' ? 'font-weight:800;color:var(--green);' : ''; ?>"><?php echo wp_kses_post( $trow['value'] ); ?></td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tfoot>
+                    <?php endif; ?>
+                </table>
+            </div>
+
+            <!-- Customer + status -->
+            <div style="display:flex;flex-direction:column;gap:20px;">
+                <div class="ds-table-wrap" style="padding:0;">
+                    <div class="ds-table-head">Customer</div>
+                    <div style="padding:16px;font-size:13px;line-height:1.7;">
+                        <div style="font-weight:700;margin-bottom:6px;"><?php echo esc_html( $v_name ); ?></div>
+                        <?php if ( $co_view->get_billing_email() ) : ?><div>✉️ <a href="mailto:<?php echo esc_attr( $co_view->get_billing_email() ); ?>" style="color:var(--green);text-decoration:none;"><?php echo esc_html( $co_view->get_billing_email() ); ?></a></div><?php endif; ?>
+                        <?php if ( $co_view->get_billing_phone() ) : ?><div>📞 <?php echo esc_html( $co_view->get_billing_phone() ); ?></div><?php endif; ?>
+                        <?php if ( $v_bill ) : ?><div style="margin-top:10px;color:var(--muted);"><strong style="color:var(--text);">Billing</strong><br><?php echo wp_kses_post( $v_bill ); ?></div><?php endif; ?>
+                        <?php if ( $v_ship && $v_ship !== $v_bill ) : ?><div style="margin-top:10px;color:var(--muted);"><strong style="color:var(--text);">Shipping</strong><br><?php echo wp_kses_post( $v_ship ); ?></div><?php endif; ?>
+                        <?php if ( $co_view->get_customer_note() ) : ?><div style="margin-top:10px;padding:10px;background:var(--surface2);border-radius:8px;"><strong>Note:</strong> <?php echo esc_html( $co_view->get_customer_note() ); ?></div><?php endif; ?>
+                    </div>
+                </div>
+
+                <?php if ( $co_view->get_payment_method_title() || $v_delivery || $v_shop || $v_paidby || $v_maplink ) : ?>
+                <div class="ds-table-wrap" style="padding:0;">
+                    <div class="ds-table-head">Payment &amp; Delivery</div>
+                    <div style="padding:16px;font-size:13px;line-height:1.8;">
+                        <?php if ( $co_view->get_payment_method_title() ) : ?><div><span style="color:var(--muted);">Payment:</span> <strong><?php echo esc_html( $co_view->get_payment_method_title() ); ?></strong></div><?php endif; ?>
+                        <?php if ( $v_paidby ) : ?><div><span style="color:var(--muted);">Paid by:</span> <?php echo esc_html( $v_paidby ); ?></div><?php endif; ?>
+                        <?php if ( $v_delivery ) : ?><div><span style="color:var(--muted);">Delivery:</span> <?php echo esc_html( $v_delivery ); ?></div><?php endif; ?>
+                        <?php if ( $v_shop ) : ?><div><span style="color:var(--muted);">Shop:</span> <?php echo esc_html( $v_shop ); ?></div><?php endif; ?>
+                        <?php if ( $v_maplink ) : ?><div><span style="color:var(--muted);">Map:</span> <a href="<?php echo esc_url( $v_maplink ); ?>" target="_blank" style="color:var(--green);text-decoration:none;">Open location</a></div><?php endif; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <div class="ds-table-wrap" style="padding:0;">
+                    <div class="ds-table-head">Update status</div>
+                    <form method="post" style="padding:16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <?php wp_nonce_field( 'cart_order_status' ); ?>
+                        <input type="hidden" name="co_pg" value="<?php echo esc_attr( max( 1, (int) ( $_GET['co_pg'] ?? 1 ) ) ); ?>">
+                        <input type="hidden" name="co_ret_status" value="<?php echo esc_attr( $co_status_norm ); ?>">
+                        <input type="hidden" name="co_ret_month" value="<?php echo esc_attr( $co_month ); ?>">
+                        <input type="hidden" name="co_ret_day" value="<?php echo esc_attr( $co_day ); ?>">
+                        <input type="hidden" name="co_ret_search" value="<?php echo esc_attr( $co_search ); ?>">
+                        <select name="co_row_status[<?php echo esc_attr( $co_view_id ); ?>]" style="<?php echo $co_sel_css; ?>flex:1;min-width:150px;">
+                            <?php foreach ( $co_all_statuses as $sk => $sl ) : $skn = substr( $sk, 3 ); ?>
+                            <option value="<?php echo esc_attr( $skn ); ?>" <?php selected( $v_status, $skn ); ?>><?php echo esc_html( $sl ); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <button type="submit" name="co_row_update" value="<?php echo esc_attr( $co_view_id ); ?>" class="ds-store-btn" style="border:0;cursor:pointer;">Update</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <?php else :
+            // Date range as timestamps (exact day beats month).
+            $co_date = '';
+            if ( $co_day ) {
+                $co_date = strtotime( $co_day . ' 00:00:00' ) . '...' . strtotime( $co_day . ' 23:59:59' );
+            } elseif ( $co_month ) {
+                $co_m_start = $co_month . '-01';
+                $co_m_end   = date( 'Y-m-t', strtotime( $co_m_start ) );
+                $co_date    = strtotime( $co_m_start . ' 00:00:00' ) . '...' . strtotime( $co_m_end . ' 23:59:59' );
+            }
+
+            // ── Status breakdown cards (respect the date filter) ──
+            $co_counts    = [];
+            $co_total_all = 0;
+            foreach ( $co_card_map as $cs => $meta ) {
+                $args = [ 'status' => $cs, 'limit' => 1, 'paginate' => true, 'return' => 'ids' ];
+                if ( $co_date ) $args['date_created'] = $co_date;
+                $res            = wc_get_orders( $args );
+                $co_counts[$cs] = (int) $res->total;
+                $co_total_all  += $co_counts[$cs];
+            }
+
+            // ── Full filtered ID list (status + date), newest first ──
+            $list_args = [ 'limit' => -1, 'orderby' => 'date', 'order' => 'DESC', 'return' => 'ids' ];
+            if ( $co_status_norm ) $list_args['status'] = $co_status_norm;
+            if ( $co_date )        $list_args['date_created'] = $co_date;
+            $co_ids = wc_get_orders( $list_args );
+
+            // Search (order #, customer, email, phone) via WC search, intersected.
+            if ( $co_search !== '' && function_exists( 'wc_order_search' ) ) {
+                $co_ids = array_values( array_intersect( $co_ids, (array) wc_order_search( $co_search ) ) );
+            }
+
+            // ── Pagination ──
+            $co_per_page    = 20;
+            $co_total       = count( $co_ids );
+            $co_total_pages = max( 1, (int) ceil( $co_total / $co_per_page ) );
+            $co_pg          = isset( $_GET['co_pg'] ) ? max( 1, (int) $_GET['co_pg'] ) : 1;
+            $co_pg          = min( $co_pg, $co_total_pages );
+            $co_page_ids    = array_slice( $co_ids, ( $co_pg - 1 ) * $co_per_page, $co_per_page );
+
+            // Months that have orders (works with or without HPOS).
+            global $wpdb;
+            $co_hpos_tbl = $wpdb->prefix . 'wc_orders';
+            if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $co_hpos_tbl ) ) === $co_hpos_tbl ) {
+                $co_months = $wpdb->get_col( "SELECT DISTINCT DATE_FORMAT(date_created_gmt,'%Y-%m') ym FROM {$co_hpos_tbl} WHERE type='shop_order' AND date_created_gmt IS NOT NULL ORDER BY ym DESC" );
+            } else {
+                $co_months = $wpdb->get_col( "SELECT DISTINCT DATE_FORMAT(post_date,'%Y-%m') ym FROM {$wpdb->posts} WHERE post_type='shop_order' ORDER BY ym DESC" );
+            }
+
+            $co_sel_css = 'padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;font-family:inherit;cursor:pointer;';
+            // Base URL preserving current filters (for cards + pagination).
+            $co_base = add_query_arg( [ 'tab' => 'cart', 'co_status' => $co_status_norm, 'co_month' => $co_month, 'co_day' => $co_day, 'co_search' => $co_search ], home_url( '/dashboard/' ) );
+        ?>
+
+        <?php if ( isset( $_GET['co_updated'] ) && (int) $_GET['co_updated'] > 0 ) : $co_n = (int) $_GET['co_updated']; ?>
+        <div id="co-flash" style="background:#ecfdf3;border:1px solid #abefc6;color:#067647;padding:10px 16px;border-radius:10px;margin-bottom:16px;font-weight:600;transition:opacity .4s ease;">✓ <?php echo number_format_i18n( $co_n ); ?> order<?php echo $co_n === 1 ? '' : 's'; ?> updated.</div>
+        <script>
+        (function(){
+            // Strip co_updated from the URL so a refresh doesn't re-show this message.
+            if(window.history && history.replaceState){
+                var u = new URL(window.location.href);
+                u.searchParams.delete('co_updated');
+                history.replaceState(null, '', u.toString());
+            }
+            var f = document.getElementById('co-flash');
+            if(f) setTimeout(function(){ f.style.opacity='0'; setTimeout(function(){ f.remove(); }, 450); }, 4000);
+        })();
+        </script>
+        <?php endif; ?>
+
+        <!-- Status cards -->
+        <div class="ds-cards" style="margin-bottom:24px;">
+            <a class="ds-card" href="<?php echo esc_url( remove_query_arg( 'co_status', $co_base ) ); ?>" style="text-decoration:none;color:inherit;<?php echo $co_status_norm === '' ? 'outline:2px solid var(--green);' : ''; ?>">
+                <div class="ds-card-icon"><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></div>
+                <div class="ds-card-label">All Orders</div>
+                <div class="ds-card-value"><?php echo number_format_i18n( $co_total_all ); ?></div>
+                <div class="ds-card-sub"><?php echo $co_day ? esc_html( date_i18n( 'j M Y', strtotime( $co_day ) ) ) : ( $co_month ? esc_html( date_i18n( 'F Y', strtotime( $co_month . '-01' ) ) ) : 'All time' ); ?></div>
+            </a>
+            <?php foreach ( $co_card_map as $cs => $meta ) : ?>
+            <a class="ds-card" href="<?php echo esc_url( add_query_arg( 'co_status', $cs, $co_base ) ); ?>" style="text-decoration:none;color:inherit;<?php echo $co_status_norm === $cs ? 'outline:2px solid ' . esc_attr( $meta[1] ) . ';' : ''; ?>">
+                <div class="ds-card-icon" style="background:<?php echo esc_attr( $meta[2] ); ?>;border-color:<?php echo esc_attr( $meta[2] ); ?>;">
+                    <svg viewBox="0 0 24 24" style="color:<?php echo esc_attr( $meta[1] ); ?>;"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <div class="ds-card-label"><?php echo esc_html( $meta[0] ); ?></div>
+                <div class="ds-card-value"><?php echo number_format_i18n( $co_counts[$cs] ); ?></div>
+                <div class="ds-card-sub">Orders <?php echo esc_html( strtolower( $meta[0] ) ); ?></div>
+            </a>
+            <?php endforeach; ?>
+        </div>
+
+        <div class="ds-table-wrap">
+            <div class="ds-table-head" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                <span>Orders <span style="color:var(--muted);font-weight:400;font-size:12px;margin-left:6px;"><?php echo number_format_i18n( $co_total ); ?> result<?php echo $co_total === 1 ? '' : 's'; ?><?php echo $co_status_norm && isset( $co_all_statuses['wc-' . $co_status_norm] ) ? ' · ' . esc_html( $co_all_statuses['wc-' . $co_status_norm] ) : ''; ?></span></span>
+                <form method="get" action="<?php echo esc_url( home_url('/dashboard/') ); ?>" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0;">
+                    <input type="hidden" name="tab" value="cart">
+                    <input type="search" name="co_search" value="<?php echo esc_attr( $co_search ); ?>" placeholder="Search order #, name, email…" style="<?php echo $co_sel_css; ?>min-width:200px;">
+                    <select name="co_status" onchange="this.form.submit()" style="<?php echo $co_sel_css; ?>">
+                        <option value="">All statuses</option>
+                        <?php foreach ( $co_all_statuses as $sk => $sl ) : $skn = substr( $sk, 3 ); ?>
+                        <option value="<?php echo esc_attr( $skn ); ?>" <?php selected( $co_status_norm, $skn ); ?>><?php echo esc_html( $sl ); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <select name="co_month" onchange="this.form.submit()" style="<?php echo $co_sel_css; ?>">
+                        <option value="">All months</option>
+                        <?php foreach ( (array) $co_months as $mo ) : if ( ! $mo ) continue; ?>
+                        <option value="<?php echo esc_attr( $mo ); ?>" <?php selected( $co_month, $mo ); ?>><?php echo esc_html( date_i18n( 'F Y', strtotime( $mo . '-01' ) ) ); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <input type="date" name="co_day" value="<?php echo esc_attr( $co_day ); ?>" onchange="this.form.submit()" title="Filter by exact day (overrides month)" style="<?php echo $co_sel_css; ?>">
+                    <button type="submit" class="ds-store-btn" style="border:0;cursor:pointer;">Search</button>
+                    <?php if ( $co_search || $co_status_norm || $co_month || $co_day ) : ?>
+                    <a href="<?php echo esc_url( add_query_arg( 'tab', 'cart', home_url('/dashboard/') ) ); ?>" title="Clear filters" style="color:var(--muted);text-decoration:none;font-size:16px;line-height:1;padding:0 2px;">&times;</a>
+                    <?php endif; ?>
+                </form>
+            </div>
+
+            <?php if ( empty( $co_page_ids ) ) : ?>
+            <p style="padding:24px;color:var(--muted);font-size:13px;">No orders found.</p>
+            <?php else : ?>
+            <form method="post" id="co-bulk-form">
+                <?php wp_nonce_field( 'cart_order_status' ); ?>
+                <input type="hidden" name="co_pg" value="<?php echo esc_attr( $co_pg ); ?>">
+                <input type="hidden" name="co_ret_status" value="<?php echo esc_attr( $co_status_norm ); ?>">
+                <input type="hidden" name="co_ret_month" value="<?php echo esc_attr( $co_month ); ?>">
+                <input type="hidden" name="co_ret_day" value="<?php echo esc_attr( $co_day ); ?>">
+                <input type="hidden" name="co_ret_search" value="<?php echo esc_attr( $co_search ); ?>">
+
+                <!-- Bulk-action toolbar -->
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--border);">
+                    <span id="co-sel-count" style="font-size:12px;color:var(--muted);font-weight:600;min-width:80px;">0 selected</span>
+                    <select name="co_bulk_status" style="<?php echo $co_sel_css; ?>">
+                        <option value="">Bulk action…</option>
+                        <?php foreach ( $co_all_statuses as $sk => $sl ) : $skn = substr( $sk, 3 ); ?>
+                        <option value="<?php echo esc_attr( $skn ); ?>">Mark as <?php echo esc_html( $sl ); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <button type="submit" name="co_do" value="bulk" class="ds-store-btn" style="border:0;cursor:pointer;">Apply</button>
+                </div>
+
+                <table class="ds-table">
+                <thead><tr>
+                    <th style="width:34px;text-align:center;"><input type="checkbox" class="co-check-all" title="Select all on this page" style="cursor:pointer;"></th>
+                    <th>Order</th>
+                    <th>Date</th>
+                    <th>Customer</th>
+                    <th style="text-align:right;">Total</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr></thead>
+                <tbody>
+                <?php foreach ( $co_page_ids as $oid ) :
+                    $order = wc_get_order( $oid );
+                    if ( ! $order ) continue;
+                    $o_status  = $order->get_status(); // no wc- prefix
+                    $o_meta    = $co_card_map[ $o_status ] ?? [ ucfirst( $o_status ), '#6b7280', 'rgba(148,163,184,.16)' ];
+                    $o_name    = trim( $order->get_billing_first_name() . ' ' . $order->get_billing_last_name() );
+                    if ( $o_name === '' ) $o_name = $order->get_billing_company() ?: '—';
+                    $o_email   = $order->get_billing_email();
+                    $o_phone   = $order->get_billing_phone();
+                    $o_created = $order->get_date_created();
+                    $o_items   = $order->get_item_count();
+                    $o_href    = add_query_arg( 'co_order', $oid, add_query_arg( 'co_pg', $co_pg, $co_base ) );
+                ?>
+                <tr class="co-row" data-href="<?php echo esc_url( $o_href ); ?>" style="cursor:pointer;">
+                    <td style="text-align:center;"><input type="checkbox" class="co-check" name="co_ids[]" value="<?php echo esc_attr( $oid ); ?>" style="cursor:pointer;"></td>
+                    <td>
+                        <a href="<?php echo esc_url( $order->get_edit_order_url() ); ?>" target="_blank" style="color:var(--green);font-weight:700;text-decoration:none;" title="Open in WP Admin">#<?php echo esc_html( $order->get_order_number() ); ?></a>
+                        <div style="font-size:11px;color:var(--muted);"><?php echo number_format_i18n( $o_items ); ?> item<?php echo $o_items === 1 ? '' : 's'; ?></div>
+                    </td>
+                    <td style="font-size:12px;white-space:nowrap;color:var(--muted);"><?php echo $o_created ? esc_html( $o_created->date_i18n( 'j M Y, H:i' ) ) : '—'; ?></td>
+                    <td>
+                        <div style="font-weight:600;font-size:13px;"><?php echo esc_html( $o_name ); ?></div>
+                        <div style="font-size:11px;color:var(--muted);"><?php echo esc_html( $o_email ?: ( $o_phone ?: '' ) ); ?></div>
+                    </td>
+                    <td style="text-align:right;font-weight:700;color:var(--green);white-space:nowrap;"><?php echo wp_kses_post( $order->get_formatted_order_total() ); ?></td>
+                    <td>
+                        <span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;color:<?php echo esc_attr( $o_meta[1] ); ?>;background:<?php echo esc_attr( $o_meta[2] ); ?>;white-space:nowrap;"><?php echo esc_html( $o_meta[0] ); ?></span>
+                    </td>
+                    <td>
+                        <div style="display:flex;gap:6px;align-items:center;">
+                            <select name="co_row_status[<?php echo esc_attr( $oid ); ?>]" style="<?php echo $co_sel_css; ?>padding:5px 8px;font-size:12px;">
+                                <?php foreach ( $co_all_statuses as $sk => $sl ) : $skn = substr( $sk, 3 ); ?>
+                                <option value="<?php echo esc_attr( $skn ); ?>" <?php selected( $o_status, $skn ); ?>><?php echo esc_html( $sl ); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <button type="submit" name="co_row_update" value="<?php echo esc_attr( $oid ); ?>" class="ds-store-btn" style="border:0;cursor:pointer;padding:6px 12px;font-size:12px;">Update</button>
+                        </div>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+                </tbody>
+                </table>
+            </form>
+
+            <!-- Premium confirm modal -->
+            <style>
+            .co-modal{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;visibility:hidden;transition:opacity .2s ease,visibility .2s ease;}
+            .co-modal.open{opacity:1;visibility:visible;}
+            .co-modal__overlay{position:absolute;inset:0;background:rgba(8,12,20,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);}
+            .co-modal__card{position:relative;width:100%;max-width:400px;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px 26px 22px;box-shadow:0 24px 60px rgba(0,0,0,.4);text-align:center;transform:translateY(10px) scale(.96);opacity:0;transition:transform .24s cubic-bezier(.16,1,.3,1),opacity .24s ease;}
+            .co-modal.open .co-modal__card{transform:translateY(0) scale(1);opacity:1;}
+            .co-modal__icon{width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;background:rgba(245,158,11,.14);color:#f59e0b;}
+            .co-modal__icon svg{width:28px;height:28px;}
+            .co-modal__icon.is-danger{background:rgba(239,68,68,.14);color:#ef4444;}
+            .co-modal__title{margin:0 0 8px;font-size:18px;font-weight:800;color:var(--text);letter-spacing:-.01em;}
+            .co-modal__msg{margin:0 0 22px;font-size:14px;line-height:1.55;color:var(--muted);}
+            .co-modal__msg strong{color:var(--text);font-weight:800;}
+            .co-modal__actions{display:flex;gap:10px;justify-content:center;}
+            .co-modal__btn{flex:1;padding:11px 16px;border-radius:12px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;border:1px solid transparent;transition:opacity .15s ease,border-color .15s ease;}
+            .co-modal__btn--ghost{background:var(--surface2);border-color:var(--border);color:var(--text);}
+            .co-modal__btn--ghost:hover{border-color:var(--muted);}
+            .co-modal__btn--primary{background:linear-gradient(135deg,#13e800,#0fb500);color:#04210a;box-shadow:0 6px 16px rgba(19,232,0,.28);}
+            .co-modal__btn--primary:hover{opacity:.9;}
+            .co-modal__btn--primary.is-danger{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;box-shadow:0 6px 16px rgba(239,68,68,.3);}
+            @media (max-width:480px){ .co-modal__actions{flex-direction:column-reverse;} }
+            .co-row:hover{ background:var(--surface2); }
+            </style>
+            <div class="co-modal" id="co-modal" aria-hidden="true">
+                <div class="co-modal__overlay" data-co-close></div>
+                <div class="co-modal__card" role="dialog" aria-modal="true" aria-labelledby="co-modal-title">
+                    <div class="co-modal__icon" id="co-modal-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                    </div>
+                    <h3 class="co-modal__title" id="co-modal-title">Apply bulk update</h3>
+                    <p class="co-modal__msg" id="co-modal-msg"></p>
+                    <div class="co-modal__actions">
+                        <button type="button" class="co-modal__btn co-modal__btn--ghost" data-co-close>Cancel</button>
+                        <button type="button" class="co-modal__btn co-modal__btn--primary" id="co-modal-confirm">Apply</button>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+            (function(){
+                var form = document.getElementById('co-bulk-form');
+                if(!form) return;
+                var all   = form.querySelector('.co-check-all');
+                var boxes = [].slice.call(form.querySelectorAll('.co-check'));
+                var count = document.getElementById('co-sel-count');
+                function refresh(){
+                    var n = boxes.filter(function(b){ return b.checked; }).length;
+                    if(count) count.textContent = n + ' selected';
+                    if(all){ all.checked = n>0 && n===boxes.length; all.indeterminate = n>0 && n<boxes.length; }
+                }
+                if(all) all.addEventListener('change', function(){ boxes.forEach(function(b){ b.checked = all.checked; }); refresh(); });
+                boxes.forEach(function(b){ b.addEventListener('change', refresh); });
+
+                // ── Row click → order detail (ignore clicks on controls/links) ──
+                [].slice.call(form.querySelectorAll('.co-row')).forEach(function(row){
+                    row.addEventListener('click', function(e){
+                        if(e.target.closest('a, button, input, select, label, option')) return;
+                        var href = row.getAttribute('data-href');
+                        if(href) window.location.href = href;
+                    });
+                });
+
+                // ── Premium modal ──
+                var modal  = document.getElementById('co-modal');
+                var mIcon  = document.getElementById('co-modal-icon');
+                var mTitle = document.getElementById('co-modal-title');
+                var mMsg   = document.getElementById('co-modal-msg');
+                var mOk    = document.getElementById('co-modal-confirm');
+                var mGhost = modal.querySelector('.co-modal__btn--ghost');
+                var DANGER = { failed:1, cancelled:1, refunded:1 };
+                var allowSubmit = false;
+
+                function closeModal(){ modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); }
+                function openModal(o){
+                    mTitle.textContent = o.title;
+                    mMsg.innerHTML = o.msg;
+                    mIcon.className = 'co-modal__icon' + (o.danger ? ' is-danger' : '');
+                    if(o.onConfirm){
+                        mGhost.style.display = '';
+                        mOk.textContent = o.okLabel || 'Confirm';
+                        mOk.className = 'co-modal__btn co-modal__btn--primary' + (o.danger ? ' is-danger' : '');
+                        mOk.onclick = function(){ closeModal(); o.onConfirm(); };
+                    } else {
+                        mGhost.style.display = 'none';
+                        mOk.textContent = 'Got it';
+                        mOk.className = 'co-modal__btn co-modal__btn--primary';
+                        mOk.onclick = closeModal;
+                    }
+                    modal.classList.add('open'); modal.setAttribute('aria-hidden','false');
+                }
+                modal.querySelectorAll('[data-co-close]').forEach(function(el){ el.addEventListener('click', closeModal); });
+                document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && modal.classList.contains('open')) closeModal(); });
+
+                form.addEventListener('submit', function(e){
+                    var btn = e.submitter;
+                    if(!(btn && btn.name === 'co_do' && btn.value === 'bulk')) return; // per-row updates pass through
+                    if(allowSubmit){ allowSubmit = false; return; }                    // confirmed → let it submit
+                    e.preventDefault();
+                    var sel = form.querySelector('[name="co_bulk_status"]');
+                    var chosen = boxes.filter(function(b){ return b.checked; });
+                    if(!chosen.length){ openModal({ title:'No orders selected', msg:'Tick at least one order before applying a bulk action.', danger:true }); return; }
+                    if(sel && !sel.value){ openModal({ title:'Choose an action', msg:'Pick a status from the <strong>Bulk action</strong> menu first.', danger:true }); return; }
+                    var opt = sel && sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].text : 'this status';
+                    var clean = opt.replace(/^Mark as\s*/i, '');
+                    var isDanger = !!DANGER[ sel ? sel.value : '' ];
+                    openModal({
+                        title: 'Apply bulk update',
+                        msg: 'Set <strong>'+ chosen.length +'</strong> selected order'+(chosen.length===1?'':'s')+' to <strong>'+ clean +'</strong>?',
+                        okLabel: opt,
+                        danger: isDanger,
+                        onConfirm: function(){ allowSubmit = true; form.requestSubmit(btn); }
+                    });
+                });
+                refresh();
+            })();
+            </script>
+
+            <?php if ( $co_total_pages > 1 ) : ?>
+            <div class="sv-pagination">
+                <?php if ( $co_pg > 1 ) : ?><a class="sv-pag-btn" href="<?php echo esc_url( add_query_arg( 'co_pg', $co_pg - 1, $co_base ) ); ?>">&lsaquo; Prev</a><?php else : ?><span class="sv-pag-btn disabled">&lsaquo; Prev</span><?php endif; ?>
+                <?php for ( $p = 1; $p <= $co_total_pages; $p++ ) :
+                    if ( $p == 1 || $p == $co_total_pages || abs( $p - $co_pg ) <= 2 ) : ?>
+                        <?php if ( $p == $co_pg ) : ?><span class="sv-pag-btn active"><?php echo $p; ?></span><?php else : ?><a class="sv-pag-btn" href="<?php echo esc_url( add_query_arg( 'co_pg', $p, $co_base ) ); ?>"><?php echo $p; ?></a><?php endif; ?>
+                    <?php elseif ( $p == 2 || $p == $co_total_pages - 1 ) : ?><span class="sv-pag-ellipsis">&hellip;</span><?php endif;
+                endfor; ?>
+                <?php if ( $co_pg < $co_total_pages ) : ?><a class="sv-pag-btn" href="<?php echo esc_url( add_query_arg( 'co_pg', $co_pg + 1, $co_base ) ); ?>">Next &rsaquo;</a><?php else : ?><span class="sv-pag-btn disabled">Next &rsaquo;</span><?php endif; ?>
+            </div>
+            <?php endif; ?>
+            <?php endif; // empty page ?>
+        </div>
+        <?php endif; // detail vs list ?>
+        <?php endif; // wc active ?>
+        <?php endif; // active tab cart ?>
         </div>
 
     </div><!-- .ds-content -->
