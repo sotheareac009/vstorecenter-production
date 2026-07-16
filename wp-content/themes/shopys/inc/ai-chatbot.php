@@ -75,7 +75,7 @@ add_action( 'after_switch_theme', 'shopys_ai_create_guest_table' );
 add_action( 'admin_init', 'shopys_ai_maybe_create_guest_table' );
 
 function shopys_ai_maybe_create_guest_table() {
-    if ( get_option( 'shopys_ai_guest_table_version' ) !== '1.3' ) {
+    if ( get_option( 'shopys_ai_guest_table_version' ) !== '1.4' ) {
         shopys_ai_create_guest_table();
     }
 }
@@ -115,6 +115,19 @@ function shopys_ai_create_guest_table() {
         KEY created_idx (created_at)
     ) {$charset}" );
 
+    // Member (logged-in website account) chat messages, keyed by user ID
+    $mem_table = $wpdb->prefix . 'chatbot_member_messages';
+    $wpdb->query( "CREATE TABLE IF NOT EXISTS {$mem_table} (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        user_id BIGINT UNSIGNED NOT NULL,
+        question TEXT,
+        answer MEDIUMTEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY user_idx (user_id),
+        KEY created_idx (created_at)
+    ) {$charset}" );
+
     // Migrations for existing tables
     $current_version = get_option( 'shopys_ai_guest_table_version', '1.0' );
     if ( version_compare( $current_version, '1.1', '<' ) ) {
@@ -124,7 +137,7 @@ function shopys_ai_create_guest_table() {
         $wpdb->query( "ALTER TABLE {$table} ADD COLUMN IF NOT EXISTS name VARCHAR(60) DEFAULT ''" );
     }
 
-    update_option( 'shopys_ai_guest_table_version', '1.3' );
+    update_option( 'shopys_ai_guest_table_version', '1.4' );
 }
 
 /**
@@ -157,6 +170,26 @@ function shopys_ai_guest_log_message( $question, $answer = '' ) {
             'created_at' => current_time( 'mysql' ),
         ),
         array( '%s', '%s', '%s', '%s' )
+    );
+}
+
+/**
+ * Log a logged-in member's chat message (question + optional answer) by user ID.
+ */
+function shopys_ai_member_log_message( $user_id, $question, $answer = '' ) {
+    $user_id  = (int) $user_id;
+    $question = trim( (string) $question );
+    if ( $user_id <= 0 || $question === '' ) return;
+    global $wpdb;
+    $wpdb->insert(
+        $wpdb->prefix . 'chatbot_member_messages',
+        array(
+            'user_id'    => $user_id,
+            'question'   => $question,
+            'answer'     => (string) $answer,
+            'created_at' => current_time( 'mysql' ),
+        ),
+        array( '%d', '%s', '%s', '%s' )
     );
 }
 
@@ -1943,6 +1976,9 @@ function shopys_ai_get_status_handler() {
 function shopys_ai_chat_handler() {
     check_ajax_referer( 'shopys_ai_nonce', 'nonce' );
 
+    // Ensure the guest/member chat tables exist (front-end AJAX doesn't fire admin_init).
+    shopys_ai_maybe_create_guest_table();
+
     $tg_id        = 0;
     $ai_remaining = -1; // -1 = unlimited
     // ── Daily message limits (Telegram login removed — uses WEBSITE account) ──
@@ -1992,12 +2028,16 @@ function shopys_ai_chat_handler() {
         wp_send_json_error( array( 'message' => 'Please type a message or attach a file.' ) );
     }
 
-    // Log the question for guests only (logged-in users aren't tracked as guests)
-    if ( ! is_user_logged_in() && ! empty( $message ) ) {
-        shopys_ai_guest_log_message( $message );
-        // Save the guest's chosen display name, if provided
-        if ( ! empty( $_POST['guest_name'] ) ) {
-            shopys_ai_guest_set_name( sanitize_text_field( wp_unslash( $_POST['guest_name'] ) ) );
+    // Log the question. Guests are tracked by IP; members by their user ID.
+    if ( ! empty( $message ) ) {
+        if ( is_user_logged_in() ) {
+            shopys_ai_member_log_message( get_current_user_id(), $message );
+        } else {
+            shopys_ai_guest_log_message( $message );
+            // Save the guest's chosen display name, if provided
+            if ( ! empty( $_POST['guest_name'] ) ) {
+                shopys_ai_guest_set_name( sanitize_text_field( wp_unslash( $_POST['guest_name'] ) ) );
+            }
         }
     }
 

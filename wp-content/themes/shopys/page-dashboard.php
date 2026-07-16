@@ -37,9 +37,12 @@ if ( $active_tab === 'guest-users' && ! $is_site_owner ) $active_tab = 'overview
 // ── Users → Export to Excel (CSV), respects the month filter ──────────────────
 if ( $is_site_owner && isset( $_GET['export'] ) && $_GET['export'] === 'users_csv' ) {
     $ex_month = ( ! empty( $_GET['u_month'] ) && preg_match( '/^\d{4}-\d{2}$/', $_GET['u_month'] ) ) ? $_GET['u_month'] : '';
+    $ex_day   = ( ! empty( $_GET['u_day'] ) && preg_match( '/^\d{4}-\d{2}-\d{2}$/', $_GET['u_day'] ) ) ? $_GET['u_day'] : '';
     $ex_role  = isset( $_GET['u_role'] ) ? sanitize_key( $_GET['u_role'] ) : '';
     $ex_args  = array( 'orderby' => 'registered', 'order' => 'DESC', 'number' => -1 );
-    if ( $ex_month ) {
+    if ( $ex_day ) { // exact day wins over month
+        $ex_args['date_query'] = array( array( 'column' => 'user_registered', 'after' => $ex_day . ' 00:00:00', 'before' => $ex_day . ' 23:59:59', 'inclusive' => true ) );
+    } elseif ( $ex_month ) {
         $ex_start = $ex_month . '-01 00:00:00';
         $ex_end   = date( 'Y-m-t 23:59:59', strtotime( $ex_start ) );
         $ex_args['date_query'] = array( array( 'column' => 'user_registered', 'after' => $ex_start, 'before' => $ex_end, 'inclusive' => true ) );
@@ -58,7 +61,7 @@ if ( $is_site_owner && isset( $_GET['export'] ) && $_GET['export'] === 'users_cs
     }
     nocache_headers();
     header( 'Content-Type: text/csv; charset=utf-8' );
-    header( 'Content-Disposition: attachment; filename="users-' . ( $ex_role ?: 'all' ) . '-' . ( $ex_month ?: 'all' ) . '.csv"' );
+    header( 'Content-Disposition: attachment; filename="users-' . ( $ex_role ?: 'all' ) . '-' . ( $ex_day ?: ( $ex_month ?: 'all' ) ) . '.csv"' );
     $out = fopen( 'php://output', 'w' );
     fwrite( $out, "\xEF\xBB\xBF" ); // UTF-8 BOM so Excel shows Khmer/accents correctly
     fputcsv( $out, array( 'No', 'ID', 'Name', 'Email', 'Phone', 'Role', 'Registered', 'Last Login' ) );
@@ -2900,6 +2903,44 @@ body {
         <?php if ( $guser === 'member' ) :
             $today   = current_time( 'Y-m-d' );
             $m_limit = $g_base_limit * 2;
+            $member_id = isset( $_GET['member_id'] ) ? (int) $_GET['member_id'] : 0;
+        ?>
+
+        <?php if ( $member_id > 0 ) :
+            // ── Single member: show all the questions they asked ──
+            $mm_table   = $wpdb->prefix . 'chatbot_member_messages';
+            $mm_has     = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $mm_table ) ) === $mm_table;
+            $mm_rows    = $mm_has ? $wpdb->get_results( $wpdb->prepare(
+                "SELECT * FROM {$mm_table} WHERE user_id = %d ORDER BY created_at DESC LIMIT 500", $member_id
+            ), ARRAY_A ) : [];
+            $mm_user    = get_userdata( $member_id );
+            $mm_label   = $mm_user ? ( $mm_user->display_name . ' (' . $mm_user->user_email . ')' ) : ( 'User #' . $member_id );
+        ?>
+        <div class="ds-table-wrap">
+            <div class="ds-table-head" style="display:flex;align-items:center;justify-content:space-between;">
+                <span>Questions from <code><?php echo esc_html( $mm_label ); ?></code>
+                    <span style="color:var(--muted);font-weight:400;font-size:12px;margin-left:6px;"><?php echo number_format_i18n( count( $mm_rows ) ); ?> messages</span>
+                </span>
+                <a class="ds-tab" href="<?php echo esc_url( add_query_arg( [ 'tab' => 'guest-users', 'guser' => 'member' ], home_url( '/dashboard/' ) ) ); ?>">&laquo; Back to members</a>
+            </div>
+            <?php if ( ! $mm_has || empty( $mm_rows ) ) : ?>
+                <div style="padding:18px;color:var(--muted);">No questions recorded for this member yet.</div>
+            <?php else : ?>
+            <table class="ds-table">
+                <thead><tr><th style="width:170px;">Time</th><th>Question</th></tr></thead>
+                <tbody>
+                <?php foreach ( $mm_rows as $mm ) : ?>
+                <tr>
+                    <td style="white-space:nowrap;color:var(--muted);font-size:12px;"><?php echo esc_html( $mm['created_at'] ); ?></td>
+                    <td style="line-height:1.5;"><?php echo esc_html( $mm['question'] ); ?></td>
+                </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+            <?php endif; ?>
+        </div>
+
+        <?php else :
             $members = get_users( array(
                 'meta_key'     => 'shopys_ai_last_active',
                 'meta_compare' => 'EXISTS',
@@ -2927,7 +2968,11 @@ body {
                     $m_at    = $m_today >= $m_limit;
                 ?>
                 <tr>
-                    <td style="font-weight:600;"><?php echo esc_html( $m->display_name ); ?></td>
+                    <td style="font-weight:600;">
+                        <a href="<?php echo esc_url( add_query_arg( [ 'tab' => 'guest-users', 'guser' => 'member', 'member_id' => $m->ID ], home_url( '/dashboard/' ) ) ); ?>" style="color:#0fb500;font-weight:700;text-decoration:none;" title="View questions">
+                            <?php echo esc_html( $m->display_name ); ?> &rsaquo;
+                        </a>
+                    </td>
                     <td><?php echo esc_html( $m->user_email ); ?></td>
                     <td><?php echo number_format_i18n( $m_total ); ?></td>
                     <td><span style="font-weight:600;<?php echo $m_at ? 'color:#dc2626;' : ''; ?>"><?php echo number_format_i18n( $m_today ) . ' / ' . number_format_i18n( $m_limit ); ?></span></td>
@@ -2938,6 +2983,7 @@ body {
             </table>
             <?php endif; ?>
         </div>
+        <?php endif; // member detail vs members list ?>
 
         <?php else : ?>
 
@@ -3145,9 +3191,12 @@ body {
         <div class="ds-panel <?php echo $active_tab === 'users' ? 'active' : ''; ?>" id="panel-users">
         <?php if ( $active_tab === 'users' ) :
             $u_month = ( ! empty( $_GET['u_month'] ) && preg_match( '/^\d{4}-\d{2}$/', $_GET['u_month'] ) ) ? $_GET['u_month'] : '';
+            $u_day   = ( ! empty( $_GET['u_day'] ) && preg_match( '/^\d{4}-\d{2}-\d{2}$/', $_GET['u_day'] ) ) ? $_GET['u_day'] : '';
             $u_role  = isset( $_GET['u_role'] ) ? sanitize_key( $_GET['u_role'] ) : '';
-            $u_args  = [ 'orderby' => 'registered', 'order' => 'DESC', 'number' => 500 ];
-            if ( $u_month ) {
+            $u_args  = [ 'orderby' => 'registered', 'order' => 'DESC', 'number' => -1 ];
+            if ( $u_day ) { // exact day wins over month
+                $u_args['date_query'] = [ [ 'column' => 'user_registered', 'after' => $u_day . ' 00:00:00', 'before' => $u_day . ' 23:59:59', 'inclusive' => true ] ];
+            } elseif ( $u_month ) {
                 $u_start = $u_month . '-01 00:00:00';
                 $u_end   = date( 'Y-m-t 23:59:59', strtotime( $u_start ) );
                 $u_args['date_query'] = [ [ 'column' => 'user_registered', 'after' => $u_start, 'before' => $u_end, 'inclusive' => true ] ];
@@ -3163,6 +3212,13 @@ body {
                     return strpos( strtolower( $u->display_name . ' ' . $u->user_login . ' ' . $u->user_email . ' ' . $ph ), $u_t ) !== false;
                 } ) );
             }
+            // Pagination (over the full filtered set; summary cards use the full set too).
+            $u_per_page    = 20;
+            $u_total       = count( $all_users );
+            $u_total_pages = max( 1, (int) ceil( $u_total / $u_per_page ) );
+            $u_pg          = isset( $_GET['u_pg'] ) ? max( 1, (int) $_GET['u_pg'] ) : 1;
+            $u_pg          = min( $u_pg, $u_total_pages );
+            $u_page_users  = array_slice( $all_users, ( $u_pg - 1 ) * $u_per_page, $u_per_page );
             // Months that have registrations (for the dropdown).
             global $wpdb;
             $u_months   = $wpdb->get_col( "SELECT DISTINCT DATE_FORMAT(user_registered,'%Y-%m') ym FROM {$wpdb->users} ORDER BY ym DESC" );
@@ -3229,7 +3285,7 @@ body {
 
         <div class="ds-table-wrap">
             <div class="ds-table-head" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-                <span>All Users <span style="color:var(--muted);font-weight:400;font-size:12px;margin-left:6px;"><?php echo count($all_users); ?> account<?php echo count($all_users)===1?'':'s'; ?><?php echo ( $u_role && isset($u_all_roles[$u_role]) ) ? ' · ' . esc_html($u_all_roles[$u_role]) : ''; ?><?php echo $u_month ? ' · ' . esc_html( date_i18n('F Y', strtotime($u_month.'-01')) ) : ''; ?></span></span>
+                <span>All Users <span style="color:var(--muted);font-weight:400;font-size:12px;margin-left:6px;"><?php echo count($all_users); ?> account<?php echo count($all_users)===1?'':'s'; ?><?php echo ( $u_role && isset($u_all_roles[$u_role]) ) ? ' · ' . esc_html($u_all_roles[$u_role]) : ''; ?><?php echo $u_day ? ' · ' . esc_html( date_i18n('j M Y', strtotime($u_day)) ) : ( $u_month ? ' · ' . esc_html( date_i18n('F Y', strtotime($u_month.'-01')) ) : '' ); ?></span></span>
                 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                     <?php $u_sel_css = 'padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;font-family:inherit;cursor:pointer;'; ?>
                     <form method="get" action="<?php echo esc_url( home_url('/dashboard/') ); ?>" style="display:flex;gap:6px;align-items:center;margin:0;">
@@ -3247,8 +3303,10 @@ body {
                             <option value="<?php echo esc_attr( $m ); ?>" <?php selected( $u_month, $m ); ?>><?php echo esc_html( date_i18n( 'F Y', strtotime( $m . '-01' ) ) ); ?></option>
                             <?php endforeach; ?>
                         </select>
+                        <input type="date" name="u_day" value="<?php echo esc_attr( $u_day ); ?>" onchange="this.form.submit()" title="Filter by exact day (overrides month)" style="<?php echo $u_sel_css; ?>">
+                        <?php if ( $u_day || $u_month ) : ?><a href="<?php echo esc_url( add_query_arg( [ 'tab' => 'users', 'u_role' => $u_role, 'u_search' => $u_search ], home_url('/dashboard/') ) ); ?>" title="Clear date" style="color:var(--muted);text-decoration:none;font-size:16px;line-height:1;padding:0 2px;">&times;</a><?php endif; ?>
                     </form>
-                    <a class="ds-store-btn" href="<?php echo esc_url( add_query_arg( [ 'tab' => 'users', 'export' => 'users_csv', 'u_role' => $u_role, 'u_month' => $u_month, 'u_search' => $u_search ], home_url('/dashboard/') ) ); ?>" title="Download as Excel/CSV">
+                    <a class="ds-store-btn" href="<?php echo esc_url( add_query_arg( [ 'tab' => 'users', 'export' => 'users_csv', 'u_role' => $u_role, 'u_month' => $u_month, 'u_day' => $u_day, 'u_search' => $u_search ], home_url('/dashboard/') ) ); ?>" title="Download as Excel/CSV">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
                         Export Excel
                     </a>
@@ -3266,7 +3324,7 @@ body {
                     <th>Login IP</th>
                 </tr></thead>
                 <tbody>
-                <?php foreach ( $all_users as $i => $u ) :
+                <?php foreach ( $u_page_users as $i => $u ) :
                     $last_login    = get_user_meta( $u->ID, 'shopys_last_login',    true );
                     $last_login_ip = get_user_meta( $u->ID, 'shopys_last_login_ip', true );
                     $role_key      = ! empty( $u->roles ) ? $u->roles[0] : 'other';
@@ -3297,7 +3355,7 @@ body {
                     $initial = strtoupper( mb_substr( $u->display_name ?: $u->user_login, 0, 1 ) );
                 ?>
                 <tr>
-                    <td style="color:var(--muted);font-size:12px;"><?php echo $i + 1; ?></td>
+                    <td style="color:var(--muted);font-size:12px;"><?php echo ( $u_pg - 1 ) * $u_per_page + $i + 1; ?></td>
                     <td>
                         <div style="display:flex;align-items:center;gap:10px;">
                             <div class="user-avatar"><?php echo esc_html($initial); ?></div>
@@ -3326,6 +3384,19 @@ body {
                 <?php endforeach; ?>
                 </tbody>
             </table>
+            <?php if ( $u_total_pages > 1 ) :
+                $u_pg_base = add_query_arg( [ 'tab' => 'users', 'u_role' => $u_role, 'u_month' => $u_month, 'u_day' => $u_day, 'u_search' => $u_search ], home_url('/dashboard/') );
+            ?>
+            <div class="sv-pagination">
+                <?php if ( $u_pg > 1 ) : ?><a class="sv-pag-btn" href="<?php echo esc_url( add_query_arg( 'u_pg', $u_pg - 1, $u_pg_base ) ); ?>">&lsaquo; Prev</a><?php else : ?><span class="sv-pag-btn disabled">&lsaquo; Prev</span><?php endif; ?>
+                <?php for ( $p = 1; $p <= $u_total_pages; $p++ ) :
+                    if ( $p == 1 || $p == $u_total_pages || abs( $p - $u_pg ) <= 2 ) : ?>
+                        <?php if ( $p == $u_pg ) : ?><span class="sv-pag-btn active"><?php echo $p; ?></span><?php else : ?><a class="sv-pag-btn" href="<?php echo esc_url( add_query_arg( 'u_pg', $p, $u_pg_base ) ); ?>"><?php echo $p; ?></a><?php endif; ?>
+                    <?php elseif ( $p == 2 || $p == $u_total_pages - 1 ) : ?><span class="sv-pag-ellipsis">&hellip;</span><?php endif;
+                endfor; ?>
+                <?php if ( $u_pg < $u_total_pages ) : ?><a class="sv-pag-btn" href="<?php echo esc_url( add_query_arg( 'u_pg', $u_pg + 1, $u_pg_base ) ); ?>">Next &rsaquo;</a><?php else : ?><span class="sv-pag-btn disabled">Next &rsaquo;</span><?php endif; ?>
+            </div>
+            <?php endif; ?>
             <?php else : ?>
             <p style="padding:24px;color:var(--muted);font-size:13px;">No users found.</p>
             <?php endif; ?>
