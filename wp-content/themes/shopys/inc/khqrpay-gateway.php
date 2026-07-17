@@ -440,6 +440,7 @@ function khqrpay_load_gateway() {
         public function payment_fields() {
             ?>
             <div class="khqr-pf">
+                <div class="khqr-pf-accent" aria-hidden="true"></div>
                 <div class="khqr-pf-badge">
                     <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/>
@@ -450,6 +451,9 @@ function khqrpay_load_gateway() {
                 <div class="khqr-pf-info">
                     <strong><?php esc_html_e( 'Scan to pay with any banking app', 'shopys' ); ?></strong>
                     <span class="khqr-pf-banks">ABA · ACLEDA · Wing · Bakong · <?php esc_html_e( '& all KHQR banks', 'shopys' ); ?></span>
+                    <div class="khqr-pf-chips" aria-hidden="true">
+                        <span>ABA</span><span>ACLEDA</span><span>Wing</span><span>Bakong</span><span class="is-more">+ <?php esc_html_e( 'all KHQR banks', 'shopys' ); ?></span>
+                    </div>
                     <span class="khqr-pf-secure">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                         <?php esc_html_e( 'Secured by Bakong · National Bank of Cambodia', 'shopys' ); ?>
@@ -472,13 +476,25 @@ function khqrpay_load_gateway() {
             .khqr-pf-banks{ font-size:12px; color:#5b6472; font-weight:600; }
             .khqr-pf-secure{ display:inline-flex; align-items:center; gap:5px; font-size:11px; color:#0a9d4a; font-weight:600; margin-top:2px; }
             .khqr-pf-secure svg{ width:13px; height:13px; }
-            /* Mobile: stack — KHQR badge on top, text centered below */
+            /* Mobile-only elements — invisible on desktop so its layout stays untouched */
+            .khqr-pf-accent, .khqr-pf-chips{ display:none; }
+            /* Mobile: premium stacked card — accent bar, centered badge, bank chips, secure pill */
             @media(max-width:768px){
-                .khqr-pf{ flex-direction:column; align-items:center; text-align:center; gap:8px; padding:12px 10px; }
-                .khqr-pf-badge{ width:52px; height:52px; }
-                .khqr-pf-info{ align-items:center; gap:2px; }
-                .khqr-pf-info strong{ font-size:13px; }
-                .khqr-pf-secure{ justify-content:center; }
+                .khqr-pf{ flex-direction:column; align-items:stretch; gap:0; padding:0; text-align:center;
+                    border-radius:15px; overflow:hidden; border-color:#e9ebf0;
+                    background:linear-gradient(180deg,#fff,#fcfcfd); box-shadow:0 8px 26px rgba(15,23,42,.08); }
+                .khqr-pf-accent{ display:block; height:4px; background:linear-gradient(90deg,#ef3b32,#c0140c 55%,#8f0c06); }
+                .khqr-pf-badge{ margin:15px auto 0; width:56px; height:56px; border-radius:15px;
+                    box-shadow:0 8px 18px rgba(196,26,18,.3), inset 0 1px 0 rgba(255,255,255,.25); }
+                .khqr-pf-info{ align-items:center; gap:8px; padding:10px 12px 14px; }
+                .khqr-pf-info strong{ font-size:13.5px; line-height:1.3; }
+                .khqr-pf-banks{ display:none; }
+                .khqr-pf-chips{ display:flex; flex-wrap:wrap; justify-content:center; gap:5px; }
+                .khqr-pf-chips span{ font-size:10.5px; font-weight:800; color:#3f4854; background:#f3f5f8;
+                    border:1px solid #e7eaef; border-radius:50px; padding:3.5px 10px; letter-spacing:.2px; white-space:nowrap; }
+                .khqr-pf-chips span.is-more{ color:#8a93a0; background:#fafbfc; font-weight:700; }
+                .khqr-pf-secure{ justify-content:center; font-size:10px; font-weight:700; letter-spacing:.2px;
+                    background:#f4fdf8; border:1px solid #e4f6ec; border-radius:50px; padding:6px 13px; margin-top:2px; }
             }
             </style>
             <?php

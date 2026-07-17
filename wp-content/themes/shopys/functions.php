@@ -1416,55 +1416,134 @@ function shopys_checkout_stepper_css() {
     body.woocommerce-checkout .woocommerce-billing-fields::before{ content:"STEP 1  \00b7  DELIVERY ADDRESS"; display:block; font-size:12px; font-weight:800; letter-spacing:1px; color:#00a341; margin:0 0 16px; padding-bottom:12px; border-bottom:1px solid #eef0f4; font-family:"Play","Battambang",sans-serif; }
     body.woocommerce-checkout #order_review::before{ content:"STEP 2  \00b7  YOUR ORDER" !important; color:#00a341 !important; letter-spacing:1px !important; font-size:12px !important; font-weight:800 !important; }
 
-    /* ── Mobile / tablet: compact app-like checkout ─────────────────────── */
+    /* App-only chrome (CTA total) — never visible on desktop */
+    .shopys-cta-total{ display:none; }
+
+    /* ── Mobile / tablet: premium app-style checkout (desktop untouched) ── */
     @media (max-width:768px){
-        /* Reclaim horizontal space — collapse the theme's nested wrappers */
-        body.woocommerce-checkout #content .container{ padding-left:8px !important; padding-right:8px !important; max-width:100% !important; width:100% !important; }
+        /* App canvas: soft grey backdrop, content edge-to-edge (site header stays) */
+        body.woocommerce-checkout{ background:#f5f6f8 !important; }
+        body.woocommerce-checkout #content .container{ padding-left:10px !important; padding-right:10px !important; max-width:100% !important; width:100% !important; }
+        body.woocommerce-checkout #content,
         body.woocommerce-checkout .content-wrap,
         body.woocommerce-checkout .primary-content-wrap,
-        body.woocommerce-checkout .thunk-content-wrap{ padding:0 !important; margin:0 !important; }
+        body.woocommerce-checkout .thunk-content-wrap{ padding:0 !important; margin:0 !important; background:transparent !important; }
+        /* Kill the remaining top gap between the notice bar and the stepper */
+        body.woocommerce-checkout .main-area,
+        body.woocommerce-checkout #primary,
+        body.woocommerce-checkout .woocommerce{ margin-top:0 !important; padding-top:0 !important; }
+        body.woocommerce-checkout form.checkout{ margin-top:0 !important; }
         body.woocommerce-checkout #sidebar-primary{ display:none !important; }
         body.woocommerce-checkout .primary-content-area{ width:100% !important; max-width:100% !important; flex:1 1 100% !important; }
 
+        /* Focused flow: hide the floating cart / chat / scroll-top bubbles (they'd cover the CTA bar) */
+        body.woocommerce-checkout #shopys-cart-fab,
+        body.woocommerce-checkout #sai-chatbot,
+        body.woocommerce-checkout #move-to-top{ display:none !important; }
+
         /* Slim page header: keep the title, drop the breadcrumb */
-        body.woocommerce-checkout .page-head{ margin:6px 0 4px !important; padding:0 !important; }
+        body.woocommerce-checkout .page-head{ margin:8px 0 6px !important; padding:0 !important; text-align:center !important; }
         body.woocommerce-checkout .page-head .breadcrumb-trail,
         body.woocommerce-checkout .page-head .trail-items,
         body.woocommerce-checkout .breadcrumb-trail{ display:none !important; }
-        body.woocommerce-checkout .page-head h1{ font-size:18px !important; margin:0 !important; }
+        body.woocommerce-checkout .page-head h1{ font-size:17px !important; margin:0 !important; letter-spacing:-.2px !important; }
 
-        /* Stepper + action bars */
-        .shopys-steps{ margin:2px auto 8px !important; gap:8px !important; }
-        .shopys-actions{ margin:0 0 8px !important; gap:8px !important; }
-        .shopys-actions .shopys-place{ flex:1; justify-content:center; }
-        .shopys-next{ width:100%; justify-content:center; }
+        /* Stepper: floating pill */
+        .shopys-steps{ background:#fff; border:1px solid #eef0f4; border-radius:50px; padding:9px 16px !important;
+            margin:2px auto 12px !important; gap:10px !important; box-shadow:0 4px 16px rgba(15,23,42,.06); }
+        .shopys-step{ font-size:11px !important; gap:7px !important; }
+        .shopys-step span{ width:23px !important; height:23px !important; font-size:11px !important; }
 
-        /* Form fields: tighter rows, 16px inputs (stops iOS zoom-on-focus) */
-        body.woocommerce-checkout form.checkout .form-row{ margin:0 0 8px !important; padding:0 !important; float:none !important; width:100% !important; }
-        body.woocommerce-checkout form.checkout label{ font-size:12.5px !important; margin-bottom:3px !important; }
+        /* Step sections as app cards */
+        body.woocommerce-checkout .woocommerce-billing-fields,
+        body.woocommerce-checkout #customer_details .woocommerce-additional-fields{ background:#fff !important; border:1px solid #eef0f4 !important;
+            border-radius:16px !important; padding:15px 13px !important; box-shadow:0 6px 22px rgba(15,23,42,.05) !important; margin:0 0 10px !important; }
+        body.woocommerce-checkout #order_review{ background:#fff !important; border:1px solid #eef0f4 !important;
+            border-radius:16px !important; padding:15px 13px !important; box-shadow:0 6px 22px rgba(15,23,42,.05) !important; }
+        body.woocommerce-checkout .woocommerce-billing-fields::before{ margin:0 0 12px !important; padding-bottom:9px !important; }
+
+        /* Inputs: app-style filled fields, 16px (stops iOS zoom), soft focus ring */
+        body.woocommerce-checkout form.checkout .form-row{ margin:0 0 10px !important; padding:0 !important; float:none !important; width:100% !important; }
+        body.woocommerce-checkout form.checkout label{ font-size:12px !important; font-weight:700 !important; color:#5b6472 !important; margin-bottom:4px !important; }
         body.woocommerce-checkout form.checkout .input-text,
         body.woocommerce-checkout form.checkout select,
-        body.woocommerce-checkout form.checkout textarea{ font-size:16px !important; padding:10px 12px !important; border-radius:10px !important; width:100% !important; }
-        body.woocommerce-checkout .woocommerce-billing-fields::before{ margin:0 0 10px !important; padding-bottom:8px !important; }
+        body.woocommerce-checkout form.checkout textarea{ font-size:16px !important; padding:12px 14px !important; width:100% !important;
+            background:#f4f6f8 !important; border:1.6px solid #f4f6f8 !important; border-radius:12px !important; box-shadow:none !important;
+            transition:border-color .18s ease, background .18s ease, box-shadow .18s ease !important; }
+        body.woocommerce-checkout form.checkout .input-text:focus,
+        body.woocommerce-checkout form.checkout select:focus,
+        body.woocommerce-checkout form.checkout textarea:focus{ background:#fff !important; border-color:#00c44f !important;
+            box-shadow:0 0 0 3px rgba(0,196,79,.14) !important; outline:none !important; }
+        body.woocommerce-checkout form.checkout .woocommerce-invalid .input-text{ border-color:#ef4444 !important; background:#fff !important; }
 
-        /* Order review table: compact, no letter-spacing blowout */
-        body.woocommerce-checkout #order_review{ padding:10px 8px !important; }
-        body.woocommerce-checkout .woocommerce-checkout-review-order-table{ font-size:13px !important; margin:0 0 8px !important; }
+        /* Order list: premium receipt (no column headers, qty pill, soft-green total row) */
+        body.woocommerce-checkout .woocommerce-checkout-review-order-table{ font-size:13px !important; margin:0 0 10px !important;
+            border:0 !important; border-collapse:separate !important; border-spacing:0 !important; }
+        body.woocommerce-checkout .woocommerce-checkout-review-order-table thead{ display:none !important; }
+        /* Borderless rows everywhere — spacing does the separating.
+           (#order_review selectors out-rank the theme's tfoot border-top rules) */
         body.woocommerce-checkout .woocommerce-checkout-review-order-table th,
-        body.woocommerce-checkout .woocommerce-checkout-review-order-table td{ padding:7px 5px !important; letter-spacing:0 !important; line-height:1.35 !important; }
-        body.woocommerce-checkout .woocommerce-checkout-review-order-table thead th{ font-size:11px !important; }
-        body.woocommerce-checkout .woocommerce-checkout-review-order-table .order-total td,
-        body.woocommerce-checkout .woocommerce-checkout-review-order-table .order-total th{ font-size:15px !important; }
+        body.woocommerce-checkout .woocommerce-checkout-review-order-table td,
+        body.woocommerce-checkout #order_review table.shop_table tfoot th,
+        body.woocommerce-checkout #order_review table.shop_table tfoot td,
+        body.woocommerce-checkout #order_review table.shop_table tfoot tr.order-total th,
+        body.woocommerce-checkout #order_review table.shop_table tfoot tr.order-total td{ border:0 !important; border-top:0 !important; box-shadow:none !important; }
+        body.woocommerce-checkout .woocommerce-checkout-review-order-table tr.cart_item td{ padding:12px 0 !important;
+            background:transparent !important; vertical-align:middle !important; letter-spacing:0 !important; }
+        body.woocommerce-checkout .woocommerce-checkout-review-order-table td.product-name{ font-weight:700 !important; font-size:13.5px !important;
+            color:#0d1117 !important; line-height:1.5 !important; }
+        body.woocommerce-checkout .woocommerce-checkout-review-order-table .product-quantity{ display:inline-block; margin-left:6px; padding:2px 9px;
+            background:#f3f5f8; border:1px solid #e9edf2; border-radius:50px; font-size:10.5px; font-weight:800; color:#5b6472; white-space:nowrap; }
+        body.woocommerce-checkout .woocommerce-checkout-review-order-table td.product-total{ text-align:right !important; font-weight:700 !important; white-space:nowrap !important; }
+        body.woocommerce-checkout .woocommerce-checkout-review-order-table tfoot th,
+        body.woocommerce-checkout .woocommerce-checkout-review-order-table tfoot td{ border:0 !important; padding:10px 0 !important;
+            background:transparent !important; letter-spacing:0 !important; }
+        body.woocommerce-checkout .woocommerce-checkout-review-order-table tfoot th{ font-size:11px !important; font-weight:800 !important;
+            color:#9aa3b0 !important; text-transform:uppercase !important; letter-spacing:.6px !important; text-align:left !important; }
+        body.woocommerce-checkout .woocommerce-checkout-review-order-table tfoot td{ text-align:right !important; font-weight:700 !important;
+            color:#0d1117 !important; font-size:13px !important; }
+        body.woocommerce-checkout .woocommerce-checkout-review-order-table tr.order-total th,
+        body.woocommerce-checkout .woocommerce-checkout-review-order-table tr.order-total td{ background:#f4fdf8 !important;
+            padding:13px 12px !important; }
+        body.woocommerce-checkout .woocommerce-checkout-review-order-table tr.order-total th{ font-size:13px !important; color:#0d1117 !important;
+            text-transform:none !important; letter-spacing:-.2px !important; border-radius:12px 0 0 12px !important; }
+        body.woocommerce-checkout .woocommerce-checkout-review-order-table tr.order-total td{ font-size:18px !important; color:#0a9d4a !important;
+            border-radius:0 12px 12px 0 !important; }
+        body.woocommerce-checkout .woocommerce-checkout-review-order-table tr.order-total td .woocommerce-Price-amount{ color:#0a9d4a !important; font-weight:800 !important; }
 
         /* Coupon strip */
-        body.woocommerce-checkout .woocommerce-form-coupon-toggle .woocommerce-info{ padding:8px 10px !important; font-size:12.5px !important; margin:0 0 8px !important; line-height:1.4 !important; }
-        body.woocommerce-checkout form.checkout_coupon{ padding:10px !important; margin:0 0 8px !important; }
+        body.woocommerce-checkout .woocommerce-form-coupon-toggle .woocommerce-info{ padding:10px 13px !important; font-size:12.5px !important;
+            margin:0 0 10px !important; line-height:1.4 !important; background:#fff !important; border:1px solid #eef0f4 !important; border-radius:14px !important; box-shadow:0 4px 14px rgba(15,23,42,.04) !important; }
+        body.woocommerce-checkout form.checkout_coupon{ padding:12px !important; margin:0 0 10px !important; border-radius:14px !important; background:#fff !important; border:1px solid #eef0f4 !important; }
 
         /* Payment area: tight, card-like (KHQR card layout lives in the gateway CSS) */
-        body.woocommerce-checkout #payment{ border-radius:14px !important; }
-        body.woocommerce-checkout #payment ul.payment_methods{ padding:8px !important; margin:0 !important; }
-        body.woocommerce-checkout #payment ul.payment_methods li{ padding:5px 3px !important; }
-        body.woocommerce-checkout #payment div.payment_box{ padding:6px 4px !important; margin:5px 0 0 !important; font-size:12.5px !important; }
+        body.woocommerce-checkout #payment{ background:transparent !important; border-radius:14px !important; }
+        body.woocommerce-checkout #payment ul.payment_methods{ padding:0 !important; margin:0 0 4px !important; }
+        body.woocommerce-checkout #payment ul.wc_payment_methods li.wc_payment_method{ padding:13px 14px !important; border-radius:13px !important; }
+        /* Keep the selected card's content centered: symmetric padding on the li,
+           only the label dodges the corner checkmark */
+        body.woocommerce-checkout #payment ul.wc_payment_methods li.wc_payment_method.pm-selected{ padding-right:14px !important; }
+        body.woocommerce-checkout #payment ul.wc_payment_methods li.wc_payment_method.pm-selected > label{ padding-right:42px !important; }
+        body.woocommerce-checkout #payment div.payment_box{ padding:4px 0 0 !important; margin:4px 0 0 !important; font-size:12.5px !important; background:transparent !important; }
+
+        /* Sticky app CTA bar: actions pinned to the bottom of the screen.
+           (JS moves the bars to <body> on mobile — a transform on any theme
+           wrapper would otherwise break position:fixed.) */
+        body.woocommerce-checkout form.checkout{ padding-bottom:74px !important; }
+        .shopys-actions{ position:fixed !important; left:0 !important; right:0 !important; bottom:0 !important; z-index:99991 !important;
+            margin:0 !important; padding:8px 10px calc(8px + env(safe-area-inset-bottom)) !important; gap:8px !important; flex-wrap:nowrap !important;
+            align-items:center !important; background:rgba(255,255,255,.96) !important; -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
+            border-top:1px solid #eef0f4 !important; box-shadow:0 -8px 26px rgba(15,23,42,.09) !important; }
+        .shopys-next{ width:100% !important; justify-content:center !important; padding:12px 16px !important; border-radius:12px !important; font-size:13px !important; }
+        .shopys-actions .shopys-place{ flex:1 !important; justify-content:center !important; padding:12px 14px !important; border-radius:12px !important; font-size:13px !important; }
+        /* Total lives in the bar, app style */
+        .shopys-cta-total{ display:flex; flex-direction:column; line-height:1.15; flex-shrink:0; min-width:56px; }
+        .shopys-cta-total small{ font-size:9px; font-weight:800; letter-spacing:1px; color:#9aa3b0; text-transform:uppercase; }
+        .shopys-cta-total b{ font-size:15px; font-weight:800; color:#0a9d4a; letter-spacing:-.3px; white-space:nowrap; }
+        /* Back becomes a compact icon button */
+        .shopys-back{ font-size:0 !important; padding:0 !important; width:41px !important; height:41px !important;
+            border-radius:12px !important; flex-shrink:0 !important; display:inline-flex !important; align-items:center !important; justify-content:center !important; }
+        .shopys-back::before{ content:"←"; font-size:17px; line-height:1; }
     }
     </style>
     <noscript><style>
@@ -1496,6 +1575,8 @@ function shopys_checkout_stepper_js() {
             var rev  = document.getElementById("order_review");
             if(cust) imp(cust, "display", step === 1 ? "block" : "none");
             if(rev)  imp(rev,  "display", step === 2 ? "block" : "none");
+            $(".shopys-actions-step1").toggle(step === 1);
+            $(".shopys-actions-step2").toggle(step === 2);
             $(".shopys-step").removeClass("active done");
             $(".shopys-step[data-go='" + step + "']").addClass("active");
             if(step === 2){ $(".shopys-step[data-go='1']").addClass("done"); }
@@ -1505,13 +1586,25 @@ function shopys_checkout_stepper_js() {
             if(!$(".shopys-steps").length){
                 $f.prepend("<div class='shopys-steps'><div class='shopys-step' data-go='1'><span>1</span> Delivery Address</div><div class='shopys-step-line'></div><div class='shopys-step' data-go='2'><span>2</span> Your Order</div></div>");
             }
-            if($("#customer_details").length && !$("#customer_details > .shopys-actions").length){
-                $("#customer_details").prepend("<div class='shopys-actions shopys-actions-end'><button type='button' class='shopys-next'>Next — Review Order →</button></div>");
+            if($("#customer_details").length && !$(".shopys-actions-step1").length){
+                $("#customer_details").prepend("<div class='shopys-actions shopys-actions-end shopys-actions-step1'><button type='button' class='shopys-next'>Next — Review Order →</button></div>");
             }
-            if($("#order_review").length && !$("#order_review > .shopys-actions").length){
+            if($("#order_review").length && !$(".shopys-actions-step2").length){
                 var placeTxt = ($.trim($("#place_order").text()) || "Place Order");
-                $("#order_review").prepend("<div class='shopys-actions'><button type='button' class='shopys-back'>← Back to Delivery</button><button type='button' class='shopys-place'>" + placeTxt + "</button></div>");
+                $("#order_review").prepend("<div class='shopys-actions shopys-actions-step2'><button type='button' class='shopys-back'>← Back to Delivery</button><button type='button' class='shopys-place'>" + placeTxt + "</button></div>");
             }
+            // Mobile app mode: host the bars on <body> — a transform on any theme
+            // wrapper would break position:fixed if they stayed nested.
+            if(window.matchMedia && window.matchMedia("(max-width:768px)").matches){
+                $(".shopys-actions-step1, .shopys-actions-step2").appendTo("body");
+            }
+            // Total in the CTA bar (visible on mobile only via CSS), kept live on updated_checkout
+            var $bar = $(".shopys-actions-step2");
+            if($bar.length && !$bar.find(".shopys-cta-total").length){
+                $bar.prepend("<div class='shopys-cta-total'><small>Total</small><b></b></div>");
+            }
+            var totalTxt = $.trim($("#order_review .order-total .woocommerce-Price-amount").last().text());
+            if(totalTxt){ $bar.find(".shopys-cta-total b").text(totalTxt); }
             applyLayout();
         }
         function toForm(){ var $f = $("form.checkout"); if($f.length){ $("html,body").animate({ scrollTop: $f.offset().top - 90 }, 300); } }
