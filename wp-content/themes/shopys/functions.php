@@ -2965,3 +2965,141 @@ function shopys_add_to_cart_login_dialog() {
     </script>
     <?php
 }
+/* ── Category promotion (dashboard → Promotion tab) ────────────────────────
+ * Applies a % discount to every product in the selected categories, computed
+ * on the fly — product data is never modified, so disabling the promotion
+ * restores original prices instantly. Settings live in the
+ * `shopys_cat_promo` option: enabled, percent, cats[], start, end.
+ */
+/** All promotions (raw list). Migrates the old single `shopys_cat_promo` option
+ *  into the `shopys_cat_promos` list on first read. */
+function shopys_promos_all() {
+    $list = get_option( 'shopys_cat_promos' );
+    if ( ! is_array( $list ) ) {
+        $list   = [];
+        $legacy = get_option( 'shopys_cat_promo' );
+        if ( is_array( $legacy ) && ( ! empty( $legacy['cats'] ) || ! empty( $legacy['products'] ) ) ) {
+            $legacy['id']   = uniqid( 'p' );
+            $legacy['name'] = 'Promotion 1';
+            $list[]         = $legacy;
+        }
+        update_option( 'shopys_cat_promos', $list, false );
+        delete_option( 'shopys_cat_promo' );
+    }
+    // Normalize: older entries stored only 'percent' — map to dtype/value.
+    foreach ( $list as &$p ) {
+        if ( empty( $p['dtype'] ) )    $p['dtype'] = 'percent';
+        if ( ! isset( $p['value'] ) )  $p['value'] = (float) ( $p['percent'] ?? 0 );
+    }
+    unset( $p );
+    return $list;
+}
+
+/** Promotions currently in effect (enabled, has value + targets, inside date window). */
+function shopys_promos_active() {
+    static $cached = false, $val = [];
+    if ( $cached ) return $val;
+    $cached = true;
+    $now = current_time( 'timestamp' );
+    foreach ( shopys_promos_all() as $o ) {
+        if ( empty( $o['enabled'] ) || empty( $o['value'] ) ) continue;
+        if ( empty( $o['cats'] ) && empty( $o['products'] ) ) continue;
+        if ( ! empty( $o['start'] ) && $now < strtotime( $o['start'] . ' 00:00:00' ) ) continue;
+        if ( ! empty( $o['end'] )   && $now > strtotime( $o['end'] . ' 23:59:59' ) )   continue;
+        $val[] = $o;
+    }
+    return $val;
+}
+
+/** Active promotions matching a product (by specific ID or category; variations
+ *  use their parent product). Cached per parent id. */
+function shopys_promo_matches( $product ) {
+    if ( ! $product instanceof WC_Product ) return [];
+    $active = shopys_promos_active();
+    if ( ! $active ) return [];
+    $pid = $product->is_type( 'variation' ) ? $product->get_parent_id() : $product->get_id();
+    if ( ! $pid ) return [];
+    static $hit = [];
+    if ( ! isset( $hit[ $pid ] ) ) {
+        $hit[ $pid ] = [];
+        foreach ( $active as $o ) {
+            $in = ! empty( $o['products'] ) && in_array( $pid, array_map( 'intval', (array) $o['products'] ), true );
+            if ( ! $in && ! empty( $o['cats'] ) ) {
+                $in = has_term( array_map( 'intval', (array) $o['cats'] ), 'product_cat', $pid );
+            }
+            if ( $in ) $hit[ $pid ][] = $o;
+        }
+    }
+    return $hit[ $pid ];
+}
+
+/** Best (lowest) promo price for a product from its regular price, or null. */
+function shopys_promo_best_price( $product ) {
+    $matches = shopys_promo_matches( $product );
+    if ( ! $matches ) return null;
+    $reg = (float) $product->get_regular_price( 'edit' );
+    if ( $reg <= 0 ) return null;
+    $best = null;
+    foreach ( $matches as $o ) {
+        $v = (float) $o['value'];
+        if ( $v <= 0 ) continue;
+        $pp = ( ( $o['dtype'] ?? 'percent' ) === 'fixed' ) ? $reg - $v : $reg * ( 1 - $v / 100 );
+        $pp = round( max( 0, $pp ), 2 );
+        if ( $pp >= $reg ) continue; // never raise or match the regular price
+        $best = ( $best === null ) ? $pp : min( $best, $pp );
+    }
+    return $best;
+}
+
+/** AJAX (owner): search products by name for the Promotion product picker. */
+add_action( 'wp_ajax_shopys_promo_search_products', 'shopys_promo_search_products' );
+function shopys_promo_search_products() {
+    if ( ! current_user_can( 'manage_options' ) ) wp_send_json_error( [ 'message' => 'Forbidden' ], 403 );
+    check_ajax_referer( 'shopys_promo_search', 'nonce' );
+    $q = isset( $_GET['q'] ) ? trim( sanitize_text_field( wp_unslash( $_GET['q'] ) ) ) : '';
+    if ( mb_strlen( $q ) < 2 ) wp_send_json_success( [] );
+    $query = new WP_Query( [
+        'post_type'      => 'product',
+        'post_status'    => 'publish',
+        's'              => $q,
+        'posts_per_page' => 20,
+        'fields'         => 'ids',
+        'no_found_rows'  => true,
+    ] );
+    $out = [];
+    foreach ( $query->posts as $pid ) {
+        $p = function_exists( 'wc_get_product' ) ? wc_get_product( $pid ) : null;
+        $out[] = [
+            'id'    => (int) $pid,
+            'name'  => html_entity_decode( get_the_title( $pid ), ENT_QUOTES ),
+            'price' => $p ? html_entity_decode( wp_strip_all_tags( $p->get_price_html() ), ENT_QUOTES ) : '',
+        ];
+    }
+    wp_send_json_success( $out );
+}
+
+/** Promo price for display/cart; keeps an existing (manual) sale if it's lower. */
+function shopys_cat_promo_price_for( $product, $current ) {
+    $promo = shopys_promo_best_price( $product );
+    if ( $promo === null ) return $current;
+    if ( $current !== '' && $current !== null && (float) $current > 0 && (float) $current < $promo ) return $current;
+    return (string) $promo;
+}
+
+add_filter( 'woocommerce_product_get_price', 'shopys_cat_promo_filter_price', 20, 2 );
+add_filter( 'woocommerce_product_variation_get_price', 'shopys_cat_promo_filter_price', 20, 2 );
+function shopys_cat_promo_filter_price( $price, $product ) {
+    return shopys_cat_promo_price_for( $product, $price );
+}
+
+add_filter( 'woocommerce_product_get_sale_price', 'shopys_cat_promo_filter_sale_price', 20, 2 );
+add_filter( 'woocommerce_product_variation_get_sale_price', 'shopys_cat_promo_filter_sale_price', 20, 2 );
+function shopys_cat_promo_filter_sale_price( $sale, $product ) {
+    if ( shopys_promo_best_price( $product ) === null ) return $sale;
+    return shopys_cat_promo_price_for( $product, $sale );
+}
+
+add_filter( 'woocommerce_product_is_on_sale', 'shopys_cat_promo_on_sale', 20, 2 );
+function shopys_cat_promo_on_sale( $on_sale, $product ) {
+    return $on_sale || shopys_promo_best_price( $product ) !== null;
+}

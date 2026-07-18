@@ -33,6 +33,7 @@ $active_tab     = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'overvi
 if ( $active_tab === 'users' && ! $is_site_owner ) $active_tab = 'overview';
 if ( $active_tab === 'telegram-users' && ! $is_site_owner ) $active_tab = 'overview';
 if ( $active_tab === 'guest-users' && ! $is_site_owner ) $active_tab = 'overview';
+if ( $active_tab === 'promotion' && ! $is_site_owner ) $active_tab = 'overview';
 
 // ── Users → Export to Excel (CSV), respects the month filter ──────────────────
 if ( $is_site_owner && isset( $_GET['export'] ) && $_GET['export'] === 'users_csv' ) {
@@ -165,6 +166,80 @@ if (
         'co_search'  => sanitize_text_field( wp_unslash( $_POST['co_ret_search'] ?? '' ) ),
         'co_updated' => $co_done,
     ], 'strlen' ), home_url( '/dashboard/' ) ) );
+    exit;
+}
+
+// ── Promotion save / delete handlers (owner only, multiple promotions) ────────
+if (
+    $is_site_owner &&
+    isset( $_POST['catpromo_action'], $_POST['_wpnonce'] ) &&
+    wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'catpromo_save' )
+) {
+    $cp_action = sanitize_key( $_POST['catpromo_action'] );
+    $cp_list   = function_exists( 'shopys_promos_all' ) ? shopys_promos_all() : ( is_array( get_option( 'shopys_cat_promos' ) ) ? get_option( 'shopys_cat_promos' ) : [] );
+    $cp_id     = isset( $_POST['cp_id'] ) ? sanitize_key( wp_unslash( $_POST['cp_id'] ) ) : '';
+    $cp_flag   = 'promo_saved';
+
+    if ( $cp_action === 'delete' && $cp_id !== '' ) {
+        $cp_list = array_values( array_filter( $cp_list, function ( $p ) use ( $cp_id ) {
+            return ( $p['id'] ?? '' ) !== $cp_id;
+        } ) );
+        $cp_flag = 'promo_deleted';
+    } elseif ( $cp_action === 'save' ) {
+        // Definition only (name / type / value / dates / enabled) — targets are set separately.
+        $cp_dtype = ( isset( $_POST['cp_dtype'] ) && $_POST['cp_dtype'] === 'fixed' ) ? 'fixed' : 'percent';
+        $cp_val   = isset( $_POST['cp_value'] ) ? (float) $_POST['cp_value'] : 0;
+        $cp_val   = ( $cp_dtype === 'percent' ) ? max( 0, min( 95, $cp_val ) ) : max( 0, min( 99999, $cp_val ) );
+        $cp_start = ( ! empty( $_POST['cp_start'] ) && preg_match( '/^\d{4}-\d{2}-\d{2}$/', $_POST['cp_start'] ) ) ? $_POST['cp_start'] : '';
+        $cp_end   = ( ! empty( $_POST['cp_end'] )   && preg_match( '/^\d{4}-\d{2}-\d{2}$/', $_POST['cp_end'] ) )   ? $_POST['cp_end']   : '';
+        $cp_entry = [
+            'id'       => $cp_id !== '' ? $cp_id : uniqid( 'p' ),
+            'name'     => sanitize_text_field( wp_unslash( $_POST['cp_name'] ?? '' ) ),
+            'enabled'  => ! empty( $_POST['cp_enabled'] ),
+            'dtype'    => $cp_dtype,
+            'value'    => $cp_val,
+            'cats'     => [],
+            'products' => [],
+            'start'    => $cp_start,
+            'end'      => $cp_end,
+        ];
+        if ( $cp_entry['name'] === '' ) $cp_entry['name'] = 'Promotion';
+        $cp_replaced = false;
+        foreach ( $cp_list as $i => $p ) {
+            if ( ( $p['id'] ?? '' ) === $cp_entry['id'] ) {
+                // Keep the promotion's existing targets when editing its definition.
+                $cp_entry['cats']     = array_map( 'intval', (array) ( $p['cats'] ?? [] ) );
+                $cp_entry['products'] = array_map( 'intval', (array) ( $p['products'] ?? [] ) );
+                $cp_list[ $i ] = $cp_entry;
+                $cp_replaced   = true;
+                break;
+            }
+        }
+        if ( ! $cp_replaced ) $cp_list[] = $cp_entry;
+    } elseif ( $cp_action === 'targets' && $cp_id !== '' ) {
+        // Assign categories / products to an existing promotion.
+        $cp_cats  = ( isset( $_POST['cp_cats'] ) && is_array( $_POST['cp_cats'] ) ) ? array_map( 'intval', $_POST['cp_cats'] ) : [];
+        $cp_valid = get_terms( [ 'taxonomy' => 'product_cat', 'hide_empty' => false, 'fields' => 'ids' ] );
+        $cp_cats  = array_values( array_intersect( $cp_cats, array_map( 'intval', (array) $cp_valid ) ) );
+        $cp_prods = ( isset( $_POST['cp_prods'] ) && is_array( $_POST['cp_prods'] ) ) ? array_map( 'intval', $_POST['cp_prods'] ) : [];
+        $cp_prods = array_values( array_filter( array_unique( $cp_prods ), function ( $id ) {
+            return $id > 0 && get_post_type( $id ) === 'product';
+        } ) );
+        foreach ( $cp_list as $i => $p ) {
+            if ( ( $p['id'] ?? '' ) === $cp_id ) {
+                $cp_list[ $i ]['cats']     = $cp_cats;
+                $cp_list[ $i ]['products'] = $cp_prods;
+                break;
+            }
+        }
+    }
+
+    update_option( 'shopys_cat_promos', $cp_list, false );
+    // Prices changed everywhere — clear WooCommerce + page caches.
+    if ( function_exists( 'wc_delete_product_transients' ) ) wc_delete_product_transients();
+    delete_transient( 'wc_products_onsale' );
+    do_action( 'litespeed_purge_all' );
+    wp_safe_redirect( add_query_arg( [ 'tab' => 'promotion', $cp_flag => 1 ], home_url( '/dashboard/' ) ) );
     exit;
 }
 
@@ -354,6 +429,7 @@ $menu_items = [
     'guest-users'    => [ 'icon' => 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z', 'label' => 'Chatbot Users', 'owner_only' => true ],
     'top-customers'  => [ 'icon' => 'M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z', 'label' => 'Top Customers' ],
     'cart'      => [ 'icon' => 'M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z', 'label' => 'Orders' ],
+    'promotion' => [ 'icon' => 'M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-5 5a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 10V5a2 2 0 012-2z', 'label' => 'Promotion', 'owner_only' => true ],
     // 'products'  => [ 'icon' => 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4', 'label' => 'Products', 'href' => admin_url( 'edit.php?post_type=product' ) ],
     'wp-admin'  => [ 'icon' => 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z', 'label' => 'WP Admin', 'href' => admin_url(), 'owner_only' => true ],
 ];
@@ -4008,6 +4084,574 @@ body {
         <?php endif; // detail vs list ?>
         <?php endif; // wc active ?>
         <?php endif; // active tab cart ?>
+        </div>
+
+        <!-- ── PROMOTION PANEL (multiple promotions · dialogs for edit/targets) ── -->
+        <div class="ds-panel <?php echo $active_tab === 'promotion' ? 'active' : ''; ?>" id="panel-promotion">
+        <?php if ( $active_tab === 'promotion' ) :
+            $cp_list  = function_exists( 'shopys_promos_all' ) ? shopys_promos_all() : [];
+            $cp_terms = get_terms( [ 'taxonomy' => 'product_cat', 'hide_empty' => false, 'orderby' => 'name' ] );
+            if ( is_wp_error( $cp_terms ) ) $cp_terms = [];
+            $cp_term_names = [];
+            foreach ( $cp_terms as $t ) $cp_term_names[ (int) $t->term_id ] = $t->name;
+
+            $cp_now = current_time( 'timestamp' );
+            $cp_status_of = function ( $o ) use ( $cp_now ) {
+                $has = ! empty( $o['cats'] ) || ! empty( $o['products'] );
+                if ( empty( $o['enabled'] ) || ! $has || empty( $o['value'] ) ) return [ 'Off', '#6b7280', 'rgba(148,163,184,.16)' ];
+                if ( ! empty( $o['start'] ) && $cp_now < strtotime( $o['start'] . ' 00:00:00' ) ) return [ 'Scheduled', '#b45309', 'rgba(245,158,11,.14)' ];
+                if ( ! empty( $o['end'] )   && $cp_now > strtotime( $o['end'] . ' 23:59:59' ) )   return [ 'Expired', '#b91c1c', 'rgba(239,68,68,.14)' ];
+                return [ 'Live', '#047857', 'rgba(16,185,129,.14)' ];
+            };
+            $cp_cur_sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_woocommerce_currency_symbol() : '$';
+            $cp_fmt_disc = function ( $p ) use ( $cp_cur_sym ) {
+                $v = rtrim( rtrim( number_format( (float) ( $p['value'] ?? ( $p['percent'] ?? 0 ) ), 2 ), '0' ), '.' );
+                return ( ( $p['dtype'] ?? 'percent' ) === 'fixed' ) ? $cp_cur_sym . $v . ' off' : $v . '% off';
+            };
+            $cp_in_css = 'padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:inherit;';
+
+            // Promotion data for the dialogs (definition prefill + current targets)
+            $cp_js = [];
+            foreach ( $cp_list as $p ) {
+                $cp_prods_js = [];
+                foreach ( (array) ( $p['products'] ?? [] ) as $ppid ) {
+                    $ppid = (int) $ppid;
+                    if ( get_post_type( $ppid ) !== 'product' ) continue;
+                    $cp_prods_js[] = [ 'id' => $ppid, 'name' => html_entity_decode( get_the_title( $ppid ), ENT_QUOTES ) ];
+                }
+                $cp_js[] = [
+                    'id'       => (string) ( $p['id'] ?? '' ),
+                    'name'     => (string) ( $p['name'] ?? 'Promotion' ),
+                    'enabled'  => ! empty( $p['enabled'] ),
+                    'dtype'    => ( ( $p['dtype'] ?? 'percent' ) === 'fixed' ) ? 'fixed' : 'percent',
+                    'value'    => (float) ( $p['value'] ?? 0 ),
+                    'start'    => (string) ( $p['start'] ?? '' ),
+                    'end'      => (string) ( $p['end'] ?? '' ),
+                    'disc'     => $cp_fmt_disc( $p ),
+                    'cats'     => array_values( array_map( 'intval', (array) ( $p['cats'] ?? [] ) ) ),
+                    'products' => $cp_prods_js,
+                ];
+            }
+        ?>
+
+        <?php if ( isset( $_GET['promo_saved'] ) ) : ?>
+        <div style="background:#ecfdf3;border:1px solid #abefc6;color:#067647;padding:10px 16px;border-radius:10px;margin-bottom:16px;font-weight:600;">✓ Promotion saved — store prices update immediately.</div>
+        <?php elseif ( isset( $_GET['promo_deleted'] ) ) : ?>
+        <div style="background:#ecfdf3;border:1px solid #abefc6;color:#067647;padding:10px 16px;border-radius:10px;margin-bottom:16px;font-weight:600;">✓ Promotion deleted — its prices are restored.</div>
+        <?php endif; ?>
+
+        <!-- Promotions list -->
+        <div class="ds-table-wrap">
+            <div class="ds-table-head" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                <span>Promotions <span style="color:var(--muted);font-weight:400;font-size:12px;margin-left:6px;"><?php echo number_format_i18n( count( $cp_list ) ); ?> total · best price wins when they overlap</span></span>
+                <button type="button" class="ds-store-btn" id="cp-add-btn" style="border:0;cursor:pointer;">+ Add Promotion</button>
+            </div>
+            <?php if ( empty( $cp_list ) ) : ?>
+            <p style="padding:24px;color:var(--muted);font-size:13px;">No promotions yet — click “+ Add Promotion” to create your first one, then use “Set Targets” to pick its categories or products.</p>
+            <?php else : ?>
+            <table class="ds-table">
+                <thead><tr>
+                    <th>Name</th>
+                    <th>Discount</th>
+                    <th>Targets</th>
+                    <th>Period</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr></thead>
+                <tbody>
+                <?php foreach ( $cp_list as $p ) :
+                    $p_st    = $cp_status_of( $p );
+                    $p_cats  = array_map( 'intval', (array) ( $p['cats'] ?? [] ) );
+                    $p_prods = array_map( 'intval', (array) ( $p['products'] ?? [] ) );
+                    $p_cat_names = array_filter( array_map( function ( $tid ) use ( $cp_term_names ) { return $cp_term_names[ $tid ] ?? ''; }, $p_cats ) );
+                    $p_target_bits = [];
+                    if ( $p_cat_names ) {
+                        $p_show = array_slice( $p_cat_names, 0, 3 );
+                        $p_target_bits[] = implode( ', ', $p_show ) . ( count( $p_cat_names ) > 3 ? ' +' . ( count( $p_cat_names ) - 3 ) : '' );
+                    }
+                    if ( $p_prods ) $p_target_bits[] = count( $p_prods ) . ' product' . ( count( $p_prods ) === 1 ? '' : 's' );
+                    $p_period = ( ! empty( $p['start'] ) || ! empty( $p['end'] ) )
+                        ? trim( ( ! empty( $p['start'] ) ? date_i18n( 'j M y', strtotime( $p['start'] ) ) : '…' ) . ' → ' . ( ! empty( $p['end'] ) ? date_i18n( 'j M y', strtotime( $p['end'] ) ) : '…' ) )
+                        : 'Always';
+                ?>
+                <tr>
+                    <td style="font-weight:700;">
+                        <a href="#" data-cp-edit="<?php echo esc_attr( $p['id'] ?? '' ); ?>" style="color:#0fb500;text-decoration:none;" title="Edit">
+                            <?php echo esc_html( $p['name'] ?? 'Promotion' ); ?> &rsaquo;
+                        </a>
+                    </td>
+                    <td style="font-weight:800;color:var(--green);white-space:nowrap;"><?php echo esc_html( $cp_fmt_disc( $p ) ); ?></td>
+                    <td style="font-size:12px;color:var(--muted);line-height:1.5;"><?php echo $p_target_bits ? esc_html( implode( ' · ', $p_target_bits ) ) : '— none yet'; ?></td>
+                    <td style="font-size:12px;white-space:nowrap;color:var(--muted);"><?php echo esc_html( $p_period ); ?></td>
+                    <td><span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;color:<?php echo esc_attr( $p_st[1] ); ?>;background:<?php echo esc_attr( $p_st[2] ); ?>;white-space:nowrap;"><?php echo esc_html( $p_st[0] ); ?></span></td>
+                    <td>
+                        <div style="display:flex;gap:6px;align-items:center;">
+                            <button type="button" data-cp-targets="<?php echo esc_attr( $p['id'] ?? '' ); ?>" style="padding:6px 12px;font-size:12px;font-weight:700;font-family:inherit;color:var(--green);background:rgba(0,196,79,.1);border:1px solid rgba(0,196,79,.3);border-radius:6px;cursor:pointer;white-space:nowrap;">Set Targets</button>
+                            <button type="button" class="ds-store-btn" data-cp-edit="<?php echo esc_attr( $p['id'] ?? '' ); ?>" style="border:0;cursor:pointer;padding:6px 12px;font-size:12px;">Edit</button>
+                            <form method="post" style="margin:0;" data-cp-del="<?php echo esc_attr( $p['name'] ?? 'Promotion' ); ?>">
+                                <?php wp_nonce_field( 'catpromo_save' ); ?>
+                                <input type="hidden" name="catpromo_action" value="delete">
+                                <input type="hidden" name="cp_id" value="<?php echo esc_attr( $p['id'] ?? '' ); ?>">
+                                <button type="submit" style="padding:6px 12px;font-size:12px;font-weight:700;font-family:inherit;color:#ef4444;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:6px;cursor:pointer;">Delete</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+            <?php endif; ?>
+        </div>
+
+        <style>
+        /* ── Premium promo dialogs ── */
+        .cpm{ position:fixed; inset:0; z-index:100000; display:flex; align-items:center; justify-content:center; padding:20px;
+            opacity:0; visibility:hidden; transition:opacity .2s ease, visibility .2s ease; }
+        .cpm.open{ opacity:1; visibility:visible; }
+        .cpm-overlay{ position:absolute; inset:0; background:rgba(8,12,20,.55); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); }
+        .cpm-card{ position:relative; width:100%; max-width:560px; max-height:88vh; display:flex; flex-direction:column;
+            background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:0 24px 60px rgba(0,0,0,.4);
+            transform:translateY(10px) scale(.96); opacity:0; transition:transform .24s cubic-bezier(.16,1,.3,1), opacity .24s ease; }
+        .cpm.open .cpm-card{ transform:none; opacity:1; }
+        /* Targets dialog: taller so the pickers have room to breathe */
+        #cpm-tgt .cpm-card{ min-height:min(600px, 88vh); }
+        #cpm-tgt form{ flex:1; min-height:0; }
+        #cpm-tgt .cpm-body{ flex:1; }
+        .cpm-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:16px 20px; border-bottom:1px solid var(--border); }
+        .cpm-head h3{ margin:0; font-size:16px; font-weight:800; letter-spacing:-.01em; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+        .cpm-x{ width:30px; height:30px; border:0; border-radius:8px; background:var(--surface2); color:var(--muted); font-size:16px; line-height:1; cursor:pointer; flex-shrink:0; }
+        .cpm-x:hover{ color:#ef4444; }
+        .cpm-body{ padding:18px 20px; overflow-y:auto; display:flex; flex-direction:column; gap:16px; }
+        .cpm-foot{ display:flex; gap:10px; justify-content:flex-end; align-items:center; padding:14px 20px; border-top:1px solid var(--border); }
+        .cpm-lbl{ font-size:12px; font-weight:700; color:var(--muted); margin-bottom:5px; }
+        .cpm-cancel{ padding:9px 16px; font-size:13px; font-weight:700; font-family:inherit; color:var(--text); background:var(--surface2); border:1px solid var(--border); border-radius:8px; cursor:pointer; }
+        .cpm-disc-badge{ display:inline-block; padding:3px 12px; border-radius:20px; font-size:11px; font-weight:700; color:var(--green); background:rgba(0,196,79,.12); }
+        /* Button loading state (applied on submit) */
+        .cp-loading{ pointer-events:none; opacity:.75; }
+        .cp-spin{ display:inline-block; width:13px; height:13px; border:2px solid rgba(128,128,128,.35); border-top-color:currentColor; border-radius:50%; animation:cpspin .7s linear infinite; margin-right:7px; vertical-align:-2px; }
+        @keyframes cpspin{ to{ transform:rotate(360deg); } }
+        /* ── Multi-select pickers (inside the targets dialog) ── */
+        .cpms{ position:relative; }
+        .cpms-control{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; min-height:44px; padding:7px 38px 7px 9px;
+            background:var(--surface2); border:1.5px solid var(--border); border-radius:10px; cursor:pointer; }
+        .cpms.open .cpms-control{ border-color:#00c44f; box-shadow:0 0 0 3px rgba(0,196,79,.14); }
+        .cpms-chevron{ position:absolute; right:12px; top:14px; width:16px; height:16px; color:var(--muted); pointer-events:none; transition:transform .18s; }
+        .cpms.open .cpms-chevron{ transform:rotate(180deg); }
+        .cpms-placeholder{ color:var(--muted); font-size:13px; padding-left:4px; }
+        .cpms-tag{ display:inline-flex; align-items:center; gap:6px; padding:4px 8px 4px 11px; background:rgba(0,196,79,.12);
+            border:1px solid rgba(0,196,79,.35); border-radius:50px; font-size:12px; font-weight:700; color:var(--text); }
+        .cpms-tag button{ display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border:0; border-radius:50%;
+            background:rgba(0,0,0,.12); color:var(--text); font-size:11px; line-height:1; cursor:pointer; padding:0; }
+        .cpms-tag button:hover{ background:#ef4444; color:#fff; }
+        .cpms-panel{ display:none; position:absolute; z-index:100001; left:0; right:0; top:calc(100% + 6px);
+            background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:0 16px 40px rgba(0,0,0,.18); overflow:hidden; }
+        .cpms.open .cpms-panel{ display:block; }
+        .cpms-search{ width:100%; padding:11px 14px; border:0; border-bottom:1px solid var(--border); background:transparent;
+            color:var(--text); font-size:13px; font-family:inherit; outline:none; }
+        .cpms-list{ max-height:200px; overflow-y:auto; padding:6px; }
+        .cpms-opt{ display:flex; align-items:center; gap:9px; padding:9px 10px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; color:var(--text); }
+        .cpms-opt:hover{ background:var(--surface2); }
+        .cpms-opt input{ width:15px; height:15px; accent-color:#00c44f; cursor:pointer; flex-shrink:0; }
+        .cpms-opt .cpms-count{ margin-left:auto; color:var(--muted); font-weight:400; font-size:11px; }
+        .cpms-opt.hidden{ display:none; }
+        .cpms-empty{ padding:12px 14px; color:var(--muted); font-size:12.5px; display:none; }
+        </style>
+
+        <!-- Dialog: create / edit promotion -->
+        <div class="cpm" id="cpm-def" aria-hidden="true">
+            <div class="cpm-overlay" data-cpm-close></div>
+            <div class="cpm-card" role="dialog" aria-modal="true">
+                <form method="post" style="display:flex;flex-direction:column;min-height:0;">
+                    <?php wp_nonce_field( 'catpromo_save' ); ?>
+                    <input type="hidden" name="catpromo_action" value="save">
+                    <input type="hidden" name="cp_id" id="cp-def-id" value="">
+                    <div class="cpm-head">
+                        <h3 id="cp-def-title">New Promotion</h3>
+                        <button type="button" class="cpm-x" data-cpm-close aria-label="Close">×</button>
+                    </div>
+                    <div class="cpm-body">
+                        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;">
+                            <div style="flex:1;min-width:200px;">
+                                <div class="cpm-lbl">Promotion name</div>
+                                <input type="text" name="cp_name" id="cp-def-name" placeholder="e.g. Khmer New Year Sale" style="<?php echo $cp_in_css; ?>width:100%;">
+                            </div>
+                            <label style="display:flex;align-items:center;gap:9px;cursor:pointer;font-weight:700;font-size:13px;padding-bottom:9px;">
+                                <input type="checkbox" name="cp_enabled" id="cp-def-enabled" value="1" checked style="width:17px;height:17px;accent-color:#00c44f;cursor:pointer;">
+                                Enabled
+                            </label>
+                        </div>
+                        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                            <div>
+                                <div class="cpm-lbl">Discount type</div>
+                                <select name="cp_dtype" id="cp-def-dtype" style="<?php echo $cp_in_css; ?>cursor:pointer;">
+                                    <option value="percent">Percentage (%)</option>
+                                    <option value="fixed">Fixed amount (<?php echo esc_html( $cp_cur_sym ); ?>)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <div class="cpm-lbl">Value</div>
+                                <input type="number" name="cp_value" id="cp-def-value" value="10" min="0.01" step="0.01" required style="<?php echo $cp_in_css; ?>width:110px;">
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                            <div>
+                                <div class="cpm-lbl">Start date <span style="font-weight:400;">(optional)</span></div>
+                                <input type="date" name="cp_start" id="cp-def-start" style="<?php echo $cp_in_css; ?>">
+                            </div>
+                            <div>
+                                <div class="cpm-lbl">End date <span style="font-weight:400;">(optional)</span></div>
+                                <input type="date" name="cp_end" id="cp-def-end" style="<?php echo $cp_in_css; ?>">
+                            </div>
+                        </div>
+                        <div style="font-size:12px;color:var(--muted);">After saving, use <strong>Set Targets</strong> to choose which categories / products this promotion applies to.</div>
+                    </div>
+                    <div class="cpm-foot">
+                        <button type="button" class="cpm-cancel" data-cpm-close>Cancel</button>
+                        <button type="submit" class="ds-store-btn" style="border:0;cursor:pointer;padding:10px 22px;">Save Promotion</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Dialog: set targets for ONE promotion (opened from its row) -->
+        <div class="cpm" id="cpm-tgt" aria-hidden="true">
+            <div class="cpm-overlay" data-cpm-close></div>
+            <div class="cpm-card" role="dialog" aria-modal="true">
+                <form method="post" style="display:flex;flex-direction:column;min-height:0;">
+                    <?php wp_nonce_field( 'catpromo_save' ); ?>
+                    <input type="hidden" name="catpromo_action" value="targets">
+                    <input type="hidden" name="cp_id" id="cp-tgt-id" value="">
+                    <div class="cpm-head">
+                        <h3><span id="cp-tgt-name">Set Targets</span> <span class="cpm-disc-badge" id="cp-tgt-disc"></span></h3>
+                        <button type="button" class="cpm-x" data-cpm-close aria-label="Close">×</button>
+                    </div>
+                    <div class="cpm-body">
+                        <!-- Separate target types: tabs -->
+                        <div style="display:inline-flex;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:4px;gap:4px;align-self:flex-start;">
+                            <button type="button" class="cp-tgt-tab active" data-cp-tab="cats" style="padding:8px 18px;border:0;border-radius:9px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:var(--surface);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.12);">Categories <span id="cp-tab-cats-n" style="color:var(--green);"></span></button>
+                            <button type="button" class="cp-tgt-tab" data-cp-tab="prods" style="padding:8px 18px;border:0;border-radius:9px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:transparent;color:var(--muted);">Products <span id="cp-tab-prods-n" style="color:var(--green);"></span></button>
+                        </div>
+                        <div id="cp-tgt-pane-cats">
+                            <div class="cpm-lbl">Categories <span style="font-weight:400;">(select one or more)</span></div>
+                            <div class="cpms" id="cpms">
+                                <div class="cpms-control" id="cpms-control" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox">
+                                    <span class="cpms-placeholder" id="cpms-placeholder">Select categories…</span>
+                                    <svg class="cpms-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                                </div>
+                                <div class="cpms-panel">
+                                    <input type="text" class="cpms-search" id="cpms-search" placeholder="Search categories…" autocomplete="off">
+                                    <div class="cpms-list" id="cpms-list">
+                                        <?php foreach ( $cp_terms as $t ) : ?>
+                                        <label class="cpms-opt" data-name="<?php echo esc_attr( mb_strtolower( $t->name ) ); ?>">
+                                            <input type="checkbox" name="cp_cats[]" value="<?php echo esc_attr( $t->term_id ); ?>" data-label="<?php echo esc_attr( $t->name ); ?>">
+                                            <?php echo esc_html( $t->name ); ?>
+                                            <span class="cpms-count"><?php echo number_format_i18n( (int) $t->count ); ?></span>
+                                        </label>
+                                        <?php endforeach; ?>
+                                        <div class="cpms-empty" id="cpms-empty">No categories match your search.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="cp-tgt-pane-prods" style="display:none;">
+                            <div class="cpm-lbl">Specific products <span style="font-weight:400;">(optional — search &amp; add)</span></div>
+                            <div class="cpms" id="cpps">
+                                <div class="cpms-control" id="cpps-control" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox">
+                                    <span class="cpms-placeholder" id="cpps-placeholder">Search &amp; add products…</span>
+                                    <svg class="cpms-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                                </div>
+                                <div class="cpms-panel">
+                                    <input type="text" class="cpms-search" id="cpps-search" placeholder="Type at least 2 letters to search products…" autocomplete="off">
+                                    <div class="cpms-list" id="cpps-list">
+                                        <div class="cpms-empty" id="cpps-empty" style="display:block;">Type to search your products.</div>
+                                    </div>
+                                </div>
+                                <span id="cpps-hidden"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cpm-foot">
+                        <button type="button" class="cpm-cancel" data-cpm-close>Cancel</button>
+                        <button type="submit" class="ds-store-btn" style="border:0;cursor:pointer;padding:10px 22px;">Save Targets</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Dialog: confirm promotion delete -->
+        <div class="cpm" id="cpm-del" aria-hidden="true">
+            <div class="cpm-overlay" data-cpm-close></div>
+            <div class="cpm-card" role="dialog" aria-modal="true" style="max-width:400px;text-align:center;">
+                <div class="cpm-body" style="align-items:center;padding-top:26px;">
+                    <div style="width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(239,68,68,.14);color:#ef4444;">
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/><path d="M10 11v6M14 11v6"/></svg>
+                    </div>
+                    <h3 style="margin:4px 0 0;font-size:17px;font-weight:800;letter-spacing:-.01em;">Delete promotion?</h3>
+                    <p style="margin:0;font-size:13.5px;line-height:1.55;color:var(--muted);">
+                        “<strong id="cp-del-name" style="color:var(--text);"></strong>” will be deleted and its
+                        discounts removed from the store immediately.
+                    </p>
+                </div>
+                <div class="cpm-foot" style="justify-content:center;">
+                    <button type="button" class="cpm-cancel" data-cpm-close>Cancel</button>
+                    <button type="button" id="cp-del-confirm" style="padding:9px 22px;font-size:13px;font-weight:700;font-family:inherit;color:#fff;background:linear-gradient(135deg,#ef4444,#dc2626);border:0;border-radius:8px;cursor:pointer;box-shadow:0 6px 16px rgba(239,68,68,.3);">Yes, delete</button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        (function(){
+            var CP_PROMOS = <?php echo wp_json_encode( $cp_js ); ?>;
+            function cpFind(id){ for(var i=0;i<CP_PROMOS.length;i++){ if(CP_PROMOS[i].id===id) return CP_PROMOS[i]; } return null; }
+            function openM(m){ m.classList.add('open'); m.setAttribute('aria-hidden','false'); }
+            function closeM(m){ m.classList.remove('open'); m.setAttribute('aria-hidden','true'); }
+            var defM = document.getElementById('cpm-def');
+            var tgtM = document.getElementById('cpm-tgt');
+            var delM = document.getElementById('cpm-del');
+            document.querySelectorAll('[data-cpm-close]').forEach(function(el){
+                el.addEventListener('click', function(){ closeM(defM); closeM(tgtM); closeM(delM); });
+            });
+            document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ closeM(defM); closeM(tgtM); closeM(delM); } });
+
+            /* ── Categories picker ── */
+            var cpmsRoot = document.getElementById('cpms');
+            var cpmsBoxes = [];
+            if(cpmsRoot){
+                var control = document.getElementById('cpms-control');
+                var search  = document.getElementById('cpms-search');
+                var list    = document.getElementById('cpms-list');
+                var empty   = document.getElementById('cpms-empty');
+                var ph      = document.getElementById('cpms-placeholder');
+                cpmsBoxes   = [].slice.call(list.querySelectorAll('input[type=checkbox]'));
+                var renderTags = function(){
+                    cpmsRoot.querySelectorAll('.cpms-tag').forEach(function(t){ t.remove(); });
+                    var checked = cpmsBoxes.filter(function(b){ return b.checked; });
+                    ph.style.display = checked.length ? 'none' : '';
+                    checked.forEach(function(b){
+                        var tag = document.createElement('span');
+                        tag.className = 'cpms-tag';
+                        tag.appendChild(document.createTextNode(b.getAttribute('data-label')));
+                        var x = document.createElement('button');
+                        x.type='button'; x.textContent='×'; x.setAttribute('aria-label','Remove');
+                        x.addEventListener('click', function(e){ e.stopPropagation(); b.checked=false; renderTags(); });
+                        tag.appendChild(x);
+                        control.insertBefore(tag, ph);
+                    });
+                    if(window.cpUpdateTabCounts) window.cpUpdateTabCounts();
+                };
+                var setOpen = function(on){
+                    cpmsRoot.classList.toggle('open', on);
+                    control.setAttribute('aria-expanded', on?'true':'false');
+                    if(on){ search.value=''; filter(); setTimeout(function(){ search.focus(); },10); }
+                };
+                var filter = function(){
+                    var q = search.value.trim().toLowerCase(), hits=0;
+                    list.querySelectorAll('.cpms-opt').forEach(function(opt){
+                        var hit = !q || opt.getAttribute('data-name').indexOf(q)!==-1;
+                        opt.classList.toggle('hidden', !hit);
+                        if(hit) hits++;
+                    });
+                    empty.style.display = hits ? 'none' : 'block';
+                };
+                control.addEventListener('click', function(){ setOpen(!cpmsRoot.classList.contains('open')); });
+                control.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); setOpen(true); } });
+                search.addEventListener('input', filter);
+                cpmsBoxes.forEach(function(b){ b.addEventListener('change', renderTags); });
+                document.addEventListener('click', function(e){ if(!cpmsRoot.contains(e.target)) setOpen(false); });
+                window.cpmsSetSelected = function(ids){
+                    ids = (ids||[]).map(String);
+                    cpmsBoxes.forEach(function(b){ b.checked = ids.indexOf(b.value)!==-1; });
+                    renderTags();
+                };
+                renderTags();
+            }
+
+            /* ── Products picker (AJAX search) ── */
+            var cppsRoot = document.getElementById('cpps');
+            if(cppsRoot){
+                var pControl = document.getElementById('cpps-control');
+                var pSearch  = document.getElementById('cpps-search');
+                var pList    = document.getElementById('cpps-list');
+                var pEmpty   = document.getElementById('cpps-empty');
+                var pPh      = document.getElementById('cpps-placeholder');
+                var pHidden  = document.getElementById('cpps-hidden');
+                var ajaxUrl  = <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>;
+                var pNonce   = <?php echo wp_json_encode( wp_create_nonce( 'shopys_promo_search' ) ); ?>;
+                var pTimer   = null, pSeq = 0;
+                var selectedIds = function(){ return [].slice.call(pHidden.querySelectorAll('input')).map(function(i){ return i.value; }); };
+                var renderPTags = function(){
+                    cppsRoot.querySelectorAll('.cpms-tag').forEach(function(t){ t.remove(); });
+                    var inputs = [].slice.call(pHidden.querySelectorAll('input'));
+                    pPh.style.display = inputs.length ? 'none' : '';
+                    inputs.forEach(function(inp){
+                        var tag = document.createElement('span');
+                        tag.className = 'cpms-tag';
+                        tag.appendChild(document.createTextNode(inp.getAttribute('data-label') || ('#'+inp.value)));
+                        var x = document.createElement('button');
+                        x.type='button'; x.textContent='×'; x.setAttribute('aria-label','Remove');
+                        x.addEventListener('click', function(e){ e.stopPropagation(); inp.remove(); renderPTags(); });
+                        tag.appendChild(x);
+                        pControl.insertBefore(tag, pPh);
+                    });
+                    if(window.cpUpdateTabCounts) window.cpUpdateTabCounts();
+                };
+                var addProduct = function(id, name){
+                    if(selectedIds().indexOf(String(id))!==-1) return;
+                    var inp = document.createElement('input');
+                    inp.type='hidden'; inp.name='cp_prods[]'; inp.value=id;
+                    inp.setAttribute('data-label', name);
+                    pHidden.appendChild(inp);
+                    renderPTags();
+                };
+                var showMsg = function(msg){
+                    pList.querySelectorAll('.cpms-opt').forEach(function(o){ o.remove(); });
+                    pEmpty.textContent = msg; pEmpty.style.display='block';
+                };
+                var renderResults = function(items){
+                    pList.querySelectorAll('.cpms-opt').forEach(function(o){ o.remove(); });
+                    if(!items.length){ pEmpty.textContent='No products found.'; pEmpty.style.display='block'; return; }
+                    pEmpty.style.display='none';
+                    var sel = selectedIds();
+                    items.forEach(function(it){
+                        var row = document.createElement('div');
+                        row.className='cpms-opt';
+                        if(sel.indexOf(String(it.id))!==-1) row.style.opacity='.45';
+                        row.appendChild(document.createTextNode(it.name));
+                        var pr = document.createElement('span');
+                        pr.className='cpms-count'; pr.textContent = it.price || '';
+                        row.appendChild(pr);
+                        row.addEventListener('click', function(){ addProduct(it.id, it.name); row.style.opacity='.45'; });
+                        pList.appendChild(row);
+                    });
+                };
+                var doSearch = function(){
+                    var q = pSearch.value.trim();
+                    if(q.length<2){ showMsg('Type to search your products.'); return; }
+                    var mySeq = ++pSeq;
+                    showMsg('Searching…');
+                    fetch(ajaxUrl + '?action=shopys_promo_search_products&nonce=' + encodeURIComponent(pNonce) + '&q=' + encodeURIComponent(q), {credentials:'same-origin'})
+                        .then(function(r){ return r.json(); })
+                        .then(function(d){ if(mySeq===pSeq) renderResults((d && d.success && d.data) ? d.data : []); })
+                        .catch(function(){ if(mySeq===pSeq) showMsg('Search failed — try again.'); });
+                };
+                var setPOpen = function(on){
+                    cppsRoot.classList.toggle('open', on);
+                    pControl.setAttribute('aria-expanded', on?'true':'false');
+                    if(on){ setTimeout(function(){ pSearch.focus(); },10); }
+                };
+                pControl.addEventListener('click', function(){ setPOpen(!cppsRoot.classList.contains('open')); });
+                pControl.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); setPOpen(true); } });
+                pSearch.addEventListener('input', function(){ clearTimeout(pTimer); pTimer = setTimeout(doSearch, 300); });
+                document.addEventListener('click', function(e){ if(!cppsRoot.contains(e.target)) setPOpen(false); });
+                window.cppsSetSelected = function(items){
+                    [].slice.call(pHidden.querySelectorAll('input')).forEach(function(i){ i.remove(); });
+                    (items||[]).forEach(function(it){ addProduct(it.id, it.name); });
+                    renderPTags();
+                };
+                renderPTags();
+            }
+
+            /* ── Definition dialog open/prefill ── */
+            function openDef(p){
+                document.getElementById('cp-def-title').textContent = p ? 'Edit Promotion' : 'New Promotion';
+                document.getElementById('cp-def-id').value      = p ? p.id : '';
+                document.getElementById('cp-def-name').value    = p ? p.name : '';
+                document.getElementById('cp-def-enabled').checked = p ? !!p.enabled : true;
+                document.getElementById('cp-def-dtype').value   = p ? p.dtype : 'percent';
+                document.getElementById('cp-def-value').value   = p ? p.value : 10;
+                document.getElementById('cp-def-start').value   = p ? p.start : '';
+                document.getElementById('cp-def-end').value     = p ? p.end : '';
+                openM(defM);
+            }
+            var addBtn = document.getElementById('cp-add-btn');
+            if(addBtn) addBtn.addEventListener('click', function(){ openDef(null); });
+            document.querySelectorAll('[data-cp-edit]').forEach(function(el){
+                el.addEventListener('click', function(e){ e.preventDefault(); openDef(cpFind(el.getAttribute('data-cp-edit'))); });
+            });
+
+            /* ── Targets dialog: one promotion, separate Categories / Products tabs ── */
+            var tgtId    = document.getElementById('cp-tgt-id');
+            var tgtName  = document.getElementById('cp-tgt-name');
+            var tgtDisc  = document.getElementById('cp-tgt-disc');
+            var tabBtns  = [].slice.call(document.querySelectorAll('.cp-tgt-tab'));
+            var paneCats = document.getElementById('cp-tgt-pane-cats');
+            var paneProds= document.getElementById('cp-tgt-pane-prods');
+            function setTab(which){
+                tabBtns.forEach(function(b){
+                    var on = b.getAttribute('data-cp-tab') === which;
+                    b.classList.toggle('active', on);
+                    b.style.background = on ? 'var(--surface)' : 'transparent';
+                    b.style.color      = on ? 'var(--text)' : 'var(--muted)';
+                    b.style.boxShadow  = on ? '0 2px 8px rgba(0,0,0,.12)' : 'none';
+                });
+                if(paneCats)  paneCats.style.display  = which === 'cats'  ? '' : 'none';
+                if(paneProds) paneProds.style.display = which === 'prods' ? '' : 'none';
+            }
+            tabBtns.forEach(function(b){ b.addEventListener('click', function(){ setTab(b.getAttribute('data-cp-tab')); }); });
+            window.cpUpdateTabCounts = function(){
+                var nCats  = document.querySelectorAll('#cpms-list input:checked').length;
+                var nProds = document.querySelectorAll('#cpps-hidden input').length;
+                var eC = document.getElementById('cp-tab-cats-n'), eP = document.getElementById('cp-tab-prods-n');
+                if(eC) eC.textContent = nCats  ? '(' + nCats + ')'  : '';
+                if(eP) eP.textContent = nProds ? '(' + nProds + ')' : '';
+            };
+            function openTgt(id){
+                var p = cpFind(id); if(!p) return;
+                if(tgtId)   tgtId.value = p.id;
+                if(tgtName) tgtName.textContent = 'Set Targets — ' + p.name;
+                if(tgtDisc) tgtDisc.textContent = p.disc;
+                if(window.cpmsSetSelected) window.cpmsSetSelected(p.cats);
+                if(window.cppsSetSelected) window.cppsSetSelected(p.products);
+                window.cpUpdateTabCounts();
+                setTab('cats');
+                openM(tgtM);
+            }
+            document.querySelectorAll('[data-cp-targets]').forEach(function(el){
+                el.addEventListener('click', function(){ openTgt(el.getAttribute('data-cp-targets')); });
+            });
+
+            /* ── Delete: premium confirm dialog, then submit with loading ── */
+            var delName    = document.getElementById('cp-del-name');
+            var delConfirm = document.getElementById('cp-del-confirm');
+            var delPending = null, delAllowed = false;
+            document.querySelectorAll('#panel-promotion form[data-cp-del]').forEach(function(f){
+                f.addEventListener('submit', function(e){
+                    if(delAllowed) return; // confirmed — let it through
+                    e.preventDefault();
+                    delPending = f;
+                    if(delName) delName.textContent = f.getAttribute('data-cp-del') || 'Promotion';
+                    openM(delM);
+                });
+            });
+            if(delConfirm) delConfirm.addEventListener('click', function(){
+                if(!delPending || delConfirm.disabled) return;
+                delConfirm.disabled = true;
+                delConfirm.classList.add('cp-loading');
+                var sp = document.createElement('span');
+                sp.className = 'cp-spin';
+                delConfirm.insertBefore(sp, delConfirm.firstChild);
+                delAllowed = true;
+                if(delPending.requestSubmit) delPending.requestSubmit(); else delPending.submit();
+            });
+
+            /* ── Loading state on every action button in this panel (save/targets/delete) ── */
+            document.querySelectorAll('#panel-promotion form').forEach(function(f){
+                f.addEventListener('submit', function(e){
+                    var btn = e.submitter || f.querySelector('[type=submit]');
+                    if(!btn || btn.disabled) return;
+                    setTimeout(function(){
+                        if(e.defaultPrevented) return; // e.g. delete intercepted by its dialog
+                        btn.disabled = true;
+                        btn.classList.add('cp-loading');
+                        var sp = document.createElement('span');
+                        sp.className = 'cp-spin';
+                        btn.insertBefore(sp, btn.firstChild);
+                    }, 0);
+                });
+            });
+        })();
+        </script>
+        <?php endif; ?>
         </div>
 
     </div><!-- .ds-content -->

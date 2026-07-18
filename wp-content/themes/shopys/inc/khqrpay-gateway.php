@@ -578,6 +578,23 @@ function khqrpay_load_gateway() {
             wp_enqueue_script( 'khqr-qrgen', 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js', array(), '1.4.4', false );
             ?>
             <style>
+            /* ── Order summary (ul.order_details) → premium card on mobile ── */
+            @media (max-width:768px){
+                body.woocommerce-order-pay ul.order_details{ display:grid !important; grid-template-columns:1fr 1fr; gap:0;
+                    background:#fff; border:1px solid #eef0f4; border-radius:16px; padding:4px 0 !important; margin:6px 0 18px !important;
+                    box-shadow:0 6px 22px rgba(15,23,42,.06); list-style:none !important;
+                    font-family:'Play','Battambang',-apple-system,sans-serif; }
+                body.woocommerce-order-pay ul.order_details li{ float:none !important; width:auto !important; margin:0 !important;
+                    border:0 !important; padding:13px 16px 11px !important; font-size:9.5px !important; letter-spacing:1.2px !important;
+                    color:#9aa3b0 !important; text-transform:uppercase !important; font-weight:800 !important; line-height:1.4 !important; }
+                body.woocommerce-order-pay ul.order_details li strong{ display:block !important; font-size:14.5px !important;
+                    color:#0d1117 !important; font-weight:800 !important; letter-spacing:-.2px !important; text-transform:none !important;
+                    margin-top:4px !important; line-height:1.35 !important; }
+                body.woocommerce-order-pay ul.order_details li.total strong{ color:#0a9d4a !important; font-size:16px !important; }
+                body.woocommerce-order-pay ul.order_details li.total,
+                body.woocommerce-order-pay ul.order_details li.method{ border-top:1px solid #f2f4f7 !important; }
+                body.woocommerce-order-pay ul.order_details li.method{ grid-column:1 / -1; }
+            }
             .khqrx-wrap{ max-width:360px; margin:10px auto 28px; font-family:'Play','Battambang',-apple-system,BlinkMacSystemFont,sans-serif; }
             .khqrx-card{ background:#fff; border:1px solid #eef0f4; border-radius:22px; overflow:hidden; box-shadow:0 24px 70px rgba(15,23,42,.13); }
             .khqrx-head{ background:linear-gradient(135deg,#ef3b32,#c0140c); color:#fff; padding:18px 18px 16px; text-align:center; }
