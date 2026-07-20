@@ -3103,3 +3103,123 @@ add_filter( 'woocommerce_product_is_on_sale', 'shopys_cat_promo_on_sale', 20, 2 
 function shopys_cat_promo_on_sale( $on_sale, $product ) {
     return $on_sale || shopys_promo_best_price( $product ) !== null;
 }
+
+/* ── Home-page discount banner (under the search bar) ──────────────────────
+ * Content + visibility configured in Dashboard → Promotion → "Home Discount
+ * Banner". Stored in the `shopys_discount_banner` option:
+ * enabled, text, link (optional URL), btn (button label).
+ */
+/** Banner color themes (each a full premium scheme). 'custom' uses the two
+ *  colors picked in the dashboard. */
+function shopys_disc_banner_presets() {
+    return [
+        'dark'   => [ 'label' => 'Dark · Green (brand)', 'bg' => 'linear-gradient(120deg,#0b0f14 0%,#0e1a12 45%,#0b1219 100%)', 'a1' => '#13e800', 'a2' => '#0fb500', 'btn_text' => '#04210a', 'text' => '#f4f8f5', 'glow' => '19,232,0' ],
+        'green'  => [ 'label' => 'Green', 'bg' => 'linear-gradient(120deg,#0fb500,#0a9d4a)', 'a1' => '#ffffff', 'a2' => '#eafff2', 'btn_text' => '#067a3b', 'text' => '#ffffff', 'glow' => '255,255,255' ],
+        'gold'   => [ 'label' => 'Black · Gold', 'bg' => 'linear-gradient(120deg,#0d0d0f,#1a160b 55%,#0d0d0f)', 'a1' => '#f5c518', 'a2' => '#d4a017', 'btn_text' => '#2a2005', 'text' => '#faf6ea', 'glow' => '245,197,24' ],
+        'red'    => [ 'label' => 'Red Sale', 'bg' => 'linear-gradient(120deg,#151013,#2a0f12 55%,#151013)', 'a1' => '#f87171', 'a2' => '#dc2626', 'btn_text' => '#fff5f5', 'text' => '#fdf2f2', 'glow' => '239,68,68' ],
+        'purple' => [ 'label' => 'Dark · Purple', 'bg' => 'linear-gradient(120deg,#101014,#1a1030 60%,#101014)', 'a1' => '#a78bfa', 'a2' => '#7c3aed', 'btn_text' => '#1d1040', 'text' => '#f5f3ff', 'glow' => '139,92,246' ],
+        'blue'   => [ 'label' => 'Dark · Blue', 'bg' => 'linear-gradient(120deg,#0b1220,#0e1a2f 60%,#0b1220)', 'a1' => '#38bdf8', 'a2' => '#1d4ed8', 'btn_text' => '#071427', 'text' => '#eff6ff', 'glow' => '59,130,246' ],
+        'custom' => [ 'label' => 'Custom colors…' ],
+    ];
+}
+
+/** Resolve the scheme for the saved settings (falls back to the brand default). */
+function shopys_disc_banner_scheme( $o ) {
+    $presets = shopys_disc_banner_presets();
+    $key     = $o['color'] ?? 'dark';
+    if ( $key === 'custom' ) {
+        $bgc = ! empty( $o['bgc'] ) ? $o['bgc'] : '#0b0f14';
+        $acc = ! empty( $o['acc'] ) ? $o['acc'] : '#13e800';
+        // Pick button text color by accent brightness.
+        $hex = ltrim( $acc, '#' );
+        if ( strlen( $hex ) === 3 ) $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+        $r = hexdec( substr( $hex, 0, 2 ) ); $g = hexdec( substr( $hex, 2, 2 ) ); $b = hexdec( substr( $hex, 4, 2 ) );
+        $lum = ( 0.299 * $r + 0.587 * $g + 0.114 * $b ) / 255;
+        return [
+            'bg'       => 'linear-gradient(120deg,' . $bgc . ' 0%, color-mix(in srgb, ' . $bgc . ' 82%, ' . $acc . ' 18%) 55%, ' . $bgc . ' 100%)',
+            'a1'       => $acc,
+            'a2'       => $acc,
+            'btn_text' => $lum > 0.55 ? '#101418' : '#ffffff',
+            'text'     => '#f4f6f5',
+            'glow'     => $r . ',' . $g . ',' . $b,
+        ];
+    }
+    return isset( $presets[ $key ], $presets[ $key ]['bg'] ) ? $presets[ $key ] : $presets['dark'];
+}
+
+add_action( 'open_shop_after_header', 'shopys_discount_banner', 7 );
+function shopys_discount_banner() {
+    if ( ! is_front_page() ) return;
+    $o = get_option( 'shopys_discount_banner' );
+    if ( ! is_array( $o ) || empty( $o['enabled'] ) || empty( $o['text'] ) ) return;
+    $link = ! empty( $o['link'] ) ? $o['link'] : '';
+    $btn  = ! empty( $o['btn'] )  ? $o['btn']  : 'Shop Now';
+    $c    = shopys_disc_banner_scheme( $o );
+    ?>
+    <div class="shopys-disc-wrap">
+        <div class="shopys-disc-card">
+            <div class="shopys-disc-left">
+                <span class="shopys-disc-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-5 5a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 10V5a2 2 0 012-2z"/>
+                    </svg>
+                </span>
+                <span class="shopys-disc-copy">
+                    <span class="shopys-disc-eyebrow"><?php esc_html_e( 'Special Offer', 'shopys' ); ?></span>
+                    <span class="shopys-disc-text"><?php echo esc_html( $o['text'] ); ?></span>
+                </span>
+            </div>
+            <?php if ( $link !== '' ) : ?>
+            <a class="shopys-disc-btn" href="<?php echo esc_url( $link ); ?>">
+                <?php echo esc_html( $btn ); ?>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+            <?php endif; ?>
+        </div>
+    </div>
+    <style>
+    .shopys-disc-wrap{ padding:14px 16px 0; font-family:'Play','Battambang',-apple-system,sans-serif; }
+    .shopys-disc-card{ position:relative; overflow:hidden; max-width:1200px; margin:0 auto 1rem;
+        display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+        padding:16px 22px; border-radius:18px;
+        background:<?php echo $c['bg']; ?>;
+        border:1px solid rgba(<?php echo $c['glow']; ?>,.3);
+        box-shadow:0 14px 40px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.06); }
+    .shopys-disc-card::before{ content:''; position:absolute; top:-90px; right:-40px; width:240px; height:240px;
+        background:radial-gradient(circle, rgba(<?php echo $c['glow']; ?>,.2), transparent 62%); border-radius:50%; pointer-events:none; }
+    .shopys-disc-card::after{ content:''; position:absolute; bottom:-110px; left:16%; width:200px; height:200px;
+        background:radial-gradient(circle, rgba(<?php echo $c['glow']; ?>,.1), transparent 62%); border-radius:50%; pointer-events:none; }
+    .shopys-disc-left{ position:relative; display:flex; align-items:center; gap:14px; min-width:0; }
+    .shopys-disc-left::before{ content:''; position:absolute; top:-30px; bottom:-30px; width:110px; pointer-events:none;
+        background:linear-gradient(105deg, transparent 0%, rgba(255,255,255,.07) 50%, transparent 100%);
+        animation:shopysDiscShine 5s ease-in-out infinite; }
+    @keyframes shopysDiscShine{ 0%{ left:-30%; } 55%,100%{ left:130%; } }
+    .shopys-disc-icon{ display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px;
+        border-radius:13px; background:linear-gradient(135deg,<?php echo $c['a1']; ?>,<?php echo $c['a2']; ?>); color:<?php echo $c['btn_text']; ?>; flex-shrink:0;
+        box-shadow:0 8px 20px rgba(<?php echo $c['glow']; ?>,.4), inset 0 1px 0 rgba(255,255,255,.35); }
+    .shopys-disc-icon svg{ width:20px; height:20px; }
+    .shopys-disc-copy{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+    .shopys-disc-eyebrow{ display:inline-flex; align-items:center; gap:6px; font-size:10px; font-weight:800;
+        letter-spacing:2.2px; text-transform:uppercase; color:<?php echo $c['a1']; ?>; }
+    .shopys-disc-eyebrow::after{ content:''; width:26px; height:1.5px; background:linear-gradient(90deg,<?php echo $c['a1']; ?>,transparent); }
+    .shopys-disc-text{ color:<?php echo $c['text']; ?>; font-weight:800; font-size:15.5px; letter-spacing:-.1px; line-height:1.35;
+        text-shadow:0 1px 3px rgba(0,0,0,.45); }
+    .shopys-disc-btn{ position:relative; display:inline-flex; align-items:center; gap:8px; padding:11px 22px;
+        border-radius:12px; background:linear-gradient(135deg,<?php echo $c['a1']; ?>,<?php echo $c['a2']; ?>); color:<?php echo $c['btn_text']; ?> !important;
+        font-weight:800; font-size:13px; letter-spacing:.3px; text-decoration:none !important; flex-shrink:0;
+        box-shadow:0 8px 22px rgba(<?php echo $c['glow']; ?>,.38), inset 0 1px 0 rgba(255,255,255,.35);
+        transition:transform .15s ease, box-shadow .15s ease; }
+    .shopys-disc-btn:hover{ transform:translateY(-2px); box-shadow:0 12px 28px rgba(<?php echo $c['glow']; ?>,.5); color:<?php echo $c['btn_text']; ?> !important; }
+    .shopys-disc-btn svg{ width:14px; height:14px; }
+    @media (max-width:700px){
+        .shopys-disc-wrap{ padding:10px 10px 0; }
+        .shopys-disc-card{ flex-direction:column; align-items:center; text-align:center; gap:12px; padding:16px 14px; border-radius:15px; }
+        .shopys-disc-left{ flex-direction:column; gap:9px; }
+        .shopys-disc-copy{ align-items:center; }
+        .shopys-disc-text{ font-size:13.5px; }
+        .shopys-disc-icon{ width:38px; height:38px; border-radius:11px; }
+        .shopys-disc-btn{ width:100%; justify-content:center; }
+    }
+    </style>
+    <?php
+}

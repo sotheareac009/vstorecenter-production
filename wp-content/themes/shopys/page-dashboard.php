@@ -243,6 +243,29 @@ if (
     exit;
 }
 
+// ── Home discount banner save handler (owner only) ────────────────────────────
+if (
+    $is_site_owner &&
+    isset( $_POST['promo_banner_save'], $_POST['_wpnonce'] ) &&
+    wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'promo_banner_save' )
+) {
+    $db_color   = isset( $_POST['db_color'] ) ? sanitize_key( $_POST['db_color'] ) : 'dark';
+    $db_presets = function_exists( 'shopys_disc_banner_presets' ) ? array_keys( shopys_disc_banner_presets() ) : [ 'dark' ];
+    if ( ! in_array( $db_color, $db_presets, true ) ) $db_color = 'dark';
+    update_option( 'shopys_discount_banner', [
+        'enabled' => ! empty( $_POST['db_enabled'] ),
+        'text'    => sanitize_text_field( wp_unslash( $_POST['db_text'] ?? '' ) ),
+        'link'    => esc_url_raw( wp_unslash( $_POST['db_link'] ?? '' ) ),
+        'btn'     => sanitize_text_field( wp_unslash( $_POST['db_btn'] ?? '' ) ),
+        'color'   => $db_color,
+        'bgc'     => sanitize_hex_color( wp_unslash( $_POST['db_bgc'] ?? '' ) ) ?: '#0b0f14',
+        'acc'     => sanitize_hex_color( wp_unslash( $_POST['db_acc'] ?? '' ) ) ?: '#13e800',
+    ], false );
+    do_action( 'litespeed_purge_all' );
+    wp_safe_redirect( add_query_arg( [ 'tab' => 'promotion', 'banner_saved' => 1 ], home_url( '/dashboard/' ) ) );
+    exit;
+}
+
 // ── Collect Site-View data (safe even if view-counter isn't loaded) ───────────
 $has_vc = function_exists( 'shopys_vc_count_views' );
 
@@ -4138,7 +4161,69 @@ body {
         <div style="background:#ecfdf3;border:1px solid #abefc6;color:#067647;padding:10px 16px;border-radius:10px;margin-bottom:16px;font-weight:600;">✓ Promotion saved — store prices update immediately.</div>
         <?php elseif ( isset( $_GET['promo_deleted'] ) ) : ?>
         <div style="background:#ecfdf3;border:1px solid #abefc6;color:#067647;padding:10px 16px;border-radius:10px;margin-bottom:16px;font-weight:600;">✓ Promotion deleted — its prices are restored.</div>
+        <?php elseif ( isset( $_GET['banner_saved'] ) ) : ?>
+        <div style="background:#ecfdf3;border:1px solid #abefc6;color:#067647;padding:10px 16px;border-radius:10px;margin-bottom:16px;font-weight:600;">✓ Home discount banner saved.</div>
         <?php endif; ?>
+
+        <!-- Home discount banner config -->
+        <?php
+            $db = get_option( 'shopys_discount_banner' );
+            $db = is_array( $db ) ? $db : [];
+        ?>
+        <div class="ds-table-wrap">
+            <div class="ds-table-head" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                <span>Home Discount Banner
+                    <span style="display:inline-block;margin-left:8px;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700;<?php echo ! empty( $db['enabled'] ) ? 'color:#047857;background:rgba(16,185,129,.14);' : 'color:#6b7280;background:rgba(148,163,184,.16);'; ?>"><?php echo ! empty( $db['enabled'] ) ? 'Visible' : 'Hidden'; ?></span>
+                </span>
+                <span style="font-size:12px;color:var(--muted);">Shown on the home page, under the search bar</span>
+            </div>
+            <form method="post" style="padding:16px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+                <?php wp_nonce_field( 'promo_banner_save' ); ?>
+                <input type="hidden" name="promo_banner_save" value="1">
+                <label style="display:flex;align-items:center;gap:9px;cursor:pointer;font-weight:700;font-size:13px;padding-bottom:9px;">
+                    <input type="checkbox" name="db_enabled" value="1" <?php checked( ! empty( $db['enabled'] ) ); ?> style="width:17px;height:17px;accent-color:#00c44f;cursor:pointer;">
+                    Show banner
+                </label>
+                <div style="flex:2;min-width:260px;">
+                    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px;">Banner text</div>
+                    <input type="text" name="db_text" value="<?php echo esc_attr( $db['text'] ?? '' ); ?>" placeholder="e.g. 🔥 Khmer New Year Sale — up to 20% off!" style="<?php echo $cp_in_css; ?>width:100%;">
+                </div>
+                <div style="flex:1;min-width:200px;">
+                    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px;">Link <span style="font-weight:400;">(optional)</span></div>
+                    <input type="url" name="db_link" value="<?php echo esc_attr( $db['link'] ?? '' ); ?>" placeholder="https://…" style="<?php echo $cp_in_css; ?>width:100%;">
+                </div>
+                <div style="min-width:130px;">
+                    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px;">Button label</div>
+                    <input type="text" name="db_btn" value="<?php echo esc_attr( $db['btn'] ?? '' ); ?>" placeholder="Shop Now" style="<?php echo $cp_in_css; ?>width:100%;">
+                </div>
+                <div style="min-width:160px;">
+                    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px;">Color theme</div>
+                    <select name="db_color" id="db-color-sel" style="<?php echo $cp_in_css; ?>width:100%;cursor:pointer;">
+                        <?php $db_color_now = $db['color'] ?? 'dark';
+                        foreach ( ( function_exists( 'shopys_disc_banner_presets' ) ? shopys_disc_banner_presets() : [] ) as $ck => $cv ) : ?>
+                        <option value="<?php echo esc_attr( $ck ); ?>" <?php selected( $db_color_now, $ck ); ?>><?php echo esc_html( $cv['label'] ?? $ck ); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div id="db-custom-colors" style="display:<?php echo $db_color_now === 'custom' ? 'flex' : 'none'; ?>;gap:10px;align-items:flex-end;">
+                    <div>
+                        <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px;">Background</div>
+                        <input type="color" name="db_bgc" value="<?php echo esc_attr( $db['bgc'] ?? '#0b0f14' ); ?>" style="width:46px;height:37px;padding:2px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer;">
+                    </div>
+                    <div>
+                        <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px;">Accent</div>
+                        <input type="color" name="db_acc" value="<?php echo esc_attr( $db['acc'] ?? '#13e800' ); ?>" style="width:46px;height:37px;padding:2px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer;">
+                    </div>
+                </div>
+                <script>
+                (function(){
+                    var sel = document.getElementById('db-color-sel'), cust = document.getElementById('db-custom-colors');
+                    if(sel && cust) sel.addEventListener('change', function(){ cust.style.display = sel.value === 'custom' ? 'flex' : 'none'; });
+                })();
+                </script>
+                <button type="submit" class="ds-store-btn" style="border:0;cursor:pointer;padding:10px 20px;">Save Banner</button>
+            </form>
+        </div>
 
         <!-- Promotions list -->
         <div class="ds-table-wrap">
