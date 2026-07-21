@@ -1413,6 +1413,8 @@ function shopys_checkout_stepper_css() {
     /* Hide the original bottom Place Order — we expose it in the top action bar */
     body.woocommerce-checkout #order_review #payment .form-row.place-order{ display:none !important; }
     body.woocommerce-checkout .woocommerce-billing-fields > h3{ display:none !important; }
+    body.woocommerce-checkout .woocommerce-shipping-fields{ display:none !important; }
+    body.woocommerce-checkout .woocommerce-additional-fields{ display:none !important; }
     body.woocommerce-checkout .woocommerce-billing-fields::before{ content:"STEP 1  \00b7  DELIVERY ADDRESS"; display:block; font-size:12px; font-weight:800; letter-spacing:1px; color:#00a341; margin:0 0 16px; padding-bottom:12px; border-bottom:1px solid #eef0f4; font-family:"Play","Battambang",sans-serif; }
     body.woocommerce-checkout #order_review::before{ content:"STEP 2  \00b7  YOUR ORDER" !important; color:#00a341 !important; letter-spacing:1px !important; font-size:12px !important; font-weight:800 !important; }
 
@@ -1690,23 +1692,12 @@ function shopys_invoice_buttons_style() {
     if ( ! is_account_page() && ! ( function_exists( 'is_wc_endpoint_url' ) && is_wc_endpoint_url( 'order-received' ) ) ) return;
     ?>
     <style>
-    /* Print / Download Invoice buttons (print-invoices plugin) → one premium row */
-    a[class*="wt_pklist_"]{
-        display:inline-flex !important; align-items:center; gap:8px; vertical-align:middle;
-        width:auto !important; min-height:0 !important;
-        margin:16px 10px 0 0 !important; padding:11px 22px !important;
-        border-radius:10px !important; font-weight:700 !important; font-size:13px !important;
-        line-height:1.2 !important; text-decoration:none !important;
-        background:#00c44f !important; color:#fff !important; border:1.5px solid #00c44f !important;
-        box-shadow:0 6px 18px rgba(0,196,79,.28); transition:transform .2s ease,box-shadow .2s ease,background .2s ease;
-    }
-    a[class*="wt_pklist_"]:hover{ background:#00a341 !important; border-color:#00a341 !important; transform:translateY(-2px); box-shadow:0 10px 26px rgba(0,196,79,.38); color:#fff !important; }
-    /* Remove the <br><br> the plugin prints after each button so they stay on one row */
-    a[class*="wt_pklist_"] + br,
-    a[class*="wt_pklist_"] + br + br{ display:none !important; }
-    /* Download = outline pill at rest, but fills green on hover just like Print */
-    a[class*="_download"]{ background:#fff !important; color:#0a7d00 !important; box-shadow:none !important; }
-    a[class*="_download"]:hover{ background:#00a341 !important; border-color:#00a341 !important; color:#fff !important; transform:translateY(-2px); box-shadow:0 10px 26px rgba(0,196,79,.38) !important; }
+    /* Hide the third-party Print/Download Invoice buttons (WebToffee + WooCommerce
+       Delivery Notes) everywhere they might appear — replaced by our own reliable
+       buttons in shopys_render_invoice_buttons(). */
+    a[class*="wt_pklist_"],
+    .order-print,
+    p.order-print{ display:none !important; }
     </style>
     <?php
 }
@@ -2085,6 +2076,97 @@ function shopys_admin_show_shop( $order ) {
     echo '<p><strong>' . esc_html__( 'Shop', 'shopys' ) . ':</strong> ' . esc_html( isset( $names[ $branch ] ) ? $names[ $branch ] : $branch ) . '</p>';
 }
 
+// ── Telegram: notify the instant an order is placed (checkout submitted) ──────
+// COD / Walk-In orders go straight to processing/on-hold, so the "paid order"
+// hook below already covers them immediately. KHQR orders stay "pending" until
+// Bakong confirms payment, so without this they'd get NO message until paid —
+// this sends the "order placed, awaiting payment" alert right away, items included.
+add_action( 'woocommerce_checkout_order_processed', 'shopys_notify_telegram_order_placed', 20, 3 );
+function shopys_notify_telegram_order_placed( $order_id, $posted_data, $order = null ) {
+    if ( ! $order ) $order = wc_get_order( $order_id );
+    if ( ! $order || $order->get_status() !== 'pending' ) return; // already-active orders are covered on their own hook
+    if ( $order->get_meta( '_shopys_tg_placed_notified' ) === 'yes' ) return;
+
+    $token = defined( 'SHOPYS_TG_BOT_TOKEN' ) ? SHOPYS_TG_BOT_TOKEN : '';
+    $chat  = shopys_tg_chat_for_order( $order );
+    if ( ! $token || ! $chat ) return;
+
+    $name = trim( $order->get_formatted_billing_full_name() );
+    if ( $name === '' ) $name = trim( $order->get_shipping_first_name() . ' ' . $order->get_shipping_last_name() );
+    $phone = $order->get_billing_phone();
+    $addr_parts = array_filter( array(
+        trim( (string) $order->get_billing_address_1() ),
+        trim( (string) $order->get_billing_city() ),
+        'Cambodia',
+    ) );
+    $addr = implode( ', ', $addr_parts );
+
+    $cur   = $order->get_currency();
+    $money = function ( $v ) use ( $cur ) {
+        $v = (float) $v;
+        return $cur === 'KHR' ? number_format( $v, 0 ) . ' ៛' : '$' . number_format( $v, 2 );
+    };
+
+    $lines = array();
+    foreach ( $order->get_items() as $item ) {
+        $lines[] = '   • ' . esc_html( $item->get_name() ) . '  <b>×' . $item->get_quantity() . '</b>  —  ' . esc_html( $money( $item->get_total() ) );
+    }
+
+    $pay_method = ( $order->get_payment_method() === 'khqrpay' ) ? 'KHQR (Bakong)' : $order->get_payment_method_title();
+    $when       = $order->get_date_created() ? $order->get_date_created()->date_i18n( 'd M Y · g:i A' ) : date_i18n( 'd M Y · g:i A' );
+    $div        = "━━━━━━━━━━━━━━━━━━━━━━━━━━";
+
+    $branch_meta  = $order->get_meta( '_shop_branch' );
+    $branch_names = shopys_shop_branches();
+    $shop_title   = ( $branch_meta && isset( $branch_names[ $branch_meta ] ) ) ? $branch_names[ $branch_meta ] : get_bloginfo( 'name' );
+
+    $msg  = "🆕  <b>NEW ORDER — Awaiting Payment</b>\n";
+    $msg .= "<i>" . esc_html( $shop_title ) . "</i>\n";
+    $msg .= $div . "\n";
+    $msg .= "🧾  <b>Invoice :</b> #" . esc_html( $order->get_order_number() ) . "\n";
+    if ( $branch_meta && isset( $branch_names[ $branch_meta ] ) ) {
+        $msg .= "🏬  <b>Shop :</b> " . esc_html( $branch_names[ $branch_meta ] ) . "\n";
+    }
+    $msg .= "👤  <b>Customer Name :</b> " . esc_html( $name !== '' ? $name : '-' ) . "\n";
+    $msg .= "📞  <b>Customer Phone :</b> " . esc_html( $phone !== '' ? $phone : '-' ) . "\n";
+    $msg .= "📍  <b>Receiver Address :</b> " . esc_html( $addr !== '' ? $addr : '-' ) . "\n";
+    $deliv_opt = $order->get_meta( '_delivery_option' );
+    if ( $deliv_opt ) {
+        $deliv_label = ( $deliv_opt === 'Pick Up' ) ? 'Pick Up (Free)' : 'Delivery (+$2)';
+        $msg .= "🚚  <b>Delivery Option :</b> " . esc_html( $deliv_label ) . "\n";
+    }
+    $map = $order->get_meta( '_delivery_map' );
+    if ( $map ) {
+        $msg .= "🗺️  <b>Delivery Map :</b> <a href=\"" . esc_url( $map ) . "\">" . esc_html__( 'Open in Google Maps', 'shopys' ) . "</a>\n";
+    }
+    $msg .= $div . "\n";
+    if ( $lines ) {
+        $msg .= "📦  <b>Order Items</b>\n" . implode( "\n", $lines ) . "\n";
+        $msg .= $div . "\n";
+    }
+    $msg .= "💳  <b>Payment:</b> " . esc_html( $pay_method ) . "\n";
+    $msg .= "💰  <b>TOTAL:</b>  <b>" . esc_html( $money( $order->get_total() ) ) . "</b>\n";
+    $msg .= "📌  <b>Status:</b> 🟠 " . esc_html__( 'Pending payment', 'shopys' ) . "\n";
+    $msg .= $div . "\n";
+    $msg .= "🕒  <i>" . esc_html( $when ) . "</i>";
+
+    $resp = wp_remote_post( "https://api.telegram.org/bot{$token}/sendMessage", array(
+        'timeout' => 15,
+        'body'    => array(
+            'chat_id'                  => $chat,
+            'text'                     => $msg,
+            'parse_mode'               => 'HTML',
+            'disable_web_page_preview' => true,
+        ),
+    ) );
+    if ( ! is_wp_error( $resp ) && (int) wp_remote_retrieve_response_code( $resp ) === 200 ) {
+        $order->update_meta_data( '_shopys_tg_placed_notified', 'yes' );
+        $order->save();
+    } else {
+        error_log( 'shopys TG order-placed notify failed: ' . ( is_wp_error( $resp ) ? $resp->get_error_message() : wp_remote_retrieve_body( $resp ) ) );
+    }
+}
+
 add_action( 'woocommerce_payment_complete', 'shopys_notify_telegram_paid_order', 20 );
 // Walk-In Customer (COD) and other gateways don't fire payment_complete — notify on
 // the status transition instead. The _shopys_tg_notified guard prevents duplicates.
@@ -2225,7 +2307,17 @@ function shopys_notify_telegram_payment( $order_id ) {
     $branch_names = shopys_shop_branches();
     $shop  = ( $branch && isset( $branch_names[ $branch ] ) ) ? $branch_names[ $branch ] : get_bloginfo( 'name' );
     $cur   = $order->get_currency();
-    $total = ( $cur === 'KHR' ) ? number_format( (float) $order->get_total(), 0 ) . ' ៛' : '$' . number_format( (float) $order->get_total(), 2 );
+    $money = function ( $v ) use ( $cur ) {
+        $v = (float) $v;
+        return $cur === 'KHR' ? number_format( $v, 0 ) . ' ៛' : '$' . number_format( $v, 2 );
+    };
+    $total = $money( $order->get_total() );
+
+    // Product list (name × qty — line total), same style as the new-order message.
+    $item_lines = array();
+    foreach ( $order->get_items() as $item ) {
+        $item_lines[] = '   • ' . esc_html( $item->get_name() ) . '  <b>×' . $item->get_quantity() . '</b>  —  ' . esc_html( $money( $item->get_total() ) );
+    }
 
     // Per-shop receiver account (from the KHQR gateway).
     $recv = function_exists( 'khqrpay_order_account' ) ? khqrpay_order_account( $order ) : array();
@@ -2242,6 +2334,9 @@ function shopys_notify_telegram_payment( $order_id ) {
     $msg .= "<i>" . esc_html( $shop ) . "</i>\n";
     $msg .= $div . "\n";
     $msg .= "🧾  <b>Order ID :</b> #" . esc_html( $order->get_order_number() ) . "\n";
+    if ( $item_lines ) {
+        $msg .= "📦  <b>Order Items</b>\n" . implode( "\n", $item_lines ) . "\n";
+    }
     $msg .= "💰  <b>Amount :</b> <b>" . esc_html( $total ) . "</b>\n";
     $msg .= "💳  <b>Method :</b> KHQR (Bakong)\n";
     if ( $recv_name !== '' || $recv_acct !== '' ) {
@@ -2300,8 +2395,17 @@ function shopys_notify_telegram_status_changed( $order_id, $from, $to, $order = 
     $branch       = $order->get_meta( '_shop_branch' );
     $shop         = ( $branch && isset( $branch_names[ $branch ] ) ) ? $branch_names[ $branch ] : get_bloginfo( 'name' );
     $cur          = $order->get_currency();
-    $total        = ( $cur === 'KHR' ) ? number_format( (float) $order->get_total(), 0 ) . ' ៛' : '$' . number_format( (float) $order->get_total(), 2 );
+    $money        = function ( $v ) use ( $cur ) {
+        $v = (float) $v;
+        return $cur === 'KHR' ? number_format( $v, 0 ) . ' ៛' : '$' . number_format( $v, 2 );
+    };
+    $total        = $money( $order->get_total() );
     $div          = "━━━━━━━━━━━━━━━━━━━━━━━━━━";
+
+    $lines = array();
+    foreach ( $order->get_items() as $item ) {
+        $lines[] = '   • ' . esc_html( $item->get_name() ) . '  <b>×' . $item->get_quantity() . '</b>  —  ' . esc_html( $money( $item->get_total() ) );
+    }
 
     $msg  = "🔄  <b>ORDER STATUS UPDATED</b>\n";
     $msg .= "<i>" . esc_html( $shop ) . "</i>\n";
@@ -2309,6 +2413,10 @@ function shopys_notify_telegram_status_changed( $order_id, $from, $to, $order = 
     $msg .= "🧾  <b>Invoice :</b> #" . esc_html( $order->get_order_number() ) . "\n";
     if ( $branch && isset( $branch_names[ $branch ] ) ) {
         $msg .= "🏬  <b>Shop :</b> " . esc_html( $shop ) . "\n";
+    }
+    if ( $lines ) {
+        $msg .= "📦  <b>Order Items</b>\n" . implode( "\n", $lines ) . "\n";
+        $msg .= $div . "\n";
     }
     $msg .= "📌  <b>Status:</b> " . shopys_order_status_badge( $last ) . " " . esc_html( wc_get_order_status_name( $last ) )
           . "  →  " . shopys_order_status_badge( $to ) . " <b>" . esc_html( wc_get_order_status_name( $to ) ) . "</b>\n";
@@ -3220,6 +3328,158 @@ function shopys_discount_banner() {
         .shopys-disc-icon{ width:38px; height:38px; border-radius:11px; }
         .shopys-disc-btn{ width:100%; justify-content:center; }
     }
+    </style>
+    <?php
+}
+
+/* ── Custom Print / Download Invoice (self-contained — no plugin, no rewrite
+ * endpoint, so it can never break from a missed permalinks flush). Uses
+ * WooCommerce's own native "order details" email template — the same table
+ * WooCommerce puts in its own order-confirmation emails — wrapped in a clean
+ * branded page. Works via a plain query string on the homepage URL, handled
+ * on 'template_redirect' before any page template loads, so it resolves
+ * identically regardless of permalink structure or caching. ─────────────── */
+
+/** Build a signed invoice URL for an order (guests use the order key; logged-in
+ *  owners/admins are authorized without needing it). */
+function shopys_invoice_url( $order, $mode = 'print' ) {
+    return add_query_arg( array(
+        'shopys_invoice' => $mode === 'download' ? 'download' : 'print',
+        'order'          => $order->get_id(),
+        'key'            => $order->get_order_key(),
+    ), home_url( '/' ) );
+}
+
+add_action( 'template_redirect', 'shopys_handle_invoice_request', 1 );
+function shopys_handle_invoice_request() {
+    if ( empty( $_GET['shopys_invoice'] ) || ! function_exists( 'wc_get_order' ) ) return;
+    $mode = sanitize_key( wp_unslash( $_GET['shopys_invoice'] ) );
+    if ( ! in_array( $mode, array( 'print', 'download' ), true ) ) return;
+
+    $order_id = isset( $_GET['order'] ) ? absint( $_GET['order'] ) : 0;
+    $order    = $order_id ? wc_get_order( $order_id ) : false;
+    if ( ! $order ) wp_die( esc_html__( 'Order not found.', 'shopys' ), '', array( 'response' => 404 ) );
+
+    // Access: matching order key (works for guests right after checkout) OR
+    // the logged-in order owner OR staff.
+    $key       = isset( $_GET['key'] ) ? sanitize_text_field( wp_unslash( $_GET['key'] ) ) : '';
+    $key_ok    = $key !== '' && hash_equals( $order->get_order_key(), $key );
+    $owner_ok  = is_user_logged_in() && (int) $order->get_customer_id() === get_current_user_id();
+    $staff_ok  = current_user_can( 'manage_woocommerce' );
+    if ( ! $key_ok && ! $owner_ok && ! $staff_ok ) {
+        wp_die( esc_html__( 'You are not allowed to view this invoice.', 'shopys' ), '', array( 'response' => 403 ) );
+    }
+
+    $site_name  = get_bloginfo( 'name' );
+    $logo_id    = get_theme_mod( 'custom_logo' );
+    $logo_url   = $logo_id ? wp_get_attachment_image_url( $logo_id, 'medium' ) : '';
+    $order_date = $order->get_date_created() ? $order->get_date_created()->date_i18n( 'd M Y' ) : '';
+    // sanitize_file_name() strips anything unsafe from the order number before it
+    // reaches an HTTP header — defensive in case a plugin ever customizes it.
+    $filename   = sanitize_file_name( 'invoice-' . $order->get_order_number() . '.html' );
+
+    // WooCommerce's own order-details table + billing/shipping address blocks —
+    // the exact same markup used in the store's order-confirmation emails.
+    $details_html = wc_get_template_html( 'emails/email-order-details.php', array(
+        'order'         => $order,
+        'sent_to_admin' => false,
+        'plain_text'    => false,
+        'email'         => null,
+    ) );
+    $addresses_html = wc_get_template_html( 'emails/email-addresses.php', array( 'order' => $order ) );
+
+    if ( $mode === 'download' ) {
+        nocache_headers();
+        header( 'Content-Type: text/html; charset=utf-8' );
+        header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+    } else {
+        nocache_headers();
+        header( 'Content-Type: text/html; charset=utf-8' );
+    }
+    ?>
+<!DOCTYPE html>
+<html <?php language_attributes(); ?>>
+<head>
+<meta charset="<?php bloginfo( 'charset' ); ?>">
+<title><?php echo esc_html( sprintf( 'Invoice #%s — %s', $order->get_order_number(), $site_name ) ); ?></title>
+<style>
+    body{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#0d1117; background:#f5f6f8; margin:0; padding:28px 16px; }
+    .inv-sheet{ max-width:680px; margin:0 auto; background:#fff; border-radius:14px; padding:34px 36px; box-shadow:0 10px 34px rgba(15,23,42,.08); }
+    .inv-head{ display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; border-bottom:2px solid #eef0f4; padding-bottom:18px; margin-bottom:22px; }
+    .inv-brand{ display:flex; align-items:center; gap:12px; }
+    .inv-brand img{ max-height:46px; width:auto; display:block; }
+    .inv-brand strong{ font-size:19px; letter-spacing:-.2px; }
+    .inv-meta{ text-align:right; font-size:13px; color:#5b6472; line-height:1.6; }
+    .inv-meta b{ color:#0d1117; }
+    .inv-title{ font-size:12px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:#00a341; margin:0 0 22px; }
+    .inv-actions{ display:flex; gap:10px; justify-content:flex-end; margin-top:26px; }
+    .inv-btn{ display:inline-flex; align-items:center; gap:7px; padding:11px 20px; border-radius:10px; font-weight:700; font-size:13px; text-decoration:none; cursor:pointer; border:1.5px solid #e7e9ee; background:#fff; color:#5b6472; font-family:inherit; }
+    .inv-btn.primary{ background:#00c44f; border-color:#00c44f; color:#fff; }
+    table{ width:100%; border-collapse:collapse; }
+    @media print{ body{ background:#fff; padding:0; } .inv-sheet{ box-shadow:none; border-radius:0; max-width:100%; } .inv-actions{ display:none !important; } }
+</style>
+</head>
+<body>
+    <div class="inv-sheet">
+        <div class="inv-head">
+            <div class="inv-brand">
+                <?php if ( $logo_url ) : ?><img src="<?php echo esc_url( $logo_url ); ?>" alt="<?php echo esc_attr( $site_name ); ?>"><?php else : ?><strong><?php echo esc_html( $site_name ); ?></strong><?php endif; ?>
+            </div>
+            <div class="inv-meta">
+                <div><b><?php esc_html_e( 'Invoice', 'shopys' ); ?> #<?php echo esc_html( $order->get_order_number() ); ?></b></div>
+                <div><?php echo esc_html( $order_date ); ?></div>
+            </div>
+        </div>
+        <p class="inv-title"><?php esc_html_e( 'Order Invoice', 'shopys' ); ?></p>
+        <?php echo $addresses_html; // phpcs:ignore -- WooCommerce core template output, already escaped ?>
+        <?php echo $details_html; // phpcs:ignore -- WooCommerce core template output, already escaped ?>
+        <?php if ( $mode === 'print' ) : ?>
+        <div class="inv-actions">
+            <button type="button" class="inv-btn" onclick="window.close();"><?php esc_html_e( 'Close', 'shopys' ); ?></button>
+            <button type="button" class="inv-btn primary" onclick="window.print();"><?php esc_html_e( 'Print', 'shopys' ); ?></button>
+        </div>
+        <script>window.addEventListener('load', function(){ setTimeout(function(){ window.print(); }, 250); });</script>
+        <?php endif; ?>
+    </div>
+</body>
+</html>
+    <?php
+    exit;
+}
+
+/** Premium Print / Download buttons — replace the old plugin buttons everywhere
+ *  they used to appear (thank-you page + My Account → View Order). */
+add_action( 'woocommerce_thankyou', 'shopys_render_invoice_buttons', 5 );
+add_action( 'woocommerce_order_details_after_order_table', 'shopys_render_invoice_buttons', 100 );
+function shopys_render_invoice_buttons( $order_id ) {
+    $order = wc_get_order( $order_id );
+    if ( ! $order ) return;
+    ?>
+    <div class="shopys-inv-row">
+        <a href="<?php echo esc_url( shopys_invoice_url( $order, 'print' ) ); ?>" target="_blank" rel="noopener" class="shopys-inv-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z"/></svg>
+            <?php esc_html_e( 'Print Invoice', 'shopys' ); ?>
+        </a>
+        <a href="<?php echo esc_url( shopys_invoice_url( $order, 'download' ) ); ?>" class="shopys-inv-btn shopys-inv-btn--outline">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            <?php esc_html_e( 'Download Invoice', 'shopys' ); ?>
+        </a>
+    </div>
+    <style>
+    /* Hide the fragile third-party invoice buttons — replaced by ours above. */
+    body.woocommerce-order-received .order-print,
+    body.woocommerce-account .order-print,
+    a[class*="wt_pklist_"]{ display:none !important; }
+
+    .shopys-inv-row{ display:flex; gap:10px; flex-wrap:wrap; margin:18px 0; font-family:'Play','Battambang',-apple-system,sans-serif; }
+    .shopys-inv-btn{ display:inline-flex; align-items:center; gap:8px; padding:11px 22px; border-radius:10px;
+        font-weight:700; font-size:13px; text-decoration:none !important; border:1.5px solid #00c44f;
+        background:#00c44f; color:#fff !important; box-shadow:0 6px 18px rgba(0,196,79,.28);
+        transition:transform .2s ease,box-shadow .2s ease,background .2s ease; }
+    .shopys-inv-btn svg{ width:16px; height:16px; }
+    .shopys-inv-btn:hover{ background:#00a341; border-color:#00a341; transform:translateY(-2px); box-shadow:0 10px 26px rgba(0,196,79,.38); }
+    .shopys-inv-btn--outline{ background:#fff; color:#0a7d00 !important; box-shadow:none; }
+    .shopys-inv-btn--outline:hover{ background:#00a341; border-color:#00a341; color:#fff !important; box-shadow:0 10px 26px rgba(0,196,79,.38); }
     </style>
     <?php
 }
