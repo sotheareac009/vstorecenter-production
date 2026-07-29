@@ -3483,3 +3483,16 @@ function shopys_render_invoice_buttons( $order_id ) {
     </style>
     <?php
 }
+
+/* ── Checkout settings: optionally hide "Pay with Cash" (COD) at checkout ──
+ * Config lives in Dashboard → Promotion → "Checkout Settings". The gateway
+ * itself stays configured/untouched in WooCommerce — this only removes it
+ * from the checkout list when the toggle is on. */
+add_filter( 'woocommerce_available_payment_gateways', 'shopys_maybe_hide_cod_gateway' );
+function shopys_maybe_hide_cod_gateway( $gateways ) {
+    $cs = get_option( 'shopys_checkout_settings' );
+    if ( is_array( $cs ) && ! empty( $cs['hide_cod'] ) && isset( $gateways['cod'] ) ) {
+        unset( $gateways['cod'] );
+    }
+    return $gateways;
+}

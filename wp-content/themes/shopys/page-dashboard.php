@@ -266,6 +266,20 @@ if (
     exit;
 }
 
+// ── Checkout settings save handler (owner only) ────────────────────────────────
+if (
+    $is_site_owner &&
+    isset( $_POST['checkout_settings_save'], $_POST['_wpnonce'] ) &&
+    wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'checkout_settings_save' )
+) {
+    update_option( 'shopys_checkout_settings', [
+        'hide_cod' => ! empty( $_POST['cs_hide_cod'] ),
+    ], false );
+    do_action( 'litespeed_purge_all' );
+    wp_safe_redirect( add_query_arg( [ 'tab' => 'promotion', 'checkout_settings_saved' => 1 ], home_url( '/dashboard/' ) ) );
+    exit;
+}
+
 // ── Collect Site-View data (safe even if view-counter isn't loaded) ───────────
 $has_vc = function_exists( 'shopys_vc_count_views' );
 
@@ -4163,7 +4177,29 @@ body {
         <div style="background:#ecfdf3;border:1px solid #abefc6;color:#067647;padding:10px 16px;border-radius:10px;margin-bottom:16px;font-weight:600;">✓ Promotion deleted — its prices are restored.</div>
         <?php elseif ( isset( $_GET['banner_saved'] ) ) : ?>
         <div style="background:#ecfdf3;border:1px solid #abefc6;color:#067647;padding:10px 16px;border-radius:10px;margin-bottom:16px;font-weight:600;">✓ Home discount banner saved.</div>
+        <?php elseif ( isset( $_GET['checkout_settings_saved'] ) ) : ?>
+        <div style="background:#ecfdf3;border:1px solid #abefc6;color:#067647;padding:10px 16px;border-radius:10px;margin-bottom:16px;font-weight:600;">✓ Checkout settings saved.</div>
         <?php endif; ?>
+
+        <!-- Checkout settings -->
+        <?php
+            $cs = get_option( 'shopys_checkout_settings' );
+            $cs = is_array( $cs ) ? $cs : [];
+        ?>
+        <div class="ds-table-wrap">
+            <div class="ds-table-head">
+                <span>Checkout Settings</span>
+            </div>
+            <form method="post" style="padding:16px;display:flex;flex-wrap:wrap;align-items:center;gap:14px;">
+                <?php wp_nonce_field( 'checkout_settings_save' ); ?>
+                <input type="hidden" name="checkout_settings_save" value="1">
+                <label style="display:flex;align-items:center;gap:9px;cursor:pointer;font-weight:700;font-size:13px;">
+                    <input type="checkbox" name="cs_hide_cod" value="1" <?php checked( ! empty( $cs['hide_cod'] ) ); ?> style="width:17px;height:17px;accent-color:#00c44f;cursor:pointer;">
+                    Hide "Pay with Cash" option at checkout
+                </label>
+                <button type="submit" class="ds-store-btn" style="border:0;cursor:pointer;padding:10px 20px;">Save</button>
+            </form>
+        </div>
 
         <!-- Home discount banner config -->
         <?php
