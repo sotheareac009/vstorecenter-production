@@ -2267,7 +2267,7 @@ function shopys_notify_telegram_paid_order( $order_id ) {
         'refunded'   => '⚪',
     );
     $st_badge = isset( $st_badges[ $st_slug ] ) ? $st_badges[ $st_slug ] : '⚫';
-    $msg .= "📌  <b>Status:</b> " . $st_badge . " " . esc_html( wc_get_order_status_name( $st_slug ) ) . "\n";
+    $msg .= "📌  <b>Status:</b> " . $st_badge . " " . esc_html( shopys_order_status_ui_label( $order, wc_get_order_status_name( $st_slug ) ) ) . "\n";
     $msg .= $div . "\n";
     $msg .= "🕒  <i>" . esc_html( $when ) . "</i>";
 
@@ -2420,7 +2420,7 @@ function shopys_notify_telegram_status_changed( $order_id, $from, $to, $order = 
         $msg .= $div . "\n";
     }
     $msg .= "📌  <b>Status:</b> " . shopys_order_status_badge( $last ) . " " . esc_html( wc_get_order_status_name( $last ) )
-          . "  →  " . shopys_order_status_badge( $to ) . " <b>" . esc_html( wc_get_order_status_name( $to ) ) . "</b>\n";
+          . "  →  " . shopys_order_status_badge( $to ) . " <b>" . esc_html( shopys_order_status_ui_label( $order, wc_get_order_status_name( $to ) ) ) . "</b>\n";
     $msg .= "💰  <b>TOTAL:</b> " . esc_html( $total ) . "\n";
     $msg .= $div . "\n";
     $msg .= "🕒  <i>" . esc_html( date_i18n( 'd M Y · g:i A' ) ) . "</i>";
@@ -3267,6 +3267,7 @@ function shopys_discount_banner() {
     ?>
     <div class="shopys-disc-wrap">
         <div class="shopys-disc-card">
+            <span class="shopys-disc-shine" aria-hidden="true"></span>
             <div class="shopys-disc-left">
                 <span class="shopys-disc-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -3298,7 +3299,7 @@ function shopys_discount_banner() {
         background:radial-gradient(circle, rgba(<?php echo $c['glow']; ?>,.2), transparent 62%); border-radius:50%; pointer-events:none; }
     .shopys-disc-card::after{ content:''; position:absolute; bottom:-110px; left:16%; width:200px; height:200px;
         background:radial-gradient(circle, rgba(<?php echo $c['glow']; ?>,.1), transparent 62%); border-radius:50%; pointer-events:none; }
-    .shopys-disc-left{ position:relative; display:flex; align-items:center; gap:14px; min-width:0; }
+    .shopys-disc-left{ position:relative; z-index:1; display:flex; align-items:center; gap:14px; min-width:0; }
     .shopys-disc-left::before{ content:''; position:absolute; top:-30px; bottom:-30px; width:110px; pointer-events:none;
         background:linear-gradient(105deg, transparent 0%, rgba(255,255,255,.07) 50%, transparent 100%);
         animation:shopysDiscShine 5s ease-in-out infinite; }
@@ -3320,14 +3321,32 @@ function shopys_discount_banner() {
         transition:transform .15s ease, box-shadow .15s ease; }
     .shopys-disc-btn:hover{ transform:translateY(-2px); box-shadow:0 12px 28px rgba(<?php echo $c['glow']; ?>,.5); color:<?php echo $c['btn_text']; ?> !important; }
     .shopys-disc-btn svg{ width:14px; height:14px; }
+    .shopys-disc-shine{ display:none; }
     @media (max-width:700px){
         .shopys-disc-wrap{ padding:10px 10px 0; }
-        .shopys-disc-card{ flex-direction:column; align-items:center; text-align:center; gap:12px; padding:16px 14px; border-radius:15px; }
-        .shopys-disc-left{ flex-direction:column; gap:9px; }
-        .shopys-disc-copy{ align-items:center; }
+        .shopys-disc-card{ flex-direction:column; align-items:stretch; text-align:center; gap:14px;
+            padding:22px 20px 20px; border-radius:16px; box-shadow:0 10px 28px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.06); }
+        .shopys-disc-card::before{ top:-70px; right:-50px; width:190px; height:190px; }
+        .shopys-disc-card::after{ bottom:-90px; left:8%; width:170px; height:170px; }
+        .shopys-disc-left{ flex-direction:column; gap:10px; }
+        .shopys-disc-left::before{ display:none; } /* the card-wide shine below replaces this one */
+        .shopys-disc-icon{ width:48px; height:48px; border-radius:14px; margin:0 auto; }
+        .shopys-disc-icon svg{ width:22px; height:22px; }
+        .shopys-disc-copy{ align-items:center; gap:5px; }
+        .shopys-disc-eyebrow{ font-size:10.5px; }
+        .shopys-disc-text{ font-size:14.5px; line-height:1.4; max-width:32ch; margin:0 auto; }
+        .shopys-disc-btn{ width:100%; justify-content:center; padding:13px 22px; font-size:13.5px; }
+        .shopys-disc-btn:active{ transform:scale(.97); }
+        .shopys-disc-shine{ display:block; position:absolute; inset:0; overflow:hidden; border-radius:inherit; pointer-events:none; }
+        .shopys-disc-shine::before{ content:''; position:absolute; top:-20%; bottom:-20%; width:70px;
+            background:linear-gradient(105deg, transparent 0%, rgba(255,255,255,.09) 50%, transparent 100%);
+            animation:shopysDiscShine 5s ease-in-out infinite; }
+    }
+    @media (max-width:380px){
+        .shopys-disc-card{ padding:18px 16px 16px; border-radius:14px; }
+        .shopys-disc-icon{ width:42px; height:42px; }
         .shopys-disc-text{ font-size:13.5px; }
-        .shopys-disc-icon{ width:38px; height:38px; border-radius:11px; }
-        .shopys-disc-btn{ width:100%; justify-content:center; }
+        .shopys-disc-btn{ padding:12px 16px; font-size:13px; }
     }
     </style>
     <?php
@@ -3496,4 +3515,33 @@ function shopys_maybe_hide_cod_gateway( $gateways ) {
         unset( $gateways['cod'] );
     }
     return $gateways;
+}
+
+/** Order status label for UI display: "Processing (Payment Successful)" for
+ *  KHQR orders that are in processing (i.e. paid), so staff can tell them
+ *  apart from COD orders that are "Processing" but not yet paid. Falls back
+ *  to the normal status label for everything else. */
+function shopys_order_status_ui_label( $order, $default_label ) {
+    if ( $order instanceof WC_Order && $order->get_status() === 'processing' && $order->get_payment_method() === 'khqrpay' ) {
+        return __( 'Processing (Payment Successful)', 'shopys' );
+    }
+    return $default_label;
+}
+
+/** Customer-facing: add a "✅ Payment Successful" note next to the status on
+ *  the My Account Orders list and single Order view, for KHQR orders that are
+ *  Processing (paid but not yet fulfilled) — makes it clear to the customer
+ *  that "Processing" here means their payment went through. */
+add_action( 'woocommerce_my_account_my_orders_column_order-status', 'shopys_myaccount_orders_paid_note' );
+function shopys_myaccount_orders_paid_note( $order ) {
+    if ( $order instanceof WC_Order && $order->get_status() === 'processing' && $order->get_payment_method() === 'khqrpay' ) {
+        echo '<div style="margin-top:4px;font-size:11px;font-weight:700;color:#0a9d4a;">✅ ' . esc_html__( 'Payment Successful', 'shopys' ) . '</div>';
+    }
+}
+
+add_action( 'woocommerce_order_details_after_order_table', 'shopys_vieworder_paid_note', 4 );
+function shopys_vieworder_paid_note( $order ) {
+    if ( $order instanceof WC_Order && $order->get_status() === 'processing' && $order->get_payment_method() === 'khqrpay' ) {
+        echo '<p style="margin:-8px 0 16px;font-size:13px;font-weight:700;color:#0a9d4a;">✅ ' . esc_html__( 'Payment Successful — your order is now processing.', 'shopys' ) . '</p>';
+    }
 }

@@ -1095,6 +1095,33 @@ body {
     .ds-mobile-toggle { display: flex; align-items: center; justify-content: center; }
     .ds-content { padding: 16px; }
     .ds-theme-toggle span { display: none; }
+
+    /* Filter/action bars inside table cards: the card clips overflow (rounded
+       corners), and flex children don't shrink below their content width by
+       default — together that silently cuts off controls with no way to
+       scroll to them. Stack everything full-width instead. */
+    .ds-table-head { flex-direction: column; align-items: stretch !important; }
+    .ds-table-head > div { width: 100%; }
+    .ds-table-head form { flex-wrap: wrap; width: 100%; }
+    .ds-table-head form > * { min-width: 0; flex: 1 1 auto; }
+    .ds-table-head form input[type=search] { flex-basis: 100%; }
+    .ds-table-head .ds-store-btn { width: 100%; justify-content: center; }
+
+    /* Same treatment for the standalone filter bars above a table (Analytics,
+       Top Customers, etc.) — every filter on the dashboard behaves the same way. */
+    .sv-filter { flex-direction: column; align-items: stretch; }
+    .sv-filter input[type=search],
+    .sv-filter input[type=date],
+    .sv-filter select { width: 100%; box-sizing: border-box; }
+    .sv-filter label { margin: 4px 0 -4px; }
+    .sv-filter-btn { width: 100%; }
+    .sv-filter a.an-period-btn { flex: 1; text-align: center; }
+
+    /* Tables (Users, Orders, Top Customers, etc.) are wider than a phone
+       screen — let each table scroll horizontally on its own, independent of
+       the card/header above it, instead of squeezing or wrapping columns. */
+    .ds-table { display: block; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .ds-table th, .ds-table td { white-space: nowrap; }
 }
 
 .ds-badge {
@@ -3699,7 +3726,7 @@ body {
             <div class="ds-table-head" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
                 <span style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
                     Order #<?php echo esc_html( $co_view->get_order_number() ); ?>
-                    <span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;color:<?php echo esc_attr( $v_meta[1] ); ?>;background:<?php echo esc_attr( $v_meta[2] ); ?>;"><?php echo esc_html( $v_meta[0] ); ?></span>
+                    <span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;color:<?php echo esc_attr( $v_meta[1] ); ?>;background:<?php echo esc_attr( $v_meta[2] ); ?>;"><?php echo esc_html( shopys_order_status_ui_label( $co_view, $v_meta[0] ) ); ?></span>
                     <span style="color:var(--muted);font-weight:400;font-size:12px;"><?php echo $v_created ? esc_html( $v_created->date_i18n( 'j M Y, H:i' ) ) : ''; ?></span>
                 </span>
                 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -3970,7 +3997,7 @@ body {
                     </td>
                     <td style="text-align:right;font-weight:700;color:var(--green);white-space:nowrap;"><?php echo wp_kses_post( $order->get_formatted_order_total() ); ?></td>
                     <td>
-                        <span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;color:<?php echo esc_attr( $o_meta[1] ); ?>;background:<?php echo esc_attr( $o_meta[2] ); ?>;white-space:nowrap;"><?php echo esc_html( $o_meta[0] ); ?></span>
+                        <span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;color:<?php echo esc_attr( $o_meta[1] ); ?>;background:<?php echo esc_attr( $o_meta[2] ); ?>;white-space:nowrap;"><?php echo esc_html( shopys_order_status_ui_label( $order, $o_meta[0] ) ); ?></span>
                     </td>
                     <td>
                         <div style="display:flex;gap:6px;align-items:center;">
