@@ -821,6 +821,13 @@ function shopys_register_success_dialog() {
 add_action( 'wp_footer', 'shopys_render_customer_login_button', 60 );
 
 function shopys_render_customer_login_button() {
+    // Guard against wp_footer firing more than once on a page (seen in the
+    // wild with some Elementor header/footer template setups) — without this,
+    // duplicate IDs break the click handler on whichever copy is on top.
+    static $rendered = false;
+    if ( $rendered ) return;
+    $rendered = true;
+
     if ( ! class_exists( 'WooCommerce' ) ) return;
 
     // Allow disabling via option

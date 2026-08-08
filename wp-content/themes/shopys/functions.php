@@ -2869,6 +2869,13 @@ function shopys_cart_count_ajax() {
 
 add_action( 'wp_footer', 'shopys_floating_cart_button', 55 );
 function shopys_floating_cart_button() {
+    // Guard against wp_footer firing more than once on a page (seen in the
+    // wild with some Elementor header/footer template setups) — duplicate
+    // IDs would otherwise leave the visible copy with no working click handler.
+    static $rendered = false;
+    if ( $rendered ) return;
+    $rendered = true;
+
     if ( is_admin() || ! function_exists( 'WC' ) ) return;
     $url   = esc_url( shopys_cart_summary_page_url() );
     $count = ( WC()->cart ) ? (int) WC()->cart->get_cart_contents_count() : 0;

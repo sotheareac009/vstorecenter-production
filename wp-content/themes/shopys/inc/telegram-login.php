@@ -309,6 +309,13 @@ function shopys_tg_login_assets() {
 add_action( 'open_shop_below_header', 'shopys_render_tg_login_button', 5 );
 
 function shopys_render_tg_login_button() {
+    // Guard against this hook firing more than once on a page (seen in the
+    // wild with some Elementor header/footer template setups) — duplicate
+    // IDs would otherwise leave the visible copy with no working click handler.
+    static $rendered = false;
+    if ( $rendered ) return;
+    $rendered = true;
+
     // Hide if header login is off OR if Telegram login is not required
     $show_header = get_option( 'shopys_ai_show_header_login', '1' );
     $require_tg  = get_option( 'shopys_ai_require_tg_login', '1' );

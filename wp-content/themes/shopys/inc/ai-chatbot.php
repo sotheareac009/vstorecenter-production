@@ -3539,6 +3539,13 @@ function shopys_ai_chatbot_assets() {
 
 add_action( 'wp_footer', 'shopys_ai_chatbot_widget', 50 );
 function shopys_ai_chatbot_widget() {
+    // Guard against wp_footer firing more than once on a page (seen in the
+    // wild with some Elementor header/footer template setups) — duplicate
+    // IDs would otherwise leave the visible copy with no working click handler.
+    static $rendered = false;
+    if ( $rendered ) return;
+    $rendered = true;
+
     if ( ! class_exists( 'WooCommerce' ) ) return;
     if ( is_admin() ) return;
     ?>
