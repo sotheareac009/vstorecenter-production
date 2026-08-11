@@ -2117,8 +2117,11 @@ function shopys_notify_telegram_paid_order( $order_id ) {
     // Split payment method + receiver cleanly for KHQR; generic title otherwise.
     if ( $order->get_payment_method() === 'khqrpay' ) {
         $pay_method = 'KHQR (Bakong)';
-        $recv_name  = function_exists( 'khqrpay_merchant_name' ) ? khqrpay_merchant_name() : '';
-        $recv_acct  = function_exists( 'khqrpay_cfg' ) ? ( khqrpay_cfg( 'khqr_account_number' ) ?: khqrpay_cfg( 'bakong_id' ) ) : '';
+        // Per-shop receiver account (from the KHQR gateway) — must match the account
+        // the QR actually paid, not the global default.
+        $recv       = function_exists( 'khqrpay_order_account' ) ? khqrpay_order_account( $order ) : array();
+        $recv_name  = $recv['merchant_name'] ?? '';
+        $recv_acct  = $recv['account_number'] ?? ( $recv['account_info'] ?? '' );
     } else {
         $pay_method = $order->get_payment_method_title();
         $recv_name  = '';
