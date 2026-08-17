@@ -58,39 +58,60 @@ function shopys_tgorder_message( WC_Order $order ) {
     if ( $name === '' ) $name = trim( $order->get_shipping_first_name() . ' ' . $order->get_shipping_last_name() );
     $phone = trim( (string) $order->get_billing_phone() );
 
-    $lines   = array();
-    $lines[] = '👤 ' . ( $name !== '' ? $name : '-' );
-    $lines[] = '📞 ' . ( $phone !== '' ? $phone : '-' );
-    $lines[] = '';
-    $lines[] = '🧾 Order #' . $order->get_order_number();
+    $money = function ( $v ) use ( $order ) {
+        return html_entity_decode( wp_strip_all_tags( wc_price( $v, array( 'currency' => $order->get_currency() ) ) ) );
+    };
+    $rule = '━━━━━━━━━━━━━━━';
 
+    // Each block is a group of lines; blocks are joined by a rule, so a block that
+    // ends up empty (e.g. no delivery option) never leaves a stray separator.
+    $blocks = array();
+
+    // Opening: the customer is writing to the shop, so it reads as their words.
+    $blocks[] = array(
+        __( 'Hello 👋 I have just placed an order on your website.', 'shopys' ),
+        __( 'Could you please check and confirm my order? Thank you!', 'shopys' ),
+    );
+
+    $head         = array( '🧾 ' . sprintf( __( 'Order No. %s', 'shopys' ), '#' . $order->get_order_number() ) );
     $branch_names = function_exists( 'shopys_shop_branches' ) ? shopys_shop_branches() : array();
     $branch       = (string) $order->get_meta( '_shop_branch' );
     if ( $branch !== '' && isset( $branch_names[ $branch ] ) ) {
-        $lines[] = '🏬 ' . $branch_names[ $branch ];
+        $head[] = '🏬 ' . $branch_names[ $branch ];
     }
+    $blocks[] = $head;
 
-    $lines[] = '';
-    $lines[] = '📦 Items';
+    $blocks[] = array(
+        '👤 ' . __( 'Name', 'shopys' ) . ': ' . ( $name !== '' ? $name : '-' ),
+        '📞 ' . __( 'Phone', 'shopys' ) . ': ' . ( $phone !== '' ? $phone : '-' ),
+    );
+
+    $items = array( '🛍 ' . __( 'My order', 'shopys' ) );
     foreach ( $order->get_items() as $item ) {
-        $lines[] = '  • ' . $item->get_name() . ' ×' . $item->get_quantity()
-                 . ' — ' . html_entity_decode( wp_strip_all_tags( wc_price( $item->get_total(), array( 'currency' => $order->get_currency() ) ) ) );
+        $items[] = '   • ' . $item->get_name() . '  ×' . $item->get_quantity() . '  —  ' . $money( $item->get_total() );
     }
+    $blocks[] = $items;
 
     $deliv = (string) $order->get_meta( '_delivery_option' );
     if ( $deliv !== '' ) {
-        $lines[] = '';
-        $lines[] = '🚚 ' . $deliv;
-        if ( strtolower( $deliv ) !== 'pick up' ) {
+        $is_pickup = ( strtolower( $deliv ) === 'pick up' );
+        $recv      = array( ( $is_pickup ? '🏬 ' : '🚚 ' ) . __( 'Receiving', 'shopys' ) . ': ' . $deliv );
+        if ( ! $is_pickup ) {
             $addr = trim( wp_strip_all_tags( str_replace( '<br/>', ', ', $order->get_formatted_shipping_address() ?: $order->get_formatted_billing_address() ) ) );
-            if ( $addr !== '' ) $lines[] = '📍 ' . $addr;
+            if ( $addr !== '' ) $recv[] = '📍 ' . __( 'Address', 'shopys' ) . ': ' . $addr;
         }
+        $blocks[] = $recv;
     }
 
-    $lines[] = '';
-    $lines[] = '💰 Total: ' . html_entity_decode( wp_strip_all_tags( wc_price( $order->get_total(), array( 'currency' => $order->get_currency() ) ) ) );
+    $blocks[] = array( '💰 ' . __( 'Total', 'shopys' ) . ': ' . $money( $order->get_total() ) );
+    $blocks[] = array( __( 'Please let me know the next step. 🙏', 'shopys' ) );
 
-    return implode( "\n", $lines );
+    $out = array();
+    foreach ( $blocks as $i => $block ) {
+        if ( $i > 0 ) $out[] = $rule;
+        foreach ( $block as $line ) $out[] = $line;
+    }
+    return implode( "\n", $out );
 }
 
 /** Full t.me deep link for an order (pre-filled message). '' if no username set. */
