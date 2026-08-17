@@ -8,11 +8,17 @@ vstore_prod_db.sql
 wp-content.zip
 *.zip
 wp-config.php
-.env
+# Every env file, not just ".env" — .env.prod holds live tokens and DB credentials
+# and GitHub push protection rejects any push that contains them.
+.env*
 node_modules/
 .DS_Store
 wp-content/cache/
 wp-content/upgrade/
 .htaccess
 wp-content/debug.log
-wp-content/debug.log
+*.log
+# Temporary KHQR diagnostics — these sit in the webroot and must never deploy
+khqr-scan-test.php
+khqr-decode.html
+gw-check.php

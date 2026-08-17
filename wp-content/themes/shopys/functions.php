@@ -751,6 +751,7 @@ add_action( 'wp_enqueue_scripts', function() {
 // AI Chatbot — always loads so the Settings page is always available
 require_once get_stylesheet_directory() . '/inc/ai-chatbot.php';
 require_once get_stylesheet_directory() . '/inc/khqrpay-gateway.php';
+require_once get_stylesheet_directory() . '/inc/telegram-order-gateway.php';
 
 // Site view counter — pageviews dashboard inside WP Admin.
 // Wrapped in file_exists so a half-finished FTP deploy can't crash the site.

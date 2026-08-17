@@ -59,12 +59,25 @@ function khqrpay_order_account( $order = null ) {
     if ( $bank === '' ) $bank = khqrpay_cfg( 'acquiring_bank' );
     $acct = $pick( 'account_number', 'khqr_account_number' );
     if ( $acct === '' ) $acct = khqrpay_cfg( 'account_number' );
+    // Multi-currency marker (tag 39) is ACLEDA-specific — other banks use their own
+    // extension, so this is per-shop. Empty => decided by bank in khqrpay_build_qr().
+    $mccy = $pick( 'multiccy', 'khqr_multiccy' );
     return array(
         'bakong_id'      => $pick( 'bakong_id', 'bakong_id' ),
         'merchant_name'  => $pick( 'merchant_name', 'merchant_name' ),
         'account_info'   => $info,
         'acquiring_bank' => $bank,
         'account_number' => $acct,
+        'multiccy'       => $mccy,
+        // Set KHQR_<BRANCH>_MERCHANT_ID to build a MERCHANT KHQR (tag 30) instead of
+        // an individual one (tag 29) — e.g. an ABA/PayWay merchant account, where the
+        // payee is a merchant ID rather than a personal account number.
+        'merchant_id'    => $pick( 'merchant_id', 'khqr_merchant_id' ),
+        // Merchant category code. ABA merchant QRs use a real MCC (5732 = electronics);
+        // individual QRs use the generic 5999.
+        'mcc'            => $pick( 'mcc', 'khqr_mcc' ),
+        // Verbatim extra sub-template for tag 62 (e.g. ABA's "68" PayWay block).
+        'extra62'        => $pick( 'extra62', 'khqr_extra62' ),
     );
 }
 
@@ -190,24 +203,58 @@ function khqrpay_build_qr( WC_Order $order ) {
     $creation   = (string) ( time() * 1000 );
     $expiration = (string) ( ( time() + khqrpay_qr_ttl_min() * 60 ) * 1000 );
 
-    // Individual account (tag 29): sub-00 account id, optional sub-01 account info
-    // and sub-02 acquiring bank (e.g. ACLEDA uses khqr@aclb + phone + "ACLEDA").
+    // Payee template. A merchant account (ABA/PayWay) uses tag 30 and carries a
+    // merchant ID in sub-01; an individual account uses tag 29 and carries the
+    // personal account number. Both share sub-00 (bakong id) and sub-02 (bank).
+    $bank        = $acctcfg['acquiring_bank'];
+    $merchant_id = $acctcfg['merchant_id'];
+    $payee_tag   = ( $merchant_id !== '' ) ? '30' : '29';
+    $payee_sub01 = ( $merchant_id !== '' ) ? $merchant_id : $acctcfg['account_info'];
+
     $acct = khqrpay_tlv( '00', $account );
-    $info = $acctcfg['account_info'];
-    $bank = $acctcfg['acquiring_bank'];
-    if ( $info !== '' ) $acct .= khqrpay_tlv( '01', $info );
-    if ( $bank !== '' ) $acct .= khqrpay_tlv( '02', $bank );
+    if ( $payee_sub01 !== '' ) $acct .= khqrpay_tlv( '01', $payee_sub01 );
+    if ( $bank !== '' )        $acct .= khqrpay_tlv( '02', $bank );
+
+    // Initiation method (tag 01). "12" (dynamic) is the textbook choice for a
+    // one-off order QR, but ACLEDA personal "My KHQR" accounts are not provisioned
+    // for dynamic QR: ABA Mobile refuses to scan them (verified 2026-08-13 — every
+    // dynamic variant was rejected, every static one accepted, for the same account
+    // and amount). "11" still carries the amount and timestamp, so nothing is lost.
+    // Override with KHQR_INITIATION=12 if an account is enabled for dynamic QR.
+    $initiation = khqrpay_cfg( 'khqr_initiation' );
+    if ( $initiation !== '11' && $initiation !== '12' ) $initiation = '11';
+
+    // Multi-currency marker (tag 39), exactly as ACLEDA emits it. Required for the
+    // USD leg of a dual-currency ACLEDA account — without it ABA rejects a USD QR
+    // even when it is static (verified 2026-08-13: card Q failed, card R passed).
+    // It is an ACLEDA extension, so it is only emitted for ACLEDA accounts; other
+    // banks carry their own (ABA uses tag 40). Override per shop with
+    // KHQR_<BRANCH>_MULTICCY, or globally with KHQR_MULTICCY ("0" disables).
+    $mccy = $acctcfg['multiccy'];
+    if ( $mccy === '' ) {
+        $mccy = ( stripos( $bank, 'ACLEDA' ) !== false ) ? '2CCY' : '0';
+    }
+
+    $mcc = $acctcfg['mcc'] !== '' ? $acctcfg['mcc'] : '5999';     // 5999 = misc retail
 
     $p  = khqrpay_tlv( '00', '01' );                              // payload format
-    $p .= khqrpay_tlv( '01', '12' );                              // dynamic
-    $p .= khqrpay_tlv( '29', $acct );                             // individual account
-    $p .= khqrpay_tlv( '52', '5999' );                            // merchant category code
+    $p .= khqrpay_tlv( '01', $initiation );                       // 11 = static, 12 = dynamic
+    $p .= khqrpay_tlv( $payee_tag, $acct );                       // 29 individual / 30 merchant
+    if ( $mccy !== '0' ) {                                        // multi-currency (ACLEDA)
+        $p .= khqrpay_tlv( '39', khqrpay_tlv( '00', $mccy ) . khqrpay_tlv( '01', '4' ) );
+    }
+    $p .= khqrpay_tlv( '52', $mcc );                              // merchant category code
     $p .= khqrpay_tlv( '53', $currency_code );                    // currency
     $p .= khqrpay_tlv( '54', $amount );                           // amount
     $p .= khqrpay_tlv( '58', 'KH' );                              // country
     $p .= khqrpay_tlv( '59', $name );                             // merchant name
     $p .= khqrpay_tlv( '60', $city );                             // merchant city
-    $p .= khqrpay_tlv( '62', khqrpay_tlv( '01', $bill ) );        // additional data: bill number
+    // Additional data (tag 62): our bill number, plus any bank-specific sub-template
+    // carried verbatim from the bank's own QR (ABA/PayWay puts its routing data in
+    // sub-68). KHQR_<BRANCH>_EXTRA62 holds that block already TLV-encoded.
+    $add62 = khqrpay_tlv( '01', $bill );
+    if ( $acctcfg['extra62'] !== '' ) $add62 .= $acctcfg['extra62'];
+    $p .= khqrpay_tlv( '62', $add62 );                            // additional data
     $p .= khqrpay_tlv( '99', khqrpay_tlv( '00', $creation ) . khqrpay_tlv( '01', $expiration ) ); // timestamp
     $p .= '6304';
     $p .= khqrpay_crc16( $p );
@@ -229,6 +276,13 @@ function khqrpay_build_qr( WC_Order $order ) {
 function khqrpay_bakong_check( $md5 ) {
     $token = khqrpay_cfg( 'bakong_token' );
     if ( $token === '' ) return new WP_Error( 'khqrpay_no_token', 'Missing BAKONG_TOKEN.' );
+
+    // Bakong allows only 100 check_transaction_* calls per day per token (errorCode
+    // 17). Once we hit that, every further call is wasted and, worse, keeps the
+    // quota pinned at zero — so stop calling until the daily reset (midnight ICT).
+    if ( get_transient( 'khqrpay_quota_exhausted' ) ) {
+        return new WP_Error( 'khqrpay_quota', 'Bakong daily request limit reached; retrying tomorrow.' );
+    }
 
     $headers = array(
         'Authorization' => 'Bearer ' . $token,
@@ -255,7 +309,17 @@ function khqrpay_bakong_check( $md5 ) {
     $body = wp_remote_retrieve_body( $resp );
     $data = json_decode( $body, true );
     if ( ! is_array( $data ) ) {
+        // Log the actual body — "Bad Bakong response" alone tells us nothing.
+        khqrpay_log( 'bad response', 'HTTP ' . $code . ' | ' . substr( trim( wp_strip_all_tags( $body ) ), 0, 200 ) );
         return new WP_Error( 'khqrpay_badjson', 'Bad Bakong response', 'HTTP ' . $code . ' | ' . substr( trim( wp_strip_all_tags( $body ) ), 0, 300 ) );
+    }
+    // Daily quota gone — latch it until midnight ICT so we stop burning requests.
+    if ( isset( $data['errorCode'] ) && (int) $data['errorCode'] === 17 ) {
+        $ict   = new DateTimeZone( 'Asia/Phnom_Penh' );
+        $now   = new DateTime( 'now', $ict );
+        $reset = new DateTime( 'tomorrow 00:05', $ict );
+        set_transient( 'khqrpay_quota_exhausted', 1, max( 300, $reset->getTimestamp() - $now->getTimestamp() ) );
+        khqrpay_log( 'daily quota exhausted — pausing checks until ' . $reset->format( 'Y-m-d H:i T' ) );
     }
     return $data;
 }
@@ -326,11 +390,16 @@ function khqrpay_confirm_order_if_paid( WC_Order $order ) {
     }
     if ( ! $md5s ) return false;
 
+    // Only the QR currently on screen can be paid, and each extra md5 costs one of
+    // the 100 daily Bakong requests — so check the newest first and stop after a
+    // couple. Older QRs for the same order have expired anyway.
+    $md5s = array_slice( array_reverse( array_unique( $md5s ) ), 0, 2 );
+
     $expected = (float) $order->get_meta( '_khqrpay_amount' );
 
-    foreach ( array_unique( $md5s ) as $md5 ) {
+    foreach ( $md5s as $md5 ) {
         $data = khqrpay_bakong_check( $md5 );
-        if ( is_wp_error( $data ) ) { khqrpay_log( 'check error', $data->get_error_message() ); continue; }
+        if ( is_wp_error( $data ) ) { khqrpay_log( 'check error', $data->get_error_message() ); return false; }
         if ( ! isset( $data['responseCode'] ) || (int) $data['responseCode'] !== 0 ) continue;
 
         $paidAmt = isset( $data['data']['amount'] ) ? (float) $data['data']['amount'] : null;
@@ -607,8 +676,11 @@ function khqrpay_load_gateway() {
             .khqrx-ref{ font-size:.7rem; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#9aa3b0; }
             .khqrx-amount{ font-size:1.65rem; font-weight:800; color:#0d1117; letter-spacing:-.5px; margin-top:3px; line-height:1.1; }
             .khqrx-amount-sub{ font-size:.82rem; color:#9aa3b0; margin-top:2px; }
-            .khqrx-qrbox{ position:relative; width:208px; margin:14px auto 4px; padding:13px; background:#fff; border-radius:16px; box-shadow:0 8px 24px rgba(15,23,42,.08); }
-            .khqrx-qr{ width:180px; height:180px; display:flex; align-items:center; justify-content:center; margin:0 auto; }
+            /* Keep the QR physically large: a v9 (53x53) KHQR at 224px gives ~0.58mm
+               per module on a phone, which bank cameras read reliably. Shrinking this
+               makes the modules too fine to resolve. */
+            .khqrx-qrbox{ position:relative; width:252px; margin:14px auto 4px; padding:13px; background:#fff; border-radius:16px; box-shadow:0 8px 24px rgba(15,23,42,.08); }
+            .khqrx-qr{ width:224px; height:224px; display:flex; align-items:center; justify-content:center; margin:0 auto; }
             .khqrx-qr svg{ width:100% !important; height:100% !important; }
             .khqrx-corner{ position:absolute; width:24px; height:24px; border:3px solid #e21c25; }
             .khqrx-corner.tl{ top:6px; left:6px; border-right:0; border-bottom:0; border-radius:9px 0 0 0; }
@@ -652,7 +724,7 @@ function khqrpay_load_gateway() {
             .khqrx-keep:hover{ background:#f3f5f8; }
             .khqrx-confirm{ border:none; background:#ef4444; color:#fff; text-decoration:none; }
             .khqrx-confirm:hover{ background:#dc2626; color:#fff; }
-            @media(max-width:480px){ .khqrx-amount{ font-size:1.5rem; } .khqrx-qrbox{ width:196px; } .khqrx-qr{ width:170px; height:170px; } }
+            @media(max-width:480px){ .khqrx-amount{ font-size:1.5rem; } .khqrx-qrbox{ width:238px; } .khqrx-qr{ width:210px; height:210px; } }
             .khqrx-qrbox.khqrx-paid{ position:relative; }
             .khqrx-qrbox.khqrx-paid .khqrx-qr{ filter:blur(3px); opacity:.35; transition:opacity .3s, filter .3s; }
             .khqrx-paid-ov{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
@@ -749,7 +821,10 @@ function khqrpay_load_gateway() {
                         var qr = qrcode(0, 'M');
                         qr.addData(qrData);
                         qr.make();
-                        document.getElementById('khqr-img').innerHTML = qr.createSvgTag({cellSize:5, margin:2});
+                        // margin is in PIXELS, not modules. The QR spec requires a quiet
+                        // zone of 4 modules; at cellSize 5 that is 20px. A smaller value
+                        // makes strict bank scanners (ABA) refuse to read the code.
+                        document.getElementById('khqr-img').innerHTML = qr.createSvgTag({cellSize:5, margin:20});
                     } catch(e){
                         document.getElementById('khqr-img').textContent = 'QR error';
                     }
@@ -802,8 +877,18 @@ function khqrpay_load_gateway() {
                 }
                 tick();
 
+                // Poll every 5s for the fastest possible confirmation.
+                // WARNING: Bakong allows only ~100 check_transaction calls per DAY, and
+                // at 5s a single 3-minute checkout spends ~36 of them — so roughly the
+                // 3rd order of the day exhausts the quota and later orders stop
+                // auto-confirming (they still get paid; they just stay 'pending' until
+                // confirmed by hand, or by the 15-minute cron once quota resets).
+                // Raise POLL_MS to fit more orders per day.
+                var POLL_MS = 5000, timer = null;
                 function poll(){
                     if (done) return;
+                    // Nobody pays while the tab is hidden — don't spend quota on it.
+                    if (document.hidden){ timer = setTimeout(function(){ poll(); }, POLL_MS); return; }
                     fetch(pollUrl + '&_=' + Date.now(), {credentials:'same-origin', cache:'no-store'})
                       .then(function(r){ return r.json(); })
                       .then(function(d){
@@ -825,11 +910,16 @@ function khqrpay_load_gateway() {
                               setTimeout(function(){ location.href = d.redirect || returnUrl; }, 1700);
                               return;
                           }
-                          setTimeout(poll, 3000);
+                          // Daily Bakong quota gone — say so instead of spinning silently.
+                          if (d && d.quota && statusEl){
+                              statusEl.innerHTML = '<span class="khqrx-dot"></span>' +
+                                  'Payment received? It may take a few minutes to confirm.';
+                          }
+                          timer = setTimeout(function(){ poll(); }, POLL_MS);
                       })
-                      .catch(function(){ setTimeout(poll, 4000); });
+                      .catch(function(){ timer = setTimeout(function(){ poll(); }, POLL_MS); });
                 }
-                setTimeout(poll, 3000);
+                timer = setTimeout(function(){ poll(); }, POLL_MS);
             })();
             </script>
             <?php
@@ -850,10 +940,38 @@ function khqrpay_ajax_poll() {
         wp_send_json( array( 'paid' => false, 'error' => 'invalid' ) );
     }
     $redirect = $order->get_checkout_order_received_url();
-    if ( $order->is_paid() || khqrpay_confirm_order_if_paid( $order ) ) {
+    if ( $order->is_paid() ) {
+        wp_send_json( array( 'paid' => true, 'redirect' => $redirect ) );
+    }
+
+    // The page polls every 5s. This floor only stops the pathological cases —
+    // several tabs open on the same order, or a refresh loop — from multiplying
+    // that rate. It is deliberately just under the poll interval so normal
+    // polling passes through untouched. Raise it with the page's POLL_MS.
+    $window = 4;
+    $gate   = 'khqrpay_last_check_' . $order->get_id();
+    if ( get_transient( $gate ) ) {
+        wp_send_json( array( 'paid' => false, 'throttled' => true ) );
+    }
+    set_transient( $gate, 1, $window );
+
+    if ( get_transient( 'khqrpay_quota_exhausted' ) ) {
+        wp_send_json( array( 'paid' => false, 'quota' => true ) );
+    }
+
+    khqrpay_count_check();
+    if ( khqrpay_confirm_order_if_paid( $order ) ) {
         wp_send_json( array( 'paid' => true, 'redirect' => $redirect ) );
     }
     wp_send_json( array( 'paid' => false ) );
+}
+
+/** Count Bakong checks made today, so the daily budget is visible in the selftest. */
+function khqrpay_count_check() {
+    $day = 'khqrpay_calls_' . wp_date( 'Y-m-d' );
+    $n   = (int) get_transient( $day );
+    set_transient( $day, $n + 1, DAY_IN_SECONDS );
+    return $n + 1;
 }
 add_action( 'wp_ajax_khqrpay_poll',        'khqrpay_ajax_poll' );
 add_action( 'wp_ajax_nopriv_khqrpay_poll', 'khqrpay_ajax_poll' );
@@ -873,7 +991,9 @@ add_action( 'init', function () {
     echo 'Check via  : ' . ( $relay !== '' ? 'RELAY ' . $relay : 'direct to Bakong' ) . "\n";
     echo 'BAKONG_ID  : ' . ( khqrpay_cfg( 'bakong_id' ) ?: '(empty)' ) . "\n";
     echo 'token set  : ' . ( khqrpay_cfg( 'bakong_token' ) ? 'yes' : 'NO' ) . "\n";
-    echo 'currency   : ' . khqrpay_qr_currency() . "\n\n";
+    echo 'currency   : ' . khqrpay_qr_currency() . "\n";
+    echo 'checks today: ' . (int) get_transient( 'khqrpay_calls_' . wp_date( 'Y-m-d' ) ) . " / 100 (Bakong daily limit)\n";
+    echo 'quota state : ' . ( get_transient( 'khqrpay_quota_exhausted' ) ? 'EXHAUSTED — paused until midnight ICT' : 'ok' ) . "\n\n";
     $t0 = microtime( true );
     $r  = khqrpay_bakong_check( '0123456789abcdef0123456789abcdef' );
     $ms = round( ( microtime( true ) - $t0 ) * 1000 );
@@ -898,25 +1018,37 @@ khqrpay_load_gateway();
 
 /* ── Background fallback: re-check pending KHQR orders even if the buyer closed the page ── */
 add_filter( 'cron_schedules', function ( $s ) {
-    $s['khqrpay_2min'] = array( 'interval' => 120, 'display' => 'Every 2 minutes (KHQR)' );
+    $s['khqrpay_15min'] = array( 'interval' => 900, 'display' => 'Every 15 minutes (KHQR)' );
     return $s;
 } );
 
 add_action( 'init', function () {
-    if ( ! wp_next_scheduled( 'khqrpay_check_pending' ) ) {
-        wp_schedule_event( time() + 120, 'khqrpay_2min', 'khqrpay_check_pending' );
+    // Was every 2 minutes over 25 orders — ~18,000 Bakong calls a day against a
+    // 100/day limit. Now every 15 minutes over the few orders that could still be
+    // paid, which leaves the quota for the customer-facing poll.
+    $next = wp_next_scheduled( 'khqrpay_check_pending' );
+    if ( $next && ( $next - time() ) > 900 ) {
+        wp_unschedule_event( $next, 'khqrpay_check_pending' ); // drop the old 2-min schedule
+        $next = false;
+    }
+    if ( ! $next ) {
+        wp_schedule_event( time() + 300, 'khqrpay_15min', 'khqrpay_check_pending' );
     }
 } );
 
 add_action( 'khqrpay_check_pending', function () {
     if ( khqrpay_cfg( 'bakong_token' ) === '' ) return;
+    if ( get_transient( 'khqrpay_quota_exhausted' ) ) return;
     $orders = wc_get_orders( array(
         'payment_method' => 'khqrpay',
         'status'         => 'pending',
-        'limit'          => 25,
-        'date_created'   => '>' . ( time() - DAY_IN_SECONDS ),
+        'limit'          => 5,
+        // Only orders whose QR could plausibly still be paid. Anything older has
+        // expired, so re-checking it just burns the daily quota.
+        'date_created'   => '>' . ( time() - 2 * HOUR_IN_SECONDS ),
     ) );
     foreach ( $orders as $order ) {
+        if ( get_transient( 'khqrpay_quota_exhausted' ) ) break;
         khqrpay_confirm_order_if_paid( $order );
     }
 } );
