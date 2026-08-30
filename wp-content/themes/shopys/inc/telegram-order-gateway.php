@@ -2,16 +2,19 @@
 /**
  * "Order via Telegram" — WooCommerce Payment Gateway
  *
- * Same idea as the out-of-stock "Contact Seller" button: the customer places the
- * order, then taps through to the shop's Telegram with a message already written
- * for them. The customer sends it from their own account, so nothing private is
+ * The customer places the order and Telegram opens by itself with the message
+ * already written. They send it from their own account, so nothing private is
  * posted to a public channel by us.
  *
  * Flow:
  *   1. Customer picks "Order via Telegram" at checkout -> order created (on-hold).
- *   2. Redirected to the order-received page, which shows a big Telegram button.
- *   3. Tapping it opens t.me/<shop> with a pre-filled message headed by the
- *      customer's name and phone, followed by the order number, items and total.
+ *   2. Redirected to the order-received page.
+ *   3. That page opens t.me/<shop> automatically (once per order), with a message
+ *      headed by the customer's name and phone, then the order number, items and
+ *      total. A fallback link is shown in case the browser blocks the redirect.
+ *
+ * Telegram cannot be made to SEND on the customer's behalf -- a t.me link can only
+ * pre-fill the compose box, so the customer still presses send themselves.
  *
  * Config (.env / wp-config):
  *   SHOPYS_TG_SALE_VSTORE   Telegram username for V-Store  (e.g. vstorestreet271)
@@ -242,25 +245,39 @@ function shopys_tgorder_load_gateway() {
     }
 }
 
-/* ── Order-received page: the big "Send my order on Telegram" button ── */
+/* ── Order-received page: open Telegram automatically ── */
 
 add_action( 'woocommerce_thankyou', 'shopys_tgorder_thankyou_button', 5 );
-function shopys_tgorder_thankyou_button( $order_id ) {
+function shopys_tgorder_thankyou_button( $order_id, $auto = true ) {
     $order = wc_get_order( $order_id );
     if ( ! $order || $order->get_payment_method() !== 'tgorder' ) return;
 
     $link = shopys_tgorder_link( $order );
     if ( $link === '' ) return;
+
     ?>
-    <div class="tgo-cta">
+    <div class="tgo-cta" id="tgo-cta" data-auto="<?php echo $auto ? '1' : '0'; ?>" data-order="<?php echo esc_attr( $order->get_id() ); ?>"
+         data-blocked-title="<?php esc_attr_e( 'Send your order', 'shopys' ); ?>"
+         data-blocked-note="<?php esc_attr_e( 'Your browser blocked the Telegram tab. Tap below to open it — your order is already written out.', 'shopys' ); ?>"
+         data-blocked-cta="<?php esc_attr_e( 'Open Telegram', 'shopys' ); ?>">
         <div class="tgo-cta-head">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71l-4.1-3.02-1.97 1.91c-.22.22-.4.4-.83.4z"/></svg>
-            <span><?php esc_html_e( 'One last step', 'shopys' ); ?></span>
+            <span id="tgo-title"><?php echo $auto ? esc_html__( 'Opening Telegram…', 'shopys' ) : esc_html__( 'Send your order', 'shopys' ); ?></span>
         </div>
-        <p><?php esc_html_e( 'Tap the button to send your order to us on Telegram. Your name, phone and order details are already filled in — just press send.', 'shopys' ); ?></p>
-        <a href="<?php echo esc_attr( $link ); ?>" target="_blank" rel="noopener" class="tgo-cta-btn" id="tgo-send">
-            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71l-4.1-3.02-1.97 1.91c-.22.22-.4.4-.83.4z"/></svg>
-            <?php esc_html_e( 'Send my order on Telegram', 'shopys' ); ?>
+        <p id="tgo-note">
+            <?php
+            if ( $auto ) {
+                esc_html_e( 'Your order is already written out — just press send in Telegram to confirm it with us.', 'shopys' );
+            } elseif ( function_exists( 'is_order_received_page' ) && is_order_received_page() ) {
+                // The tab opened from the "Place order" click is already showing Telegram.
+                esc_html_e( 'Telegram has opened in a new tab with your order ready — just press send there.', 'shopys' );
+            } else {
+                esc_html_e( 'Your name, phone and order details are already filled in — just press send.', 'shopys' );
+            }
+            ?>
+        </p>
+        <a href="<?php echo esc_attr( $link ); ?>" target="_blank" rel="noopener" class="tgo-cta-link" id="tgo-send">
+            <?php esc_html_e( 'Telegram did not open? Tap here', 'shopys' ); ?>
         </a>
     </div>
     <style>
@@ -270,17 +287,39 @@ function shopys_tgorder_thankyou_button( $order_id ) {
     .tgo-cta-head{ display:inline-flex; align-items:center; gap:8px; color:#1c86c6; font-weight:800; font-size:13px;
         text-transform:uppercase; letter-spacing:1px; }
     .tgo-cta-head svg{ width:17px; height:17px; }
-    .tgo-cta p{ font-size:13.5px; color:#5b6472; line-height:1.6; margin:8px 0 16px; }
-    .tgo-cta-btn{ display:flex; align-items:center; justify-content:center; gap:10px; padding:15px 20px; border-radius:13px;
-        background:linear-gradient(135deg,#3aa8e8,#1c86c6); color:#fff !important; font-weight:800; font-size:1rem;
-        text-decoration:none !important; box-shadow:0 10px 24px rgba(28,134,198,.32); transition:transform .15s ease; }
-    .tgo-cta-btn:active{ transform:scale(.97); }
-    .tgo-cta-btn svg{ width:19px; height:19px; }
+    .tgo-cta p{ font-size:13.5px; color:#5b6472; line-height:1.6; margin:8px 0 14px; }
+    .tgo-cta-link{ display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:12px 20px;
+        border-radius:12px; background:linear-gradient(135deg,#3aa8e8,#1c86c6); color:#fff !important; font-weight:800;
+        font-size:.92rem; text-decoration:none !important; box-shadow:0 8px 20px rgba(28,134,198,.28); }
+    .tgo-cta-link:active{ transform:scale(.97); }
+    .tgo-cta-link.is-primary{ display:flex; width:100%; padding:15px 20px; font-size:1rem;
+        box-shadow:0 10px 24px rgba(28,134,198,.32); }
     </style>
+    <script>
+    (function(){
+        var box = document.getElementById('tgo-cta');
+        if (!box || box.getAttribute('data-auto') !== '1') return;
+        var link = document.getElementById('tgo-send');
+        if (!link) return;
+
+        // Signal once per order. A refresh must not re-open Telegram.
+        var key = 'tgo-signalled-' + box.getAttribute('data-order');
+        try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, '1'); } catch(e){}
+
+        // This page cannot open a tab itself (no click), so it hands the link to the
+        // tab that the "Place order" click already parked on the waiting page. One
+        // second lets the order detail settle on screen first.
+        setTimeout(function(){
+            var payload = JSON.stringify({ url: link.href, t: Date.now() });
+            try { localStorage.setItem('shopys_tgo_url', payload); } catch(e){}
+            try { var bc = new BroadcastChannel('shopys_tgo'); bc.postMessage(payload); bc.close(); } catch(e){}
+        }, 1000);
+    })();
+    </script>
     <?php
 }
 
-/* ── Same button on the customer's order detail / thank-you email footer view ── */
+/* ── Customer's order detail page: link only, never auto-open ── */
 
 add_action( 'woocommerce_order_details_after_order_table', 'shopys_tgorder_order_detail_button', 20 );
 function shopys_tgorder_order_detail_button( $order ) {
@@ -288,7 +327,97 @@ function shopys_tgorder_order_detail_button( $order ) {
     if ( $order->get_payment_method() !== 'tgorder' ) return;
     if ( $order->is_paid() || in_array( $order->get_status(), array( 'cancelled', 'refunded', 'failed' ), true ) ) return;
     if ( did_action( 'woocommerce_thankyou' ) ) return; // already shown above
-    shopys_tgorder_thankyou_button( $order->get_id() );
+    // Revisiting an old order should not relaunch Telegram — show the link only.
+    shopys_tgorder_thankyou_button( $order->get_id(), false );
+}
+
+/* ── Open Telegram in a new tab, 1s after the order page appears ───────────────
+ * A browser only grants a new tab from a real click, and the order-received page
+ * has none — so the tab is CREATED on the "Place order" click and parked on a
+ * waiting page. It does nothing until the order-received page has rendered, then
+ * that page hands it the Telegram link and the parked tab navigates to it.
+ *
+ * Result: exactly one Telegram tab, opened a second after the order detail shows.
+ */
+
+add_action( 'template_redirect', 'shopys_tgorder_go_handler' );
+function shopys_tgorder_go_handler() {
+    if ( empty( $_GET['shopys_tgo_go'] ) ) return;
+    nocache_headers();
+    ?><!doctype html>
+    <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <title><?php esc_html_e( 'Preparing your order…', 'shopys' ); ?></title>
+    <style>
+     body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f6f7f9;
+        font-family:'Play','Battambang',-apple-system,BlinkMacSystemFont,sans-serif;color:#0d1117;text-align:center;padding:24px;}
+     .b{max-width:340px}
+     .s{width:38px;height:38px;margin:0 auto 18px;border:3px solid #dbe3ea;border-top-color:#1c86c6;border-radius:50%;animation:sp .8s linear infinite}
+     @keyframes sp{to{transform:rotate(360deg)}}
+     h1{font-size:17px;font-weight:800;margin:0 0 8px}
+     p{font-size:13.5px;color:#5b6472;line-height:1.6;margin:0}
+    </style></head><body><div class="b" id="w">
+      <div class="s"></div>
+      <h1><?php esc_html_e( 'Preparing your order…', 'shopys' ); ?></h1>
+      <p><?php esc_html_e( 'Telegram will open here in a moment with your order ready to send.', 'shopys' ); ?></p>
+    </div>
+    <script>
+    (function(){
+        var done = false;
+        function go(raw){
+            if (done || !raw) return;
+            var d; try { d = JSON.parse(raw); } catch(e){ return; }
+            // Ignore a leftover link from an earlier order.
+            if (!d || !d.url || !d.t || (Date.now() - d.t) > 120000) return;
+            done = true;
+            try { localStorage.removeItem('shopys_tgo_url'); } catch(e){}
+            window.location.href = d.url;
+        }
+        // The order page may signal before or after this tab finishes loading, so
+        // listen for the event AND read whatever is already there.
+        window.addEventListener('storage', function(e){ if (e.key === 'shopys_tgo_url') go(e.newValue); });
+        try { var bc = new BroadcastChannel('shopys_tgo'); bc.onmessage = function(e){ go(e.data); }; } catch(e){}
+        try { go(localStorage.getItem('shopys_tgo_url')); } catch(e){}
+
+        setTimeout(function(){
+            if (done) return;
+            document.getElementById('w').innerHTML =
+                '<h1><?php echo esc_js( __( 'Nothing to send yet', 'shopys' ) ); ?></h1>' +
+                '<p><?php echo esc_js( __( 'You can close this tab — your order page has a link to send it on Telegram.', 'shopys' ) ); ?></p>';
+        }, 45000);
+    })();
+    </script>
+    </body></html>
+    <?php
+    exit;
+}
+
+/* ── Checkout: create the parked tab on the "Place order" click ── */
+
+add_action( 'wp_footer', 'shopys_tgorder_checkout_js', 99 );
+function shopys_tgorder_checkout_js() {
+    if ( ! function_exists( 'is_checkout' ) || ! is_checkout() || is_order_received_page() ) return;
+    ?>
+    <script>
+    (function(){
+        // Opening inside the click handler keeps the browser's "user activation",
+        // which is the only state in which a new tab is allowed. Opening later —
+        // after checkout's AJAX returns, or from the order page — is blocked.
+        function selectedIsTgorder(){
+            var el = document.querySelector('input[name="payment_method"]:checked');
+            return !!el && el.value === 'tgorder';
+        }
+        document.addEventListener('click', function(e){
+            var btn = e.target.closest && e.target.closest('#place_order');
+            if (!btn || !selectedIsTgorder()) return;
+            try {
+                // Clear any stale link so the parked tab cannot act on an old order.
+                localStorage.removeItem('shopys_tgo_url');
+            } catch(err){}
+            try { window.open('<?php echo esc_url_raw( add_query_arg( 'shopys_tgo_go', 1, home_url( '/' ) ) ); ?>', '_blank'); } catch(err){}
+        }, true);
+    })();
+    </script>
+    <?php
 }
 
 // Define the gateway class now — see the note above shopys_tgorder_load_gateway().
