@@ -125,20 +125,87 @@ function shopys_lc_product_ddr( $product ) {
 }
 
 /**
+ * PCIe generations a drive supports, read from its name.
+ * "PCIe 5.0/4.0" -> [4,5]; "PCIe 4.0" -> [4]; "Gen4" -> [4].
+ * Empty for drives that state none (SATA SSDs, unbranded trays).
+ *
+ * @return int[] ascending
+ */
+function shopys_lc_detect_pcie_gens( $text ) {
+    $text = (string) $text;
+    $gens = array();
+
+    // Capture the whole "PCIe 5.0/4.0" cluster, then every generation inside it.
+    if ( preg_match( '/PCIe\s*([345]\.0(?:\s*\/\s*[345]\.0)*)/i', $text, $m )
+        && preg_match_all( '/([345])\.0/', $m[1], $inner ) ) {
+        $gens = array_merge( $gens, array_map( 'intval', $inner[1] ) );
+    }
+    if ( preg_match_all( '/\bGen\s*([345])\b/i', $text, $m2 ) ) {
+        $gens = array_merge( $gens, array_map( 'intval', $m2[1] ) );
+    }
+
+    $gens = array_values( array_unique( $gens ) );
+    sort( $gens );
+    return $gens;
+}
+
+/**
+ * The PCIe generation of a laptop's storage slot, from its "Storage:" spec line.
+ *
+ * Only that line is read: a GPU or chipset line can mention PCIe too, and
+ * matching those would misreport the slot. 0 when the spec sheet omits it, in
+ * which case no filtering is applied.
+ */
+function shopys_lc_product_storage_gen( $product ) {
+    static $memo = array();
+    if ( ! $product instanceof WC_Product ) return 0;
+
+    $id = $product->get_id();
+    if ( isset( $memo[ $id ] ) ) return $memo[ $id ];
+
+    $txt = wp_strip_all_tags( $product->get_short_description() ) . "\n" . wp_strip_all_tags( $product->get_description() );
+
+    $gen = 0;
+    foreach ( preg_split( '/[\r\n]+/', $txt ) as $line ) {
+        if ( stripos( $line, 'storage' ) === false ) continue;
+        $found = shopys_lc_detect_pcie_gens( $line );
+        if ( $found ) $gen = max( $found );
+        break; // first Storage line is the authoritative one
+    }
+
+    $gen = (int) apply_filters( 'shopys_lc_product_storage_gen', $gen, $product );
+    $memo[ $id ] = $gen;
+    return $gen;
+}
+
+/**
+ * Products that sit in an upgrade category but aren't a valid internal upgrade —
+ * external enclosures, docks and caddies. Excluded before caching.
+ */
+function shopys_lc_is_excluded_option( $part, $id, $name ) {
+    $ids = array_map( 'intval', (array) apply_filters( 'shopys_lc_excluded_option_ids', array(), $part ) );
+    if ( in_array( (int) $id, $ids, true ) ) return true;
+
+    $pattern = apply_filters( 'shopys_lc_option_exclude_pattern', '/\b(enclosure|ESD|docking|dock|caddy)\b/i', $part );
+    return $pattern && preg_match( $pattern, (string) $name );
+}
+
+/**
  * Every upgrade option for one part: published, purchasable, in-stock, priced
  * products from the configured categories, cheapest first. Cached for 6h.
  *
- * RAM options carry a `ddr` generation read from the product name, which is
- * where it is recorded reliably — the ddr4/ddr5 categories are not consistent.
+ * RAM options carry a `ddr` generation and storage options a `gens` list, both
+ * read from the product name — that is where it is recorded reliably, the
+ * ddr4/ddr5 categories are not consistent.
  *
- * @return array[] list of array( id, name, price, ddr )
+ * @return array[] list of array( id, name, price, ddr, gens )
  */
 function shopys_lc_all_options( $part ) {
     static $memo = array();
     if ( isset( $memo[ $part ] ) ) return $memo[ $part ];
 
     $slugs = shopys_lc_option_categories( $part );
-    $key   = 'shopys_lc_opts_v2_' . $part . '_' . substr( md5( implode( ',', $slugs ) ), 0, 8 );
+    $key   = 'shopys_lc_opts_v3_' . $part . '_' . substr( md5( implode( ',', $slugs ) ), 0, 8 );
 
     $cached = get_transient( $key );
     if ( is_array( $cached ) ) {
@@ -171,11 +238,15 @@ function shopys_lc_all_options( $part ) {
             if ( ! $p || ! $p->is_purchasable() || ! $p->is_in_stock() ) continue;
             $price = (float) $p->get_price();
             if ( $price <= 0 ) continue;
+            $name = $p->get_name();
+            if ( shopys_lc_is_excluded_option( $part, $id, $name ) ) continue;
+
             $options[] = array(
                 'id'    => (int) $id,
-                'name'  => $p->get_name(),
+                'name'  => $name,
                 'price' => $price,
-                'ddr'   => ( $part === 'ram' ) ? shopys_lc_detect_ddr( $p->get_name() ) : '',
+                'ddr'   => ( $part === 'ram' ) ? shopys_lc_detect_ddr( $name ) : '',
+                'gens'  => ( $part === 'storage' ) ? shopys_lc_detect_pcie_gens( $name ) : array(),
             );
         }
     }
@@ -188,25 +259,48 @@ function shopys_lc_all_options( $part ) {
 /**
  * The upgrade options offered for a given laptop.
  *
- * RAM is narrowed to the generation the laptop actually takes, so a DDR4
- * machine is never offered DDR5 sticks. If detection fails, or filtering would
- * leave nothing to choose from, the full list is returned unchanged.
+ * RAM is narrowed to the exact generation the machine takes — DDR4 and DDR5 are
+ * physically incompatible, so a DDR4 laptop must never be offered DDR5.
+ *
+ * Storage is narrowed to "the slot's generation or slower", because PCIe drives
+ * work in any slot but a faster drive would be throttled and mis-sold. A drive
+ * advertising two generations ("PCIe 5.0/4.0") qualifies on its lowest. Drives
+ * that state no generation (SATA SSDs, unbranded trays) always qualify.
+ *
+ * If detection fails, or filtering would leave nothing to choose from, the full
+ * list is returned rather than an empty dropdown.
  *
  * @return array[]
  */
 function shopys_lc_get_options( $part, $for_product = null ) {
     $options = shopys_lc_all_options( $part );
 
-    if ( $part !== 'ram' || ! $for_product instanceof WC_Product ) return $options;
+    if ( ! $for_product instanceof WC_Product ) return $options;
 
-    $gen = shopys_lc_product_ddr( $for_product );
-    if ( ! $gen ) return $options;
+    if ( $part === 'ram' ) {
+        $gen = shopys_lc_product_ddr( $for_product );
+        if ( ! $gen ) return $options;
 
-    $matched = array_values( array_filter( $options, function ( $opt ) use ( $gen ) {
-        return ! empty( $opt['ddr'] ) && $opt['ddr'] === $gen;
-    } ) );
+        $matched = array_values( array_filter( $options, function ( $opt ) use ( $gen ) {
+            return ! empty( $opt['ddr'] ) && $opt['ddr'] === $gen;
+        } ) );
 
-    return empty( $matched ) ? $options : $matched;
+        return empty( $matched ) ? $options : $matched;
+    }
+
+    if ( $part === 'storage' ) {
+        $slot = shopys_lc_product_storage_gen( $for_product );
+        if ( ! $slot ) return $options;
+
+        $matched = array_values( array_filter( $options, function ( $opt ) use ( $slot ) {
+            if ( empty( $opt['gens'] ) ) return true;      // SATA / unspecified — fits anything
+            return min( $opt['gens'] ) <= $slot;           // nothing faster than the slot
+        } ) );
+
+        return empty( $matched ) ? $options : $matched;
+    }
+
+    return $options;
 }
 
 /**
@@ -226,7 +320,7 @@ function shopys_lc_find_option( $part, $product_id, $for_product = null ) {
 function shopys_lc_flush_options_cache() {
     foreach ( SHOPYS_LC_PARTS as $part ) {
         $slugs = shopys_lc_option_categories( $part );
-        delete_transient( 'shopys_lc_opts_v2_' . $part . '_' . substr( md5( implode( ',', $slugs ) ), 0, 8 ) );
+        delete_transient( 'shopys_lc_opts_v3_' . $part . '_' . substr( md5( implode( ',', $slugs ) ), 0, 8 ) );
     }
 }
 add_action( 'woocommerce_update_product', 'shopys_lc_flush_options_cache' );
@@ -249,8 +343,9 @@ function shopys_lc_render_card_config( $product ) {
     }
     if ( empty( $sets ) ) return;
 
-    // Tell the customer which memory generation the machine takes.
-    $ddr = shopys_lc_product_ddr( $product );
+    // Tell the customer which generations the machine takes.
+    $ddr      = shopys_lc_product_ddr( $product );
+    $slot_gen = shopys_lc_product_storage_gen( $product );
 
     $base      = (float) $product->get_price();
     $collapsed = (bool) apply_filters( 'shopys_lc_default_collapsed', true, $product );
@@ -272,6 +367,8 @@ function shopys_lc_render_card_config( $product ) {
                 <?php echo esc_html( shopys_lc_part_label( $part ) ); ?>
                 <?php if ( $part === 'ram' && $ddr ) : ?>
                     <span class="ppg-lc-hint"><?php echo esc_html( strtoupper( $ddr ) ); ?></span>
+                <?php elseif ( $part === 'storage' && $slot_gen ) : ?>
+                    <span class="ppg-lc-hint"><?php echo esc_html( sprintf( 'GEN%d', $slot_gen ) ); ?></span>
                 <?php endif; ?>
             </label>
             <select class="ppg-lc-select" data-part="<?php echo esc_attr( $part ); ?>"
