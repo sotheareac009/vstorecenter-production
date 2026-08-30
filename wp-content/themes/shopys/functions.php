@@ -679,6 +679,7 @@ if ( class_exists( 'WooCommerce' ) ) {
     require_once get_stylesheet_directory() . '/template-parts/product-by-category.php';
     require_once get_stylesheet_directory() . '/template-parts/cart-summary.php';
     require_once get_stylesheet_directory() . '/inc/cart-invoice.php';
+    require_once get_stylesheet_directory() . '/inc/laptop-config.php';
 }
 
 // ── Register TikTok and Telegram in Customizer > Social Icons panel ──
@@ -2113,6 +2114,12 @@ function shopys_notify_telegram_paid_order( $order_id ) {
     $lines = array();
     foreach ( $order->get_items() as $item ) {
         $lines[] = '   • ' . esc_html( $item->get_name() ) . '  <b>×' . $item->get_quantity() . '</b>  —  ' . esc_html( $money( $item->get_total() ) );
+        // Laptop configurator (RAM / Storage) and any other line-item meta.
+        if ( function_exists( 'shopys_lc_order_item_lines' ) ) {
+            foreach ( shopys_lc_order_item_lines( $item ) as $cfg_line ) {
+                $lines[] = '      <i>↳ ' . esc_html( $cfg_line ) . '</i>';
+            }
+        }
     }
 
     // Split payment method + receiver cleanly for KHQR; generic title otherwise.
@@ -2231,6 +2238,12 @@ function shopys_notify_telegram_payment( $order_id ) {
     $item_lines = array();
     foreach ( $order->get_items() as $item ) {
         $item_lines[] = '   • ' . esc_html( $item->get_name() ) . '  <b>×' . $item->get_quantity() . '</b>  —  ' . esc_html( $money( $item->get_total() ) );
+        // Laptop configurator (RAM / Storage) and any other line-item meta.
+        if ( function_exists( 'shopys_lc_order_item_lines' ) ) {
+            foreach ( shopys_lc_order_item_lines( $item ) as $cfg_line ) {
+                $item_lines[] = '      <i>↳ ' . esc_html( $cfg_line ) . '</i>';
+            }
+        }
     }
 
     // Per-shop receiver account (from the KHQR gateway).
@@ -2319,6 +2332,12 @@ function shopys_notify_telegram_status_changed( $order_id, $from, $to, $order = 
     $lines = array();
     foreach ( $order->get_items() as $item ) {
         $lines[] = '   • ' . esc_html( $item->get_name() ) . '  <b>×' . $item->get_quantity() . '</b>  —  ' . esc_html( $money( $item->get_total() ) );
+        // Laptop configurator (RAM / Storage) and any other line-item meta.
+        if ( function_exists( 'shopys_lc_order_item_lines' ) ) {
+            foreach ( shopys_lc_order_item_lines( $item ) as $cfg_line ) {
+                $lines[] = '      <i>↳ ' . esc_html( $cfg_line ) . '</i>';
+            }
+        }
     }
 
     $msg  = "🔄  <b>ORDER STATUS UPDATED</b>\n";

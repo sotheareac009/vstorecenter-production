@@ -91,6 +91,21 @@ function shopys_cart_summary_shortcode( $atts ) {
                     <div class="shopys-cs__meta">
                         <a href="<?php echo esc_url( $permalink ); ?>" class="shopys-cs__name"><?php echo esc_html( $product->get_name() ); ?></a>
                         <?php if ( $sku ) : ?><span class="shopys-cs__sku">SKU: <?php echo esc_html( $sku ); ?></span><?php endif; ?>
+                        <?php
+                        $config_lines = function_exists( 'shopys_lc_item_lines' ) ? shopys_lc_item_lines( $item ) : array();
+                        if ( ! empty( $config_lines ) ) :
+                            $is_custom = ! empty( $item['shopys_config']['parts'] );
+                        ?>
+                        <div class="shopys-cs__config">
+                            <span class="shopys-cs__config-tag<?php echo $is_custom ? ' shopys-cs__config-tag--custom' : ''; ?>">
+                                <?php echo esc_html( $is_custom ? __( 'Custom', 'shopys' ) : __( 'Standard', 'shopys' ) ); ?>
+                            </span>
+                            <?php foreach ( $config_lines as $line ) :
+                                if ( $line['key'] === __( 'Configuration', 'shopys' ) ) continue; ?>
+                                <div><?php echo esc_html( $line['key'] . ': ' . $line['value'] ); ?></div>
+                            <?php endforeach; ?>
+                        </div>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <div class="shopys-cs__col-price"><?php echo wc_price( $price ); ?></div>

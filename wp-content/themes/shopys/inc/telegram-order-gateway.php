@@ -92,6 +92,12 @@ function shopys_tgorder_message( WC_Order $order ) {
     $items = array( '🛍 ' . __( 'My order', 'shopys' ) );
     foreach ( $order->get_items() as $item ) {
         $items[] = '   • ' . $item->get_name() . '  ×' . $item->get_quantity() . '  —  ' . $money( $item->get_total() );
+        // Laptop configurator selections (RAM / Storage) stored as line-item meta.
+        if ( function_exists( 'shopys_lc_order_item_lines' ) ) {
+            foreach ( shopys_lc_order_item_lines( $item ) as $cfg_line ) {
+                $items[] = '      ↳ ' . $cfg_line;
+            }
+        }
     }
     $blocks[] = $items;
 

@@ -336,6 +336,7 @@ function premium_product_grid_shortcode( $atts ) {
                     <div class="ppg-sku"><span class="ppg-sku-separator"></span><?php esc_html_e( 'Code', 'shopys' ); ?> : <?php echo esc_html( $sku ); ?></div>
                     <?php endif; ?>
                     <div class="ppg-stock-row"><?php echo shopys_ppg_stock_badge( $product ); ?></div>
+                    <?php if ( function_exists( 'shopys_lc_render_card_config' ) ) shopys_lc_render_card_config( $product ); ?>
                     <?php if ( $atts['cart'] === 'true' || $atts['view'] === 'true' ) : ?>
                     <div class="ppg-actions">
                         <?php if ( $atts['view'] === 'true' ) : ?>
@@ -624,6 +625,7 @@ function ppg_ajax_paginate_handler() {
                     <div class="ppg-sku"><span class="ppg-sku-separator"></span><?php esc_html_e( 'Code', 'shopys' ); ?> : <?php echo esc_html( $sku ); ?></div>
                     <?php endif; ?>
                     <div class="ppg-stock-row"><?php echo shopys_ppg_stock_badge( $product ); ?></div>
+                    <?php if ( function_exists( 'shopys_lc_render_card_config' ) ) shopys_lc_render_card_config( $product ); ?>
                     <?php if ( $atts['cart'] === 'true' || $atts['view'] === 'true' ) : ?>
                     <div class="ppg-actions">
                         <?php if ( $atts['view'] === 'true' ) : ?>

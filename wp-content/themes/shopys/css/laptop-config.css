@@ -1,0 +1,181 @@
+/* ── Laptop Configurator (RAM / Storage dropdowns on product cards) ── */
+
+.ppg-lc {
+    margin: 10px 0 4px;
+    padding: 10px;
+    border: 1px solid #e6e9ee;
+    border-radius: 10px;
+    background: #fafbfc;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Collapse toggle */
+.ppg-lc-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: #4b5563;
+}
+
+.ppg-lc-toggle:hover {
+    color: #111827;
+}
+
+.ppg-lc-toggle:focus-visible {
+    outline: 2px solid #4ab34a;
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+.ppg-lc-chevron {
+    flex: 0 0 auto;
+    transition: transform .2s ease;
+}
+
+.ppg-lc--collapsed .ppg-lc-chevron {
+    transform: rotate(-90deg);
+}
+
+/* Collapsible body */
+.ppg-lc-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 500px;
+    overflow: hidden;
+    transition: max-height .25s ease, opacity .2s ease, margin .25s ease;
+}
+
+.ppg-lc--collapsed .ppg-lc-body {
+    max-height: 0;
+    opacity: 0;
+    margin-bottom: -8px; /* absorb the parent's flex gap while hidden */
+}
+
+.ppg-lc-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.ppg-lc-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: #6b7280;
+}
+
+.ppg-lc-hint {
+    margin-left: 4px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    color: #2563eb;
+    background: #e8efff;
+}
+
+.ppg-lc-select {
+    width: 100%;
+    max-width: 100%;
+    padding: 7px 28px 7px 10px;
+    font-size: 12px;
+    line-height: 1.35;
+    color: #1f2937;
+    background: #fff;
+    border: 1px solid #d7dce3;
+    border-radius: 8px;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 13px;
+    text-overflow: ellipsis;
+}
+
+.ppg-lc-select:focus {
+    outline: none;
+    border-color: #4ab34a;
+    box-shadow: 0 0 0 3px rgba(74, 179, 74, .15);
+}
+
+.ppg-lc-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 6px;
+    border-top: 1px dashed #e0e4ea;
+}
+
+.ppg-lc-badge {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 999px;
+}
+
+.ppg-lc-badge--standard {
+    color: #4b5563;
+    background: #eceff3;
+}
+
+.ppg-lc-badge--custom {
+    color: #8a5300;
+    background: #ffefc7;
+}
+
+.ppg-lc-total {
+    font-size: 15px;
+    font-weight: 800;
+    color: #111827;
+}
+
+.ppg-lc--custom .ppg-lc-total {
+    color: #d3232f;
+}
+
+/* Cart / invoice configuration lines */
+.shopys-cs__config,
+.inv-product-config {
+    margin-top: 3px;
+    font-size: 11px;
+    line-height: 1.5;
+    color: #6b7280;
+}
+
+.shopys-cs__config-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 999px;
+    color: #4b5563;
+    background: #eceff3;
+}
+
+.shopys-cs__config-tag--custom {
+    color: #8a5300;
+    background: #ffefc7;
+}

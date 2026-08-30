@@ -437,6 +437,11 @@ function shopys_render_cart_invoice() {
                             <div>
                                 <div class="inv-product-name"><?php echo esc_html( $product->get_name() ); ?></div>
                                 <?php if ( $sku ) : ?><div class="inv-product-sku">SKU: <?php echo esc_html( $sku ); ?></div><?php endif; ?>
+                                <?php
+                                $config_lines = function_exists( 'shopys_lc_item_lines' ) ? shopys_lc_item_lines( $item ) : array();
+                                foreach ( $config_lines as $line ) : ?>
+                                    <div class="inv-product-config"><?php echo esc_html( $line['key'] . ': ' . $line['value'] ); ?></div>
+                                <?php endforeach; ?>
                             </div>
                         </div>
                     </td>
