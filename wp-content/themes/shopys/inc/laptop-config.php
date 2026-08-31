@@ -48,10 +48,26 @@ function shopys_lc_laptop_categories() {
  */
 function shopys_lc_option_categories( $part ) {
     $defaults = array(
-        'ram'     => array( 'ram' ),
+        'ram'     => array( 'laptop-ram-custom' ),
         'storage' => array( 'storage-component', 'storage' ),
     );
     return (array) apply_filters( 'shopys_lc_option_categories', $defaults[ $part ] ?? array(), $part );
+}
+
+/**
+ * Whether a part's categories pull in their child categories.
+ *
+ * RAM is deliberately off: the source is the single `laptop-ram-custom`
+ * category (a child of `ram-custom`). Following the tree would pull in
+ * `desktop-ram-custom`, and desktop memory must never be offered as a laptop
+ * upgrade.
+ */
+function shopys_lc_option_include_children( $part ) {
+    $defaults = array(
+        'ram'     => false,
+        'storage' => true,
+    );
+    return (bool) apply_filters( 'shopys_lc_option_include_children', $defaults[ $part ] ?? true, $part );
 }
 
 /**
@@ -229,7 +245,7 @@ function shopys_lc_all_options( $part ) {
                 'taxonomy'         => 'product_cat',
                 'field'            => 'slug',
                 'terms'            => $slugs,
-                'include_children' => true,
+                'include_children' => shopys_lc_option_include_children( $part ),
             ) ),
         ) );
 
@@ -267,8 +283,11 @@ function shopys_lc_all_options( $part ) {
  * advertising two generations ("PCIe 5.0/4.0") qualifies on its lowest. Drives
  * that state no generation (SATA SSDs, unbranded trays) always qualify.
  *
- * If detection fails, or filtering would leave nothing to choose from, the full
- * list is returned rather than an empty dropdown.
+ * When the laptop's generation is known but nothing in stock matches it, the
+ * list comes back empty and the dropdown is omitted entirely — showing an
+ * incompatible part is worse than showing no upgrade at all. The full list is
+ * returned only when the generation cannot be detected, where any choice is as
+ * good a guess as another.
  *
  * @return array[]
  */
@@ -281,23 +300,19 @@ function shopys_lc_get_options( $part, $for_product = null ) {
         $gen = shopys_lc_product_ddr( $for_product );
         if ( ! $gen ) return $options;
 
-        $matched = array_values( array_filter( $options, function ( $opt ) use ( $gen ) {
+        return array_values( array_filter( $options, function ( $opt ) use ( $gen ) {
             return ! empty( $opt['ddr'] ) && $opt['ddr'] === $gen;
         } ) );
-
-        return empty( $matched ) ? $options : $matched;
     }
 
     if ( $part === 'storage' ) {
         $slot = shopys_lc_product_storage_gen( $for_product );
         if ( ! $slot ) return $options;
 
-        $matched = array_values( array_filter( $options, function ( $opt ) use ( $slot ) {
+        return array_values( array_filter( $options, function ( $opt ) use ( $slot ) {
             if ( empty( $opt['gens'] ) ) return true;      // SATA / unspecified — fits anything
             return min( $opt['gens'] ) <= $slot;           // nothing faster than the slot
         } ) );
-
-        return empty( $matched ) ? $options : $matched;
     }
 
     return $options;
